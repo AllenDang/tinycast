@@ -2,8 +2,8 @@ import SwiftUI
 
 struct ClipboardList: View {
     let results: [ClipboardItem]
-    let selection: Int
-    let onSelect: (Int) -> Void
+    let selectedID: ClipboardItem.ID?
+    let onSelect: (ClipboardItem) -> Void
     let onActivate: () -> Void
     @EnvironmentObject private var store: ClipboardStore
 
@@ -15,21 +15,22 @@ struct ClipboardList: View {
                 ScrollViewReader { proxy in
                     ScrollView {
                         LazyVStack(spacing: 2) {
-                            ForEach(Array(results.enumerated()), id: \.element.id) { index, item in
-                                ClipboardRow(item: item, selected: index == selection, imageURL: store.imageURL(for: item))
-                                    .id(index)
+                            ForEach(results) { item in
+                                ClipboardRow(item: item, selected: item.id == selectedID, imageURL: store.imageURL(for: item))
                                     .contentShape(Rectangle())
-                                    .onTapGesture(count: 2) { onSelect(index); onActivate() }
-                                    .onTapGesture { onSelect(index) }
+                                    .onTapGesture(count: 2) { onSelect(item); onActivate() }
+                                    .onTapGesture { onSelect(item) }
                                     .contextMenu {
-                                        Button("Paste") { onSelect(index); onActivate() }
+                                        Button("Paste") { onSelect(item); onActivate() }
                                         Button("Delete", role: .destructive) { store.remove(item) }
                                     }
                             }
                         }
                         .padding(8)
                     }
-                    .onChange(of: selection) { proxy.scrollTo(selection, anchor: .center) }
+                    .onChange(of: selectedID) { _, id in
+                        if let id { proxy.scrollTo(id, anchor: .center) }
+                    }
                 }
             }
         }

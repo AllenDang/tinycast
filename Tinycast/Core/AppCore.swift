@@ -90,6 +90,7 @@ final class AppCore: ObservableObject {
     /// Open Settings in front (accessory apps otherwise open it behind / inactive).
     func showSettings() {
         NSApp.activate(ignoringOtherApps: true)
+        NotificationCenter.default.post(name: .tinycastShowSettings, object: nil)
         NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
         DispatchQueue.main.async {
             for window in NSApp.windows where (window.identifier?.rawValue ?? "").contains("Settings") {

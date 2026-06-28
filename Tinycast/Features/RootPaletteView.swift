@@ -74,13 +74,13 @@ struct RootPaletteView: View {
     private var content: some View {
         switch vm.mode {
         case .launcher:
-            LauncherList(results: appResults, selection: selection)
+            LauncherList(results: appResults, selectedID: selectedApp?.id)
         case .clipboard:
             HStack(spacing: 0) {
                 ClipboardList(
                     results: clipResults,
-                    selection: selection,
-                    onSelect: { vm.selection = $0 },
+                    selectedID: selectedClipItem?.id,
+                    onSelect: { item in vm.selection = clipResults.firstIndex(of: item) ?? 0 },
                     onActivate: activateSelection
                 )
                 .frame(width: 290)
@@ -88,6 +88,10 @@ struct RootPaletteView: View {
                 ClipboardPreview(item: selectedClipItem)
             }
         }
+    }
+
+    private var selectedApp: AppEntry? {
+        appResults.indices.contains(selection) ? appResults[selection] : nil
     }
 
     private var selectedClipItem: ClipboardItem? {

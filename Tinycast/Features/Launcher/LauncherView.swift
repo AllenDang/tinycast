@@ -2,7 +2,7 @@ import SwiftUI
 
 struct LauncherList: View {
     let results: [AppEntry]
-    let selection: Int
+    let selectedID: AppEntry.ID?
     @EnvironmentObject private var core: AppCore
 
     var body: some View {
@@ -13,16 +13,17 @@ struct LauncherList: View {
                 ScrollViewReader { proxy in
                     ScrollView {
                         LazyVStack(spacing: 2) {
-                            ForEach(Array(results.enumerated()), id: \.element.id) { index, app in
-                                AppRow(app: app, selected: index == selection)
-                                    .id(index)
+                            ForEach(results) { app in
+                                AppRow(app: app, selected: app.id == selectedID)
                                     .contentShape(Rectangle())
                                     .onTapGesture { core.launch(app) }
                             }
                         }
                         .padding(8)
                     }
-                    .onChange(of: selection) { proxy.scrollTo(selection, anchor: .center) }
+                    .onChange(of: selectedID) { _, id in
+                        if let id { proxy.scrollTo(id, anchor: .center) }
+                    }
                 }
             }
         }
