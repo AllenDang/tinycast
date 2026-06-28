@@ -4,6 +4,7 @@ import KeyboardShortcuts
 struct GeneralSettingsView: View {
     @ObservedObject private var settings = AppCore.shared.settings
     @State private var accessibilityTrusted = Permissions.isAccessibilityTrusted()
+    private let refreshTimer = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
 
     var body: some View {
         Form {
@@ -44,5 +45,9 @@ struct GeneralSettingsView: View {
         }
         .formStyle(.grouped)
         .onAppear { accessibilityTrusted = Permissions.isAccessibilityTrusted() }
+        .onReceive(refreshTimer) { _ in
+            let trusted = Permissions.isAccessibilityTrusted()
+            if trusted != accessibilityTrusted { accessibilityTrusted = trusted }
+        }
     }
 }

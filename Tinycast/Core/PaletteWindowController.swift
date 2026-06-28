@@ -1,14 +1,11 @@
 import AppKit
 import SwiftUI
-import os
 
 @MainActor
 final class PaletteWindowController: NSObject, NSWindowDelegate {
     private unowned let core: AppCore
     private var panel: PalettePanel?
     private(set) var previousApp: NSRunningApplication?
-
-    private static let log = Logger(subsystem: "com.tinycast.app", category: "window")
 
     init(core: AppCore) {
         self.core = core
@@ -23,7 +20,6 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
         NSApp.activate(ignoringOtherApps: true)
         panel.makeKeyAndOrderFront(nil)
         panel.orderFrontRegardless()
-        Self.log.debug("show() — panel.isVisible=\(panel.isVisible, privacy: .public) isKey=\(panel.isKeyWindow, privacy: .public)")
     }
 
     func hide(restoreFocus: Bool) {

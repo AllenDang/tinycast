@@ -1,8 +1,6 @@
 import AppKit
-import os
 
 enum AppLauncher {
-    private static let log = Logger(subsystem: "com.tinycast.app", category: "launcher")
 
     @MainActor
     static func launch(_ url: URL) {
@@ -16,18 +14,13 @@ enum AppLauncher {
         let running = NSRunningApplication.runningApplications(withBundleIdentifier: bundleID)
         if let app = running.first {
             if app.isActive {
-                log.debug("toggle hide \(bundleID, privacy: .public)")
                 app.hide()
             } else {
-                log.debug("toggle activate \(bundleID, privacy: .public)")
                 app.unhide()
                 app.activate()
             }
         } else if let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundleID) {
-            log.debug("toggle launch \(bundleID, privacy: .public)")
             NSWorkspace.shared.openApplication(at: url, configuration: NSWorkspace.OpenConfiguration())
-        } else {
-            log.debug("toggle: no app for \(bundleID, privacy: .public)")
         }
     }
 }

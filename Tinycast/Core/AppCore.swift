@@ -1,6 +1,5 @@
 import AppKit
 import SwiftUI
-import os
 
 enum PaletteMode: String, CaseIterable, Identifiable {
     case launcher
@@ -61,12 +60,9 @@ final class AppCore: ObservableObject {
         hotKeys.start()
     }
 
-    private static let log = Logger(subsystem: "com.tinycast.app", category: "core")
-
     // MARK: - Palette control
 
     func togglePalette() {
-        Self.log.debug("togglePalette() visible=\(self.windowController.isVisible, privacy: .public)")
         if windowController.isVisible, palette.mode == .launcher {
             hidePalette()
         } else {
@@ -75,7 +71,6 @@ final class AppCore: ObservableObject {
     }
 
     func toggleClipboard() {
-        Self.log.debug("toggleClipboard() visible=\(self.windowController.isVisible, privacy: .public)")
         if windowController.isVisible, palette.mode == .clipboard {
             hidePalette()
         } else {
@@ -90,6 +85,18 @@ final class AppCore: ObservableObject {
 
     func hidePalette(restoreFocus: Bool = true) {
         windowController.hide(restoreFocus: restoreFocus)
+    }
+
+    /// Open Settings in front (accessory apps otherwise open it behind / inactive).
+    func showSettings() {
+        NSApp.activate(ignoringOtherApps: true)
+        NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
+        DispatchQueue.main.async {
+            for window in NSApp.windows where (window.identifier?.rawValue ?? "").contains("Settings") {
+                window.makeKeyAndOrderFront(nil)
+                window.orderFrontRegardless()
+            }
+        }
     }
 
     // MARK: - Actions invoked from the palette UI

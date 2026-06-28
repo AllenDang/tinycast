@@ -1,6 +1,5 @@
 import Foundation
 import KeyboardShortcuts
-import os
 
 extension KeyboardShortcuts.Name {
     static let togglePalette = Self("togglePalette")
@@ -15,20 +14,13 @@ final class HotKeyManager {
 
     private let boundKey = "boundAppBundleIDs"
     private var registered = Set<String>()
-    private static let log = Logger(subsystem: "com.tinycast.app", category: "hotkeys")
 
     func start() {
         KeyboardShortcuts.onKeyDown(for: .togglePalette) { [weak self] in
-            MainActor.assumeIsolated {
-                Self.log.debug("hotkey: togglePalette")
-                self?.onTogglePalette?()
-            }
+            MainActor.assumeIsolated { self?.onTogglePalette?() }
         }
         KeyboardShortcuts.onKeyDown(for: .toggleClipboard) { [weak self] in
-            MainActor.assumeIsolated {
-                Self.log.debug("hotkey: toggleClipboard")
-                self?.onToggleClipboard?()
-            }
+            MainActor.assumeIsolated { self?.onToggleClipboard?() }
         }
         for bundleID in boundBundleIDs { registerAppHandler(bundleID) }
     }
@@ -53,11 +45,7 @@ final class HotKeyManager {
         let name = KeyboardShortcuts.Name.app(bundleID)
         guard registered.insert(name.rawValue).inserted else { return }
         KeyboardShortcuts.onKeyDown(for: name) {
-            MainActor.assumeIsolated {
-                Self.log.debug("hotkey: app \(bundleID, privacy: .public)")
-                AppLauncher.toggle(bundleID: bundleID)
-            }
+            MainActor.assumeIsolated { AppLauncher.toggle(bundleID: bundleID) }
         }
-        Self.log.debug("registered app handler for \(bundleID, privacy: .public)")
     }
 }

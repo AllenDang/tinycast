@@ -82,10 +82,7 @@ final class ClipboardStore: ObservableObject {
     func search(_ query: String) -> [ClipboardItem] {
         let q = query.trimmingCharacters(in: .whitespaces)
         guard !q.isEmpty else { return items }
-        return items.filter { item in
-            if let text = item.text { return text.localizedCaseInsensitiveContains(q) }
-            return "image".contains(q.lowercased())
-        }
+        return items.filter { ($0.text?.localizedCaseInsensitiveContains(q)) ?? false }
     }
 
     // MARK: - Private

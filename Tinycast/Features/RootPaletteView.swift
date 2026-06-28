@@ -10,6 +10,9 @@ struct RootPaletteView: View {
     private var appResults: [AppEntry] { appIndex.matches(vm.query) }
     private var clipResults: [ClipboardItem] { store.search(vm.query) }
     private var resultCount: Int { vm.mode == .launcher ? appResults.count : clipResults.count }
+    /// Selection clamped into the current results — the single source of truth for highlight,
+    /// preview and activation so the list and preview can never disagree.
+    private var selection: Int { resultCount == 0 ? 0 : min(max(vm.selection, 0), resultCount - 1) }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -18,6 +21,7 @@ struct RootPaletteView: View {
             content
         }
         .frame(width: 720, height: 470)
+        .background(OverlayScrollers())
         .background(VisualEffectView())
         .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
         .overlay(
@@ -70,12 +74,12 @@ struct RootPaletteView: View {
     private var content: some View {
         switch vm.mode {
         case .launcher:
-            LauncherList(results: appResults, selection: vm.selection)
+            LauncherList(results: appResults, selection: selection)
         case .clipboard:
             HStack(spacing: 0) {
                 ClipboardList(
                     results: clipResults,
-                    selection: vm.selection,
+                    selection: selection,
                     onSelect: { vm.selection = $0 },
                     onActivate: activateSelection
                 )
@@ -87,20 +91,19 @@ struct RootPaletteView: View {
     }
 
     private var selectedClipItem: ClipboardItem? {
-        clipResults.indices.contains(vm.selection) ? clipResults[vm.selection] : nil
+        clipResults.indices.contains(selection) ? clipResults[selection] : nil
     }
 
     private func deleteSelectedClip() {
         guard let item = selectedClipItem else { return }
         store.remove(item)
-        vm.selection = min(vm.selection, max(clipResults.count - 2, 0))
     }
 
     // MARK: - Actions
 
     private func move(_ delta: Int) {
         guard resultCount > 0 else { return }
-        vm.selection = min(max(vm.selection + delta, 0), resultCount - 1)
+        vm.selection = min(max(selection + delta, 0), resultCount - 1)
     }
 
     private func toggleMode() {
@@ -110,11 +113,11 @@ struct RootPaletteView: View {
     private func activateSelection() {
         switch vm.mode {
         case .launcher:
-            guard appResults.indices.contains(vm.selection) else { return }
-            core.launch(appResults[vm.selection])
+            guard appResults.indices.contains(selection) else { return }
+            core.launch(appResults[selection])
         case .clipboard:
-            guard clipResults.indices.contains(vm.selection) else { return }
-            core.paste(clipResults[vm.selection])
+            guard clipResults.indices.contains(selection) else { return }
+            core.paste(clipResults[selection])
         }
     }
 }

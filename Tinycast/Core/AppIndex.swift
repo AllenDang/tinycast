@@ -1,8 +1,8 @@
 import AppKit
 
 struct AppEntry: Identifiable, Hashable, Sendable {
-    let id: String          // bundle identifier, or path if none
-    let name: String
+    let id: String          // file path — always unique
+    let name: String        // clean display name, never includes ".app"
     let url: URL
     let bundleID: String?
 
@@ -30,46 +30,75 @@ final class AppIndex: ObservableObject {
         ].map { URL(fileURLWithPath: $0) }
         searchDirs.append(fm.homeDirectoryForCurrentUser.appendingPathComponent("Applications"))
 
-        var seen = Set<String>()
+        var seenBundleIDs = Set<String>()
         var result: [AppEntry] = []
         for dir in searchDirs {
             guard let items = try? fm.contentsOfDirectory(
                 at: dir, includingPropertiesForKeys: nil, options: [.skipsHiddenFiles]
             ) else { continue }
             for url in items where url.pathExtension == "app" {
-                let bundleID = Bundle(url: url)?.bundleIdentifier
-                let key = bundleID ?? url.path
-                guard seen.insert(key).inserted else { continue }
-                let name = fm.displayName(atPath: url.path)
-                result.append(AppEntry(id: key, name: name, url: url, bundleID: bundleID))
+                let bundle = Bundle(url: url)
+                let bundleID = bundle?.bundleIdentifier
+                // Dedup by bundle id; first directory (/Applications) wins.
+                if let bundleID, !seenBundleIDs.insert(bundleID).inserted { continue }
+
+                let name = (bundle?.object(forInfoDictionaryKey: "CFBundleDisplayName") as? String)
+                    ?? (bundle?.object(forInfoDictionaryKey: "CFBundleName") as? String)
+                    ?? url.deletingPathExtension().lastPathComponent
+                result.append(AppEntry(id: url.path, name: name, url: url, bundleID: bundleID))
             }
         }
         return result.sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
     }
 
-    /// Fuzzy-ranked matches. Empty query returns the alphabetical list.
-    func matches(_ query: String, limit: Int = 60) -> [AppEntry] {
+    /// Ranked matches. Empty query returns the full alphabetical list.
+    func matches(_ query: String, limit: Int = 200) -> [AppEntry] {
         let q = query.trimmingCharacters(in: .whitespaces)
-        guard !q.isEmpty else { return Array(apps.prefix(limit)) }
+        guard !q.isEmpty else { return apps }
         let scored = apps.compactMap { app -> (AppEntry, Int)? in
             guard let score = FuzzyMatch.score(query: q, candidate: app.name) else { return nil }
             return (app, score)
         }
         return scored
-            .sorted { $0.1 != $1.1 ? $0.1 > $1.1 : $0.0.name.count < $1.0.name.count }
+            .sorted {
+                $0.1 != $1.1
+                    ? $0.1 > $1.1
+                    : $0.0.name.localizedCaseInsensitiveCompare($1.0.name) == .orderedAscending
+            }
             .prefix(limit)
             .map(\.0)
     }
 }
 
 enum FuzzyMatch {
-    /// Subsequence match with bonuses for consecutive hits, word boundaries and prefixes.
-    /// Returns nil when `query` is not a subsequence of `candidate`.
+    /// Tiered relevance score; higher is better. Returns nil when the query doesn't match at all.
+    /// Tiers are spaced far enough apart that a better kind always beats a worse one.
     static func score(query: String, candidate: String) -> Int? {
-        let q = Array(query.lowercased())
-        let c = Array(candidate.lowercased())
+        let q = query.lowercased()
+        let c = candidate.lowercased()
         guard !q.isEmpty else { return 0 }
 
+        if c == q { return 100_000 }
+        if c.hasPrefix(q) { return 90_000 - c.count }
+
+        if let range = c.range(of: q) {
+            let atWordStart = isWordStart(c, range.lowerBound)
+            return (atWordStart ? 80_000 : 70_000) - c.count
+        }
+
+        guard let sub = subsequenceScore(Array(q), Array(c)) else { return nil }
+        return sub
+    }
+
+    private static func isWordStart(_ s: String, _ index: String.Index) -> Bool {
+        if index == s.startIndex { return true }
+        let before = s[s.index(before: index)]
+        return !before.isLetter && !before.isNumber
+    }
+
+    /// Subsequence match with bonuses for consecutive hits and word boundaries.
+    /// Returns nil when `q` is not a subsequence of `c`. Always below the substring tier.
+    private static func subsequenceScore(_ q: [Character], _ c: [Character]) -> Int? {
         var qi = 0
         var score = 0
         var run = 0
@@ -92,9 +121,7 @@ enum FuzzyMatch {
             prev = ci
             qi += 1
         }
-
         guard qi == q.count else { return nil }
-        if c.starts(with: q) { score += 15 }
         return score
     }
 }
