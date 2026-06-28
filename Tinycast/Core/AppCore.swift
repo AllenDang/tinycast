@@ -1,0 +1,107 @@
+import AppKit
+import SwiftUI
+import os
+
+enum PaletteMode: String, CaseIterable, Identifiable {
+    case launcher
+    case clipboard
+
+    var id: String { rawValue }
+    var title: String { self == .launcher ? "Apps" : "Clipboard" }
+    var systemImage: String { self == .launcher ? "magnifyingglass" : "doc.on.clipboard" }
+    var placeholder: String { self == .launcher ? "Search apps…" : "Search clipboard…" }
+}
+
+/// View-model shared between the panel's SwiftUI tree and the coordinator.
+@MainActor
+final class PaletteViewModel: ObservableObject {
+    @Published var mode: PaletteMode = .launcher
+    @Published var query: String = ""
+    @Published var selection: Int = 0
+    /// Changes every time the palette is shown so the search field can re-focus.
+    @Published var focusToken = UUID()
+
+    func prepare(mode: PaletteMode) {
+        self.mode = mode
+        query = ""
+        selection = 0
+        focusToken = UUID()
+    }
+}
+
+/// Single owner of every long-lived manager. Wired up once from the app delegate.
+@MainActor
+final class AppCore: ObservableObject {
+    static let shared = AppCore()
+
+    let appIndex = AppIndex()
+    let clipboardStore = ClipboardStore()
+    let clipboardManager: ClipboardManager
+    let hotKeys = HotKeyManager()
+    let settings = AppSettings()
+    let palette = PaletteViewModel()
+
+    private lazy var windowController = PaletteWindowController(core: self)
+
+    private init() {
+        clipboardManager = ClipboardManager(store: clipboardStore)
+    }
+
+    func start() {
+        NSApp.setActivationPolicy(.accessory)
+
+        clipboardStore.maxItems = settings.clipboardMaxItems
+        clipboardStore.load()
+        clipboardManager.start()
+
+        Task { await appIndex.refresh() }
+
+        hotKeys.onTogglePalette = { [weak self] in self?.togglePalette() }
+        hotKeys.onToggleClipboard = { [weak self] in self?.toggleClipboard() }
+        hotKeys.start()
+    }
+
+    private static let log = Logger(subsystem: "com.tinycast.app", category: "core")
+
+    // MARK: - Palette control
+
+    func togglePalette() {
+        Self.log.debug("togglePalette() visible=\(self.windowController.isVisible, privacy: .public)")
+        if windowController.isVisible, palette.mode == .launcher {
+            hidePalette()
+        } else {
+            showPalette(mode: .launcher)
+        }
+    }
+
+    func toggleClipboard() {
+        Self.log.debug("toggleClipboard() visible=\(self.windowController.isVisible, privacy: .public)")
+        if windowController.isVisible, palette.mode == .clipboard {
+            hidePalette()
+        } else {
+            showPalette(mode: .clipboard)
+        }
+    }
+
+    func showPalette(mode: PaletteMode) {
+        palette.prepare(mode: mode)
+        windowController.show()
+    }
+
+    func hidePalette(restoreFocus: Bool = true) {
+        windowController.hide(restoreFocus: restoreFocus)
+    }
+
+    // MARK: - Actions invoked from the palette UI
+
+    func launch(_ app: AppEntry) {
+        hidePalette(restoreFocus: false)
+        AppLauncher.launch(app.url)
+    }
+
+    func paste(_ item: ClipboardItem) {
+        let previous = windowController.previousApp
+        hidePalette(restoreFocus: false)
+        Paster.paste(item, store: clipboardStore, previousApp: previous)
+    }
+}

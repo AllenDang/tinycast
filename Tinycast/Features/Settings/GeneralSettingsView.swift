@@ -1,0 +1,48 @@
+import SwiftUI
+import KeyboardShortcuts
+
+struct GeneralSettingsView: View {
+    @ObservedObject private var settings = AppCore.shared.settings
+    @State private var accessibilityTrusted = Permissions.isAccessibilityTrusted()
+
+    var body: some View {
+        Form {
+            Section("Global Shortcuts") {
+                KeyboardShortcuts.Recorder("App Launcher:", name: .togglePalette)
+                KeyboardShortcuts.Recorder("Clipboard History:", name: .toggleClipboard)
+            }
+
+            Section("Clipboard") {
+                Stepper(
+                    "History size: \(settings.clipboardMaxItems) items",
+                    value: $settings.clipboardMaxItems, in: 50...2000, step: 50
+                )
+                .onChange(of: settings.clipboardMaxItems) {
+                    AppCore.shared.clipboardStore.maxItems = settings.clipboardMaxItems
+                }
+                Button("Clear Clipboard History") {
+                    AppCore.shared.clipboardStore.clearAll()
+                }
+            }
+
+            Section("Permissions") {
+                LabeledContent("Accessibility (paste)") {
+                    HStack(spacing: 8) {
+                        Image(systemName: accessibilityTrusted ? "checkmark.circle.fill" : "exclamationmark.triangle.fill")
+                            .foregroundStyle(accessibilityTrusted ? .green : .orange)
+                        Button("Open Settings…") { Permissions.openAccessibilitySettings() }
+                    }
+                }
+                Text("Required so Tinycast can paste a clipboard item into the app you were using.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
+            Section("Startup") {
+                Toggle("Launch Tinycast at login", isOn: $settings.launchAtLogin)
+            }
+        }
+        .formStyle(.grouped)
+        .onAppear { accessibilityTrusted = Permissions.isAccessibilityTrusted() }
+    }
+}
