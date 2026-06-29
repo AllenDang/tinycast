@@ -15,10 +15,5 @@ struct TinycastApp: App {
             Button("Quit Tinycast") { NSApp.terminate(nil) }
                 .keyboardShortcut("q")
         }
-
-        Settings {
-            SettingsRootView()
-                .environmentObject(AppCore.shared.appIndex)
-        }
     }
 }

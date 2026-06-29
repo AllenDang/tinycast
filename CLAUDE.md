@@ -61,18 +61,20 @@ from `App/AppDelegate.swift` on launch. It owns every manager:
 - **Paster / Permissions** (`Core/*.swift`) — paste-back sets the pasteboard, re-activates the
   previously frontmost app, and posts ⌘V via `CGEvent` (needs Accessibility / `AXIsProcessTrusted`).
 
-UI lives in `Features/`: `RootPaletteView` (search field + mode switch), `Launcher/`, `Clipboard/`
-(list + preview pane), `Settings/` (SwiftUI `Settings` scene, opened via `AppCore.showSettings()`).
+UI lives in `Features/`: `RootPaletteView` (search field + bottom bar), `Launcher/`, `Clipboard/`
+(list + preview pane), `About/` (About + Changelog), `Settings/`. Settings, About and Changelog all
+open in their own `NSWindow` via `AuxWindowController` (`Features/About/AboutView.swift`), raised by
+`AppCore.showSettings()/showAbout()/showChangelog()` — the SwiftUI `Settings` scene is unreliable for
+an accessory app, so it is not used.
 
 ## SwiftUI gotchas learned here (don't regress)
 
 - **List identity:** use plain `ForEach(results)` with stable `Identifiable` ids and drive
   selection/scroll by **element id**. Do *not* combine `ForEach(enumerated, id:)` with `.id(index)`
   and `scrollTo(Int)` — it makes rows render stale/wrong content.
-- **Overlay scrollers:** SwiftUI's `HostingScrollView` resets `scrollerStyle` back to legacy after
-  layout; `Core/OverlayScrollers.swift` re-asserts `.overlay` to get thin, auto-hiding scrollbars.
-- **Settings window:** an accessory app must `NSApp.activate` and raise the window itself, otherwise
-  Settings opens behind other apps and the selected tab renders grey.
+- **Aux windows:** an accessory app must `NSApp.activate` and raise the window itself, otherwise
+  Settings/About/Changelog open behind other apps and render inactive/grey. `AuxWindowController`
+  caches one window per id and does this on every `show`.
 
 ## Conventions
 

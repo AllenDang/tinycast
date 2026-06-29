@@ -90,16 +90,11 @@ final class AppCore: ObservableObject {
         windowController.hide(restoreFocus: restoreFocus)
     }
 
-    /// Open Settings in front (accessory apps otherwise open it behind / inactive).
+    /// Settings runs in its own window (the SwiftUI `Settings` scene is unreliable for accessory
+    /// apps), raised to the front via the same controller as About/Changelog.
     func showSettings() {
-        NSApp.activate(ignoringOtherApps: true)
-        NotificationCenter.default.post(name: .tinycastShowSettings, object: nil)
-        NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
-        DispatchQueue.main.async {
-            for window in NSApp.windows where (window.identifier?.rawValue ?? "").contains("Settings") {
-                window.makeKeyAndOrderFront(nil)
-                window.orderFrontRegardless()
-            }
+        auxWindows.show(id: "settings", title: "Settings", size: CGSize(width: 500, height: 440)) {
+            SettingsRootView().environmentObject(self.appIndex)
         }
     }
 

@@ -98,8 +98,8 @@ private struct AppRow: View {
                     if running {
                         Circle()
                             .fill(.secondary)
-                            .frame(width: 5, height: 5)
-                            .offset(y: 5)
+                            .frame(width: 4, height: 4)
+                            .offset(y: 4)
                     }
                 }
             Text(app.name)
@@ -119,7 +119,8 @@ private struct AppRow: View {
     }
 }
 
-/// Actions popover content for a launcher app — shown anchored at the bottom-right on right-click.
+/// Actions popover content for a launcher app — shown anchored at the bottom-right on right-click
+/// or from the Actions pill. Styled like Raycast's actions menu.
 struct AppActionsMenu: View {
     let app: AppEntry
     let dismiss: () -> Void
@@ -127,39 +128,24 @@ struct AppActionsMenu: View {
     @EnvironmentObject private var favorites: FavoritesStore
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 2) {
-            actionButton("Open Application", systemImage: "arrow.up.forward.app") {
+        PopoverMenu(header: app.name) {
+            PopoverMenuRow(title: "Open Application", systemImage: "arrow.up.forward.app", shortcut: "↵") {
                 core.launch(app)
+                dismiss()
             }
             if favorites.isFavorite(app) {
-                actionButton("Remove from Favorites", systemImage: "star.slash") {
+                PopoverMenuRow(title: "Remove from Favorites", systemImage: "star.slash") {
                     favorites.toggle(app)
                 }
             } else {
-                actionButton("Add to Favorites", systemImage: "star") {
+                PopoverMenuRow(title: "Add to Favorites", systemImage: "star") {
                     favorites.toggle(app)
                 }
             }
-            actionButton("Show in Finder", systemImage: "folder") {
+            PopoverMenuRow(title: "Show in Finder", systemImage: "folder") {
                 core.showInFinder(app)
+                dismiss()
             }
         }
-        .padding(6)
-        .frame(width: 220)
-    }
-
-    private func actionButton(_ title: String, systemImage: String, action: @escaping () -> Void) -> some View {
-        Button {
-            action()
-            dismiss()
-        } label: {
-            Label(title, systemImage: systemImage)
-                .font(.system(size: 13))
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-        .padding(.horizontal, 8)
-        .padding(.vertical, 6)
     }
 }

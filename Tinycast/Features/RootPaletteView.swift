@@ -8,6 +8,7 @@ struct RootPaletteView: View {
     @EnvironmentObject private var favorites: FavoritesStore
     @FocusState private var searchFocused: Bool
     @State private var showActions = false
+    @State private var showAppMenu = false
 
     private var isQueryEmpty: Bool { vm.query.trimmingCharacters(in: .whitespaces).isEmpty }
 
@@ -38,21 +39,16 @@ struct RootPaletteView: View {
 
         return VStack(spacing: 0) {
             header
-            Divider().opacity(0.35)
+            Divider().opacity(0.1)
             content(apps: apps, clips: clips, selection: sel,
                     favoriteCount: favoriteCount, showSections: showSections)
-            Divider().opacity(0.35)
+            Divider().opacity(0.1)
             bottomBar(selectedApp: selectedApp)
         }
         .frame(width: 720, height: 470)
-        .background(OverlayScrollers())
-        .background(Color.black.opacity(0.25))
+        .background(Color.black.opacity(0.1))
         .background(VisualEffectView())
         .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: 20, style: .continuous)
-                .strokeBorder(.white.opacity(0.08), lineWidth: 1)
-        )
         .onChange(of: vm.focusToken) { searchFocused = true }
         .onChange(of: vm.query) { vm.selection = 0 }
         .onChange(of: vm.mode) { vm.selection = 0; showActions = false }
@@ -61,6 +57,11 @@ struct RootPaletteView: View {
         .onKeyPress(.upArrow) { move(-1); return .handled }
         .onKeyPress(.escape) { core.hidePalette(); return .handled }
         .onKeyPress(.tab) { toggleMode(); return .handled }
+        .onKeyPress(keys: [","], phases: .down) { press in
+            guard press.modifiers.contains(.command) else { return .ignored }
+            core.showSettings()
+            return .handled
+        }
         .onKeyPress(keys: [.delete, .deleteForward], phases: .down) { press in
             guard vm.mode == .clipboard, press.modifiers.contains(.command) else { return .ignored }
             deleteSelectedClip()
@@ -117,38 +118,73 @@ struct RootPaletteView: View {
 
     private func bottomBar(selectedApp: AppEntry?) -> some View {
         HStack(spacing: 0) {
-            Menu {
-                Button("Settings…") { core.showSettings() }
-                    .keyboardShortcut(",")
-                Button("About Tinycast") { core.showAbout() }
-                Button("Changelog") { core.showChangelog() }
-            } label: {
-                Image(systemName: "line.3.horizontal")
-                    .font(.system(size: 14, weight: .medium))
-                    .foregroundStyle(.secondary)
-            }
-            .menuStyle(.borderlessButton)
-            .menuIndicator(.hidden)
-            .fixedSize()
-
+            appMenuButton
             Spacer()
+            actionPill(selectedApp: selectedApp)
+        }
+        .padding(.horizontal, 12)
+        .frame(height: 44)
+    }
 
-            HStack(spacing: 6) {
-                Text(vm.mode == .launcher ? "Open Application" : "Paste")
-                Image(systemName: "return")
-            }
-            .font(.system(size: 12))
-            .foregroundStyle(.secondary)
-            .popover(isPresented: $showActions, arrowEdge: .top) {
-                if let app = selectedApp {
-                    AppActionsMenu(app: app) { showActions = false }
-                        .environmentObject(core)
-                        .environmentObject(favorites)
+    private var appMenuButton: some View {
+        Button { showAppMenu = true } label: {
+            Image(systemName: "line.3.horizontal")
+                .font(.system(size: 14, weight: .medium))
+                .foregroundStyle(.secondary)
+                .frame(width: 28, height: 28)
+                .background(Circle().fill(.white.opacity(0.08)))
+        }
+        .buttonStyle(.plain)
+        .popover(isPresented: $showAppMenu, arrowEdge: .top) {
+            PopoverMenu {
+                PopoverMenuRow(title: "Settings…", systemImage: "gearshape", shortcut: "⌘,") {
+                    showAppMenu = false; core.showSettings()
+                }
+                PopoverMenuRow(title: "About Tinycast", systemImage: "info.circle") {
+                    showAppMenu = false; core.showAbout()
+                }
+                PopoverMenuRow(title: "Changelog", systemImage: "doc.text") {
+                    showAppMenu = false; core.showChangelog()
                 }
             }
         }
-        .padding(.horizontal, 16)
-        .frame(height: 40)
+    }
+
+    @ViewBuilder
+    private func actionPill(selectedApp: AppEntry?) -> some View {
+        HStack(spacing: 0) {
+            pillSegment(action: activateSelection) {
+                Text(vm.mode == .launcher ? "Open Application" : "Paste")
+                Image(systemName: "return")
+            }
+            if vm.mode == .launcher {
+                Divider().frame(height: 16).opacity(0.25)
+                pillSegment(action: { showActions = true }) {
+                    Text("Actions")
+                    Text("⌘K")
+                }
+            }
+        }
+        .background(Capsule().fill(.white.opacity(0.08)))
+        .popover(isPresented: $showActions, arrowEdge: .top) {
+            if let app = selectedApp {
+                AppActionsMenu(app: app) { showActions = false }
+                    .environmentObject(core)
+                    .environmentObject(favorites)
+            }
+        }
+    }
+
+    private func pillSegment<Label: View>(action: @escaping () -> Void, @ViewBuilder label: () -> Label) -> some View {
+        Button(action: action) {
+            HStack(spacing: 6) { label() }
+                .font(.system(size: 12))
+                .foregroundStyle(.secondary)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 6)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
     }
 
     private func deleteSelectedClip() {
