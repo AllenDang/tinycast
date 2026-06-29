@@ -8,6 +8,9 @@ struct LauncherList: View {
     let onActions: (AppEntry) -> Void
     @EnvironmentObject private var core: AppCore
     @EnvironmentObject private var runningApps: RunningAppsMonitor
+    /// Mouse hover wins the highlight; when the cursor leaves the list we fall back to the
+    /// keyboard selection. Kept separate from `vm.selection` so hovering never triggers auto-scroll.
+    @State private var hoveredID: AppEntry.ID?
 
     private enum Row: Identifiable {
         case header(String)
@@ -51,10 +54,14 @@ struct LauncherList: View {
                                 case .app(let app):
                                     AppRow(
                                         app: app,
-                                        selected: app.id == selectedID,
+                                        selected: hoveredID == nil ? app.id == selectedID : hoveredID == app.id,
                                         running: app.bundleID.map(runningApps.runningBundleIDs.contains) ?? false
                                     )
                                     .contentShape(Rectangle())
+                                    .onHover { inside in
+                                        if inside { hoveredID = app.id }
+                                        else if hoveredID == app.id { hoveredID = nil }
+                                    }
                                     .onTapGesture { core.launch(app) }
                                     .onRightClick { onActions(app) }
                                 }
@@ -63,6 +70,7 @@ struct LauncherList: View {
                         .padding(8)
                     }
                     .onChange(of: selectedID) { _, id in
+                        hoveredID = nil
                         if let id { proxy.scrollTo(id, anchor: .center) }
                     }
                 }
@@ -136,10 +144,12 @@ struct AppActionsMenu: View {
             if favorites.isFavorite(app) {
                 PopoverMenuRow(title: "Remove from Favorites", systemImage: "star.slash") {
                     favorites.toggle(app)
+                    dismiss()
                 }
             } else {
                 PopoverMenuRow(title: "Add to Favorites", systemImage: "star") {
                     favorites.toggle(app)
+                    dismiss()
                 }
             }
             PopoverMenuRow(title: "Show in Finder", systemImage: "folder") {

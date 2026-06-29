@@ -117,24 +117,27 @@ struct RootPaletteView: View {
     }
 
     private func bottomBar(selectedApp: AppEntry?) -> some View {
-        HStack(spacing: 0) {
-            appMenuButton
-            Spacer()
-            actionPill(selectedApp: selectedApp)
+        GlassEffectContainer(spacing: 10) {
+            HStack(spacing: 0) {
+                appMenuButton
+                Spacer()
+                actionPill(selectedApp: selectedApp)
+            }
         }
-        .padding(.horizontal, 12)
-        .frame(height: 44)
+        .padding(.horizontal, 14)
+        .frame(height: 50)
     }
 
     private var appMenuButton: some View {
         Button { showAppMenu = true } label: {
             Image(systemName: "line.3.horizontal")
-                .font(.system(size: 14, weight: .medium))
+                .font(.system(size: 13, weight: .semibold))
                 .foregroundStyle(.secondary)
-                .frame(width: 28, height: 28)
-                .background(Circle().fill(.white.opacity(0.08)))
+                .frame(width: 32, height: 32)
+                .contentShape(.circle)
         }
         .buttonStyle(.plain)
+        .glassEffect(.regular.interactive(), in: .circle)
         .popover(isPresented: $showAppMenu, arrowEdge: .top) {
             PopoverMenu {
                 PopoverMenuRow(title: "Settings…", systemImage: "gearshape", shortcut: "⌘,") {
@@ -152,20 +155,19 @@ struct RootPaletteView: View {
 
     @ViewBuilder
     private func actionPill(selectedApp: AppEntry?) -> some View {
-        HStack(spacing: 0) {
-            pillSegment(action: activateSelection) {
+        Button(action: activateSelection) {
+            HStack(spacing: 6) {
                 Text(vm.mode == .launcher ? "Open Application" : "Paste")
                 Image(systemName: "return")
             }
-            if vm.mode == .launcher {
-                Divider().frame(height: 16).opacity(0.25)
-                pillSegment(action: { showActions = true }) {
-                    Text("Actions")
-                    Text("⌘K")
-                }
-            }
+            .font(.system(size: 12, weight: .medium))
+            .foregroundStyle(.primary)
+            .padding(.horizontal, 14)
+            .padding(.vertical, 8)
+            .contentShape(.capsule)
         }
-        .background(Capsule().fill(.white.opacity(0.08)))
+        .buttonStyle(.plain)
+        .glassEffect(.regular.interactive(), in: .capsule)
         .popover(isPresented: $showActions, arrowEdge: .top) {
             if let app = selectedApp {
                 AppActionsMenu(app: app) { showActions = false }
@@ -173,18 +175,6 @@ struct RootPaletteView: View {
                     .environmentObject(favorites)
             }
         }
-    }
-
-    private func pillSegment<Label: View>(action: @escaping () -> Void, @ViewBuilder label: () -> Label) -> some View {
-        Button(action: action) {
-            HStack(spacing: 6) { label() }
-                .font(.system(size: 12))
-                .foregroundStyle(.secondary)
-                .padding(.horizontal, 10)
-                .padding(.vertical, 6)
-                .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
     }
 
     private func deleteSelectedClip() {
