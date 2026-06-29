@@ -38,9 +38,12 @@ final class AppCore: ObservableObject {
     let clipboardManager: ClipboardManager
     let hotKeys = HotKeyManager()
     let settings = AppSettings()
+    let favorites = FavoritesStore()
+    let runningApps = RunningAppsMonitor()
     let palette = PaletteViewModel()
 
     private lazy var windowController = PaletteWindowController(core: self)
+    private let auxWindows = AuxWindowController()
 
     private init() {
         clipboardManager = ClipboardManager(store: clipboardStore)
@@ -100,11 +103,28 @@ final class AppCore: ObservableObject {
         }
     }
 
+    func showAbout() {
+        auxWindows.show(id: "about", title: "About Tinycast", size: CGSize(width: 320, height: 320)) {
+            AboutView()
+        }
+    }
+
+    func showChangelog() {
+        auxWindows.show(id: "changelog", title: "Changelog", size: CGSize(width: 460, height: 480)) {
+            ChangelogView()
+        }
+    }
+
     // MARK: - Actions invoked from the palette UI
 
     func launch(_ app: AppEntry) {
         hidePalette(restoreFocus: false)
         AppLauncher.launch(app.url)
+    }
+
+    func showInFinder(_ app: AppEntry) {
+        hidePalette(restoreFocus: false)
+        AppLauncher.showInFinder(app.url)
     }
 
     func paste(_ item: ClipboardItem) {

@@ -44,6 +44,8 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
             .environmentObject(core.palette)
             .environmentObject(core.appIndex)
             .environmentObject(core.clipboardStore)
+            .environmentObject(core.favorites)
+            .environmentObject(core.runningApps)
         let panel = PalettePanel(rootView: root)
         panel.delegate = self
         self.panel = panel

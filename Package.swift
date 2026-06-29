@@ -15,6 +15,7 @@ let package = Package(
             ],
             path: "Tinycast",
             exclude: ["Info.plist", "Tinycast.entitlements", "Assets.xcassets"],
+            resources: [.process("Resources")],
             swiftSettings: [
                 .swiftLanguageMode(.v5)
             ]

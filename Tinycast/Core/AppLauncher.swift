@@ -7,6 +7,11 @@ enum AppLauncher {
         NSWorkspace.shared.openApplication(at: url, configuration: NSWorkspace.OpenConfiguration())
     }
 
+    @MainActor
+    static func showInFinder(_ url: URL) {
+        NSWorkspace.shared.activateFileViewerSelecting([url])
+    }
+
     /// Toggle behaviour: focus the app if it is not frontmost, hide it if it is,
     /// launch it if it isn't running.
     @MainActor
