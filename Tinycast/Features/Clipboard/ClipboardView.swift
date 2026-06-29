@@ -74,7 +74,7 @@ private struct ClipboardRow: View {
                 .frame(width: 26, height: 20)
                 .foregroundStyle(.secondary)
         case .image:
-            if let url = imageURL, let image = NSImage(contentsOf: url) {
+            if let url = imageURL, let image = ImageThumbnail.load(url, maxPixel: 64) {
                 Image(nsImage: image)
                     .resizable()
                     .aspectRatio(contentMode: .fill)
@@ -116,7 +116,7 @@ struct ClipboardPreview: View {
                     .frame(maxWidth: .infinity, alignment: .topLeading)
             }
         case .image:
-            if let url = store.imageURL(for: item), let image = NSImage(contentsOf: url) {
+            if let url = store.imageURL(for: item), let image = ImageThumbnail.load(url, maxPixel: 1200) {
                 Image(nsImage: image)
                     .resizable()
                     .aspectRatio(contentMode: .fit)
@@ -145,8 +145,8 @@ struct ClipboardPreview: View {
             let count = (item.text ?? "").count
             return "Text · \(count) character\(count == 1 ? "" : "s")"
         case .image:
-            if let url = store.imageURL(for: item), let image = NSImage(contentsOf: url) {
-                return "Image · \(Int(image.size.width))×\(Int(image.size.height))"
+            if let url = store.imageURL(for: item), let size = ImageThumbnail.pixelSize(of: url) {
+                return "Image · \(Int(size.width))×\(Int(size.height))"
             }
             return "Image"
         }

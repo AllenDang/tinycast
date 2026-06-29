@@ -15,10 +15,17 @@ struct RootPaletteView: View {
     private var selection: Int { resultCount == 0 ? 0 : min(max(vm.selection, 0), resultCount - 1) }
 
     var body: some View {
-        VStack(spacing: 0) {
+        // Filter once per render for the active mode only; event handlers (rare) use the computed
+        // properties above. Avoids running the matcher/search several times for a single render.
+        let apps = vm.mode == .launcher ? appResults : []
+        let clips = vm.mode == .clipboard ? clipResults : []
+        let count = vm.mode == .launcher ? apps.count : clips.count
+        let sel = count == 0 ? 0 : min(max(vm.selection, 0), count - 1)
+
+        return VStack(spacing: 0) {
             header
             Divider().opacity(0.35)
-            content
+            content(apps: apps, clips: clips, selection: sel)
         }
         .frame(width: 720, height: 470)
         .background(OverlayScrollers())
@@ -71,36 +78,30 @@ struct RootPaletteView: View {
     }
 
     @ViewBuilder
-    private var content: some View {
+    private func content(apps: [AppEntry], clips: [ClipboardItem], selection: Int) -> some View {
         switch vm.mode {
         case .launcher:
-            LauncherList(results: appResults, selectedID: selectedApp?.id)
+            let selectedID = apps.indices.contains(selection) ? apps[selection].id : nil
+            LauncherList(results: apps, selectedID: selectedID)
         case .clipboard:
+            let selected = clips.indices.contains(selection) ? clips[selection] : nil
             HStack(spacing: 0) {
                 ClipboardList(
-                    results: clipResults,
-                    selectedID: selectedClipItem?.id,
-                    onSelect: { item in vm.selection = clipResults.firstIndex(of: item) ?? 0 },
+                    results: clips,
+                    selectedID: selected?.id,
+                    onSelect: { item in vm.selection = clips.firstIndex(of: item) ?? 0 },
                     onActivate: activateSelection
                 )
                 .frame(width: 290)
                 Divider().opacity(0.35)
-                ClipboardPreview(item: selectedClipItem)
+                ClipboardPreview(item: selected)
             }
         }
     }
 
-    private var selectedApp: AppEntry? {
-        appResults.indices.contains(selection) ? appResults[selection] : nil
-    }
-
-    private var selectedClipItem: ClipboardItem? {
-        clipResults.indices.contains(selection) ? clipResults[selection] : nil
-    }
-
     private func deleteSelectedClip() {
-        guard let item = selectedClipItem else { return }
-        store.remove(item)
+        guard clipResults.indices.contains(selection) else { return }
+        store.remove(clipResults[selection])
     }
 
     // MARK: - Actions
