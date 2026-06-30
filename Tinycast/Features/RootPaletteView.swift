@@ -156,11 +156,13 @@ struct RootPaletteView: View {
 
     private var appMenuButton: some View {
         Button { withAnimation(Self.menuAnimation) { showAppMenu.toggle() } } label: {
-            Image(systemName: "line.3.horizontal")
-                .font(.system(size: 13, weight: .semibold))
-                .foregroundStyle(.secondary)
-                .frame(width: Theme.Size.menuButton, height: Theme.Size.menuButton)
-                .contentShape(.circle)
+            VStack(alignment: .leading, spacing: 4) {
+                Capsule().frame(width: 15, height: 2.5)
+                Capsule().frame(width: 9, height: 2.5)
+            }
+            .foregroundStyle(.secondary)
+            .frame(width: Theme.Size.menuButton, height: Theme.Size.menuButton)
+            .contentShape(.circle)
         }
         .buttonStyle(.plain)
         .frosted(in: Circle())
