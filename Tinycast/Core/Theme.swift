@@ -17,13 +17,13 @@ enum Theme {
         static let row: CGFloat = 8
         static let menu: CGFloat = 6
         static let menuPanel: CGFloat = 14
-        static let thumbnail: CGFloat = 4
+        static let thumbnail: CGFloat = 6
     }
 
     enum Size {
         static let panelWidth: CGFloat = 720
         static let panelHeight: CGFloat = 470
-        static let headerHeight: CGFloat = 54
+        static let headerHeight: CGFloat = 44
         static let bottomBarHeight: CGFloat = 52
         static let rowIcon: CGFloat = 24
         static let menuButton: CGFloat = 36

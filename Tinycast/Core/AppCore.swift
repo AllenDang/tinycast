@@ -7,7 +7,7 @@ enum PaletteMode: String, CaseIterable, Identifiable {
 
     var id: String { rawValue }
     var title: String { self == .launcher ? "Apps" : "Clipboard" }
-    var systemImage: String { self == .launcher ? "magnifyingglass" : "doc.on.clipboard" }
+    var systemImage: String { self == .launcher ? "magnifyingglass" : "doc.on.doc" }
     var placeholder: String { self == .launcher ? "Search apps…" : "Search clipboard…" }
 }
 

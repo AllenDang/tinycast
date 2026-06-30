@@ -116,24 +116,32 @@ private struct ClipboardRow: View {
     private var thumbnail: some View {
         switch item.kind {
         case .text:
-            Image(systemName: "text.alignleft")
-                .symbolRenderingMode(.hierarchical)
-                .frame(width: Theme.Size.rowIcon, height: Theme.Size.rowIcon)
-                .foregroundStyle(.secondary)
+            glyphTile("doc.text")
         case .image:
             if let url = imageURL, let image = ImageThumbnail.load(url, maxPixel: 64) {
                 Image(nsImage: image)
                     .resizable()
                     .aspectRatio(contentMode: .fill)
                     .frame(width: Theme.Size.rowIcon, height: Theme.Size.rowIcon)
-                    .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.thumbnail))
+                    .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.thumbnail, style: .continuous))
             } else {
-                Image(systemName: "photo")
-                    .symbolRenderingMode(.hierarchical)
-                    .frame(width: Theme.Size.rowIcon, height: Theme.Size.rowIcon)
-                    .foregroundStyle(.secondary)
+                glyphTile("photo")
             }
         }
+    }
+
+    /// An SF Symbol centered on a rounded tile, sized to match the launcher's app icon so text and
+    /// image clipboard rows share one consistent thumbnail shape.
+    private func glyphTile(_ systemName: String) -> some View {
+        RoundedRectangle(cornerRadius: Theme.Radius.thumbnail, style: .continuous)
+            .fill(Color.primary.opacity(0.08))
+            .frame(width: Theme.Size.rowIcon, height: Theme.Size.rowIcon)
+            .overlay(
+                Image(systemName: systemName)
+                    .font(.system(size: 13))
+                    .symbolRenderingMode(.hierarchical)
+                    .foregroundStyle(.secondary)
+            )
     }
 }
 

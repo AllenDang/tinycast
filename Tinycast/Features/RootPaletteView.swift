@@ -150,6 +150,9 @@ struct RootPaletteView: View {
                         }
                     )
                     .frame(width: Theme.Size.clipboardListWidth)
+                    Rectangle()
+                        .fill(Color.primary.opacity(0.10))
+                        .frame(width: 1)
                     ClipboardPreview(item: selected)
                 }
             }
