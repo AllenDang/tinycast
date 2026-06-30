@@ -30,26 +30,96 @@ struct AboutView: View {
 }
 
 struct ChangelogView: View {
-    // Read + parse the bundled markdown once; the file is static, so a `let` avoids re-decoding it
+    // Read + parse the bundled markdown once; the file is static, so a `let` avoids re-parsing it
     // on every body evaluation.
-    private let markdown: AttributedString = {
+    private let blocks: [MarkdownBlock] = {
         guard let url = Bundle.module.url(forResource: "CHANGELOG", withExtension: "md"),
-              let text = try? String(contentsOf: url, encoding: .utf8),
-              let attributed = try? AttributedString(
-                  markdown: text,
-                  options: .init(interpretedSyntax: .inlineOnlyPreservingWhitespace)
-              )
-        else { return AttributedString("No changelog available.") }
-        return attributed
+              let text = try? String(contentsOf: url, encoding: .utf8)
+        else { return [.paragraph(AttributedString("No changelog available."))] }
+        return MarkdownBlock.parse(text)
     }()
 
     var body: some View {
         ScrollView {
-            Text(markdown)
-                .font(.body)
-                .textSelection(.enabled)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(20)
+            VStack(alignment: .leading, spacing: 8) {
+                ForEach(Array(blocks.enumerated()), id: \.offset) { _, block in
+                    block.view
+                }
+            }
+            .textSelection(.enabled)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(24)
+            .thinOverlayScrollbar()
+        }
+    }
+}
+
+/// A minimal, dependency-free block-level markdown renderer for the changelog. SwiftUI's
+/// `Text(AttributedString)` only styles *inline* markdown (bold/italic/code/links) — it ignores
+/// block syntax, so `#` headings and `-` bullets would otherwise render as literal characters.
+/// This parser splits the document into blocks and renders each with the right SwiftUI styling,
+/// while still using `AttributedString` for inline formatting within each line.
+enum MarkdownBlock {
+    case heading(level: Int, text: AttributedString)
+    case bullet(AttributedString)
+    case paragraph(AttributedString)
+
+    static func parse(_ raw: String) -> [MarkdownBlock] {
+        var blocks: [MarkdownBlock] = []
+        for line in raw.components(separatedBy: .newlines) {
+            let trimmed = line.trimmingCharacters(in: .whitespaces)
+            if trimmed.isEmpty { continue }
+            if let level = headingLevel(trimmed) {
+                blocks.append(.heading(level: level, text: inline(String(trimmed.dropFirst(level + 1)))))
+            } else if trimmed.hasPrefix("- ") || trimmed.hasPrefix("* ") {
+                blocks.append(.bullet(inline(String(trimmed.dropFirst(2)))))
+            } else {
+                blocks.append(.paragraph(inline(trimmed)))
+            }
+        }
+        return blocks
+    }
+
+    /// Number of leading `#`s if the line is an ATX heading (`#` … `######` followed by a space).
+    private static func headingLevel(_ line: String) -> Int? {
+        let hashes = line.prefix { $0 == "#" }.count
+        guard (1...6).contains(hashes) else { return nil }
+        let after = line.index(line.startIndex, offsetBy: hashes)
+        guard after < line.endIndex, line[after] == " " else { return nil }
+        return hashes
+    }
+
+    /// Inline-only markdown (bold/italic/code/links) → styled `AttributedString`.
+    private static func inline(_ s: String) -> AttributedString {
+        (try? AttributedString(
+            markdown: s,
+            options: .init(interpretedSyntax: .inlineOnlyPreservingWhitespace)
+        )) ?? AttributedString(s)
+    }
+
+    @ViewBuilder var view: some View {
+        switch self {
+        case .heading(let level, let text):
+            Text(text)
+                .font(Self.headingFont(level))
+                .padding(.top, level <= 2 ? 8 : 2)
+        case .bullet(let text):
+            HStack(alignment: .firstTextBaseline, spacing: 8) {
+                Text("•").foregroundStyle(.secondary)
+                Text(text)
+            }
+            .padding(.leading, 4)
+        case .paragraph(let text):
+            Text(text)
+        }
+    }
+
+    private static func headingFont(_ level: Int) -> Font {
+        switch level {
+        case 1: return .title.bold()
+        case 2: return .title2.bold()
+        case 3: return .title3.bold()
+        default: return .headline
         }
     }
 }

@@ -41,6 +41,9 @@ struct GeneralSettingsView: View {
 
             Section("Startup") {
                 Toggle("Launch Tinycast at login", isOn: $settings.launchAtLogin)
+                    // Attached to a row (not the Form) so the configurator lands inside the
+                    // Form's own scroll view, where `enclosingScrollView` can find it.
+                    .thinOverlayScrollbar()
             }
         }
         .formStyle(.grouped)

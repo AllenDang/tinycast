@@ -39,6 +39,7 @@ struct AppHotkeysSettingsView: View {
                         .padding(.vertical, 5)
                     }
                 }
+                .thinOverlayScrollbar()
             }
         }
     }
