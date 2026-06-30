@@ -148,7 +148,7 @@ struct AppActionsMenu: View {
 
     var body: some View {
         PopoverMenu(header: app.name) {
-            PopoverMenuRow(title: "Open Application", systemImage: "arrow.up.forward.app", shortcut: "↵") {
+            PopoverMenuRow(title: "Open Application", systemImage: "list.bullet.rectangle", shortcut: "↵") {
                 core.launch(app)
                 dismiss()
             }

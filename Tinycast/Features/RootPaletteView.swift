@@ -70,7 +70,7 @@ struct RootPaletteView: View {
             }
         }
         .frame(width: Theme.Size.panelWidth, height: Theme.Size.panelHeight)
-        .background(Color.black.opacity(0.45))
+        .background(Color.black.opacity(0.40))
         .background(VisualEffectView())
         .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.panel, style: .continuous))
         .onChange(of: vm.focusToken) { searchFocused = true }
@@ -174,14 +174,14 @@ struct RootPaletteView: View {
 
     private var appMenu: some View {
         PopoverMenu {
-            PopoverMenuRow(title: "Settings…", systemImage: "gearshape", shortcut: "⌘,") {
-                closeMenus(); core.showSettings()
+           PopoverMenuRow(title: "Changelog", systemImage: "doc.text") {
+                closeMenus(); core.showChangelog()
             }
             PopoverMenuRow(title: "About Tinycast", systemImage: "info.circle") {
                 closeMenus(); core.showAbout()
             }
-            PopoverMenuRow(title: "Changelog", systemImage: "doc.text") {
-                closeMenus(); core.showChangelog()
+              PopoverMenuRow(title: "Settings", systemImage: "gearshape", shortcut: "⌘,") {
+                closeMenus(); core.showSettings()
             }
         }
     }
