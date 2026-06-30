@@ -10,16 +10,16 @@ struct PopoverMenu<Content: View>: View {
         VStack(alignment: .leading, spacing: 1) {
             if let header {
                 Text(header)
-                    .font(.system(size: 11, weight: .semibold))
+                    .font(Theme.Typography.sectionHeader)
                     .foregroundStyle(.secondary)
-                    .padding(.horizontal, 10)
-                    .padding(.top, 4)
-                    .padding(.bottom, 2)
+                    .padding(.horizontal, Theme.Spacing.md)
+                    .padding(.top, Theme.Spacing.xs)
+                    .padding(.bottom, Theme.Spacing.xs / 2)
             }
             content
         }
-        .padding(6)
-        .frame(width: 240)
+        .padding(Theme.Spacing.sm)
+        .frame(width: Theme.Size.menuWidth)
     }
 }
 
@@ -34,27 +34,27 @@ struct PopoverMenuRow: View {
 
     var body: some View {
         Button(action: action) {
-            HStack(spacing: 10) {
+            HStack(spacing: Theme.Spacing.md) {
                 Image(systemName: systemImage)
-                    .font(.system(size: 13))
+                    .font(Theme.Typography.menuIcon)
                     .foregroundStyle(.secondary)
-                    .frame(width: 16)
+                    .frame(width: Theme.Size.menuIcon)
                 Text(title)
-                    .font(.system(size: 13))
-                Spacer(minLength: 8)
+                    .font(Theme.Typography.menuRow)
+                Spacer(minLength: Theme.Spacing.sm)
                 if let shortcut {
                     Text(shortcut)
-                        .font(.system(size: 12))
+                        .font(Theme.Typography.menuShortcut)
                         .foregroundStyle(.secondary)
                 }
             }
-            .padding(.horizontal, 8)
-            .padding(.vertical, 6)
+            .padding(.horizontal, Theme.Spacing.sm)
+            .padding(.vertical, Theme.Spacing.sm)
             .frame(maxWidth: .infinity, alignment: .leading)
             .contentShape(Rectangle())
             .background(
-                RoundedRectangle(cornerRadius: 6, style: .continuous)
-                    .fill(hovering ? Color.primary.opacity(0.12) : Color.clear)
+                RoundedRectangle(cornerRadius: Theme.Radius.menu, style: .continuous)
+                    .fill(hovering ? Theme.Colors.menuHover : Color.clear)
             )
         }
         .buttonStyle(.plain)

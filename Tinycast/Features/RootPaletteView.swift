@@ -39,16 +39,16 @@ struct RootPaletteView: View {
 
         return VStack(spacing: 0) {
             header
-            Divider().opacity(0.1)
+            Divider().opacity(Theme.Opacity.divider)
             content(apps: apps, clips: clips, selection: sel,
                     favoriteCount: favoriteCount, showSections: showSections)
-            Divider().opacity(0.1)
+            Divider().opacity(Theme.Opacity.divider)
             bottomBar(selectedApp: selectedApp)
         }
-        .frame(width: 720, height: 470)
-        .background(Color.black.opacity(0.1))
+        .frame(width: Theme.Size.panelWidth, height: Theme.Size.panelHeight)
+        .background(Theme.Colors.panelTint)
         .background(VisualEffectView())
-        .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.panel, style: .continuous))
         .onChange(of: vm.focusToken) { searchFocused = true }
         .onChange(of: vm.query) { vm.selection = 0 }
         .onChange(of: vm.mode) { vm.selection = 0; showActions = false }
@@ -70,18 +70,18 @@ struct RootPaletteView: View {
     }
 
     private var header: some View {
-        HStack(spacing: 12) {
+        HStack(spacing: Theme.Spacing.lg) {
             Image(systemName: vm.mode.systemImage)
-                .font(.system(size: 18))
+                .font(Theme.Typography.headerIcon)
                 .foregroundStyle(.secondary)
             TextField(vm.mode.placeholder, text: $vm.query)
                 .textFieldStyle(.plain)
-                .font(.system(size: 22, weight: .regular))
+                .font(Theme.Typography.searchField)
                 .focused($searchFocused)
                 .onSubmit(activateSelection)
         }
-        .padding(.horizontal, 20)
-        .frame(height: 54)
+        .padding(.horizontal, Theme.Spacing.xxl)
+        .frame(height: Theme.Size.headerHeight)
     }
 
     @ViewBuilder
@@ -109,23 +109,21 @@ struct RootPaletteView: View {
                     onSelect: { item in vm.selection = clips.firstIndex(of: item) ?? 0 },
                     onActivate: activateSelection
                 )
-                .frame(width: 290)
-                Divider().opacity(0.35)
+                .frame(width: Theme.Size.clipboardListWidth)
+                Divider().opacity(Theme.Opacity.previewDivider)
                 ClipboardPreview(item: selected)
             }
         }
     }
 
     private func bottomBar(selectedApp: AppEntry?) -> some View {
-        GlassEffectContainer(spacing: 10) {
-            HStack(spacing: 0) {
-                appMenuButton
-                Spacer()
-                actionPill(selectedApp: selectedApp)
-            }
+        HStack(spacing: 0) {
+            appMenuButton
+            Spacer()
+            actionPill(selectedApp: selectedApp)
         }
-        .padding(.horizontal, 14)
-        .frame(height: 50)
+        .padding(.horizontal, Theme.Spacing.xl)
+        .frame(height: Theme.Size.bottomBarHeight)
     }
 
     private var appMenuButton: some View {
@@ -133,11 +131,11 @@ struct RootPaletteView: View {
             Image(systemName: "line.3.horizontal")
                 .font(.system(size: 13, weight: .semibold))
                 .foregroundStyle(.secondary)
-                .frame(width: 32, height: 32)
+                .frame(width: Theme.Size.menuButton, height: Theme.Size.menuButton)
                 .contentShape(.circle)
         }
         .buttonStyle(.plain)
-        .glassEffect(.regular.interactive(), in: .circle)
+        .frosted(in: Circle())
         .popover(isPresented: $showAppMenu, arrowEdge: .top) {
             PopoverMenu {
                 PopoverMenuRow(title: "Settings…", systemImage: "gearshape", shortcut: "⌘,") {
@@ -156,18 +154,18 @@ struct RootPaletteView: View {
     @ViewBuilder
     private func actionPill(selectedApp: AppEntry?) -> some View {
         Button(action: activateSelection) {
-            HStack(spacing: 6) {
+            HStack(spacing: Theme.Spacing.sm) {
                 Text(vm.mode == .launcher ? "Open Application" : "Paste")
                 Image(systemName: "return")
             }
-            .font(.system(size: 12, weight: .medium))
+            .font(Theme.Typography.pill)
             .foregroundStyle(.primary)
-            .padding(.horizontal, 14)
-            .padding(.vertical, 8)
+            .padding(.horizontal, Theme.Spacing.lg)
+            .padding(.vertical, Theme.Spacing.md)
             .contentShape(.capsule)
         }
         .buttonStyle(.plain)
-        .glassEffect(.regular.interactive(), in: .capsule)
+        .frosted(in: Capsule())
         .popover(isPresented: $showActions, arrowEdge: .top) {
             if let app = selectedApp {
                 AppActionsMenu(app: app) { showActions = false }

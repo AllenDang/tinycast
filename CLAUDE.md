@@ -22,7 +22,10 @@ DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer swift build
 # Run the matcher unit test (no Xcode needed)
 swift Tools/fuzz-test.swift
 
-# Build a runnable, ad-hoc-signed .app  ->  build/Tinycast.app
+# One-time: create a stable self-signed identity so the Accessibility grant survives rebuilds
+Packaging/dev-cert.sh
+
+# Build a runnable .app  ->  build/Tinycast.app
 Packaging/make-app.sh debug      # or: release
 
 # Build the distributable DMG  ->  build/Tinycast.dmg
@@ -31,7 +34,11 @@ Packaging/build-dmg.sh
 
 `make-app.sh` assembles the bundle by hand: copies the SwiftPM binary + resource bundles, writes a
 concrete `Info.plist` (the one in `Tinycast/Info.plist` uses build variables and is only for the
-XcodeGen project), and ad-hoc signs (`codesign --sign -`).
+XcodeGen project), and signs it. It prefers the stable `Tinycast Self-Signed` identity created by
+`dev-cert.sh` and falls back to ad-hoc (`codesign --sign -`). Use the stable identity locally: an
+ad-hoc signature gets a new cdhash every build, which invalidates the TCC **Accessibility** grant
+(the app then reports "permission not given" after each rebuild). Grant Accessibility once after the
+first stable-signed build and it persists.
 
 **Distribution:** GitHub DMG, ad-hoc signed (no notarization). Users bypass Gatekeeper via System
 Settings → Privacy & Security → "Open Anyway". Non-sandboxed (required to launch apps, post events).

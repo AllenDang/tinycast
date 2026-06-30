@@ -8,8 +8,8 @@ struct LauncherList: View {
     let onActions: (AppEntry) -> Void
     @EnvironmentObject private var core: AppCore
     @EnvironmentObject private var runningApps: RunningAppsMonitor
-    /// Mouse hover wins the highlight; when the cursor leaves the list we fall back to the
-    /// keyboard selection. Kept separate from `vm.selection` so hovering never triggers auto-scroll.
+    /// The mouse-hovered row — a layer that's independent of (and visually distinct from) the
+    /// keyboard selection, just like Raycast. Hover never moves the selection or scrolls.
     @State private var hoveredID: AppEntry.ID?
 
     private enum Row: Identifiable {
@@ -54,23 +54,25 @@ struct LauncherList: View {
                                 case .app(let app):
                                     AppRow(
                                         app: app,
-                                        selected: hoveredID == nil ? app.id == selectedID : hoveredID == app.id,
+                                        selected: app.id == selectedID,
+                                        hovered: app.id == hoveredID,
                                         running: app.bundleID.map(runningApps.runningBundleIDs.contains) ?? false
                                     )
                                     .contentShape(Rectangle())
-                                    .onHover { inside in
-                                        if inside { hoveredID = app.id }
-                                        else if hoveredID == app.id { hoveredID = nil }
-                                    }
+                                    // Only set on enter; clearing happens once at the list level
+                                    // (below). A fast sweep is a clean run of enters with no
+                                    // transient nil, so the hover layer never flickers.
+                                    .onHover { if $0 { hoveredID = app.id } }
                                     .onTapGesture { core.launch(app) }
                                     .onRightClick { onActions(app) }
                                 }
                             }
                         }
-                        .padding(8)
+                        .padding(Theme.Spacing.sm)
                     }
+                    // Clear hover only when the cursor leaves the whole list, not between rows.
+                    .onHover { inside in if !inside { hoveredID = nil } }
                     .onChange(of: selectedID) { _, id in
-                        hoveredID = nil
                         if let id { proxy.scrollTo(id, anchor: .center) }
                     }
                 }
@@ -83,25 +85,33 @@ private struct SectionHeader: View {
     let title: String
     var body: some View {
         Text(title)
-            .font(.system(size: 11, weight: .semibold))
+            .font(Theme.Typography.sectionHeader)
             .foregroundStyle(.secondary)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.horizontal, 12)
-            .padding(.top, 8)
-            .padding(.bottom, 2)
+            .padding(.horizontal, Theme.Spacing.lg)
+            .padding(.top, Theme.Spacing.sm)
+            .padding(.bottom, Theme.Spacing.xs / 2)
     }
 }
 
 private struct AppRow: View {
     let app: AppEntry
     let selected: Bool
+    let hovered: Bool
     let running: Bool
 
+    /// Selection wins over hover when a row is both; otherwise hover shows its fainter layer.
+    private var fill: Color {
+        if selected { return Theme.Colors.rowSelection }
+        if hovered { return Theme.Colors.rowHover }
+        return .clear
+    }
+
     var body: some View {
-        HStack(spacing: 10) {
+        HStack(spacing: Theme.Spacing.md) {
             Image(nsImage: app.icon)
                 .resizable()
-                .frame(width: 22, height: 22)
+                .frame(width: Theme.Size.rowIcon, height: Theme.Size.rowIcon)
                 .overlay(alignment: .bottom) {
                     if running {
                         Circle()
@@ -111,18 +121,18 @@ private struct AppRow: View {
                     }
                 }
             Text(app.name)
-                .font(.system(size: 14))
+                .font(Theme.Typography.rowTitle)
                 .lineLimit(1)
             Spacer()
             Text("Application")
-                .font(.system(size: 12))
+                .font(Theme.Typography.rowTrailing)
                 .foregroundStyle(.secondary)
         }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 6)
+        .padding(.horizontal, Theme.Spacing.lg)
+        .padding(.vertical, Theme.Spacing.sm)
         .background(
-            RoundedRectangle(cornerRadius: 8, style: .continuous)
-                .fill(selected ? Color.primary.opacity(0.1) : Color.clear)
+            RoundedRectangle(cornerRadius: Theme.Radius.row, style: .continuous)
+                .fill(fill)
         )
     }
 }

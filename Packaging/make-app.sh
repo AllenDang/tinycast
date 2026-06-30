@@ -71,7 +71,17 @@ $ICON_KEY
 </plist>
 PLIST
 
-echo "▸ Ad-hoc signing…"
-codesign --force --deep --sign - "$APP"
+# Prefer a stable, self-signed identity so the Accessibility (TCC) grant survives rebuilds.
+# Falls back to ad-hoc if it hasn't been created yet (run Packaging/dev-cert.sh once).
+SIGN_IDENTITY="Tinycast Self-Signed"
+# Note: no `-v` — the cert is self-signed (untrusted) but codesign still signs with it, and the
+# stable cert identity is what keeps the TCC grant alive across rebuilds.
+if security find-identity -p codesigning 2>/dev/null | grep -q "$SIGN_IDENTITY"; then
+    echo "▸ Signing with stable identity ($SIGN_IDENTITY)…"
+    codesign --force --deep --sign "$SIGN_IDENTITY" "$APP"
+else
+    echo "▸ Ad-hoc signing (run Packaging/dev-cert.sh once for a persistent Accessibility grant)…"
+    codesign --force --deep --sign - "$APP"
+fi
 
 echo "✓ Built $APP"

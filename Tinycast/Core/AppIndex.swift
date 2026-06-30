@@ -15,9 +15,14 @@ struct AppEntry: Identifiable, Hashable, Sendable {
 final class AppIndex: ObservableObject {
     @Published private(set) var apps: [AppEntry] = []
 
+    /// One-entry memo so repeated renders for the same query (e.g. while hovering moves the
+    /// selection) reuse the ranking instead of re-running the fuzzy match every frame.
+    private var matchCache: (query: String, result: [AppEntry])?
+
     func refresh() async {
         let found = await Task.detached(priority: .utility) { AppIndex.scan() }.value
         apps = found
+        matchCache = nil
     }
 
     nonisolated private static func scan() -> [AppEntry] {
@@ -55,6 +60,13 @@ final class AppIndex: ObservableObject {
     func matches(_ query: String, limit: Int = 200) -> [AppEntry] {
         let q = query.trimmingCharacters(in: .whitespaces)
         guard !q.isEmpty else { return apps }
+        if let matchCache, matchCache.query == q { return matchCache.result }
+        let result = rank(q, limit: limit)
+        matchCache = (q, result)
+        return result
+    }
+
+    private func rank(_ q: String, limit: Int) -> [AppEntry] {
         let scored = apps.compactMap { app -> (AppEntry, Int)? in
             guard let score = FuzzyMatch.score(query: q, candidate: app.name) else { return nil }
             return (app, score)

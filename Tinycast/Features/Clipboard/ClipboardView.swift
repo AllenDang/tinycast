@@ -43,19 +43,19 @@ private struct ClipboardRow: View {
     let imageURL: URL?
 
     var body: some View {
-        HStack(spacing: 10) {
+        HStack(spacing: Theme.Spacing.md) {
             thumbnail
             Text(previewText)
-                .font(.system(size: 13))
+                .font(Theme.Typography.menuRow)
                 .lineLimit(1)
                 .truncationMode(.tail)
             Spacer(minLength: 0)
         }
-        .padding(.horizontal, 10)
-        .padding(.vertical, 7)
+        .padding(.horizontal, Theme.Spacing.md)
+        .padding(.vertical, Theme.Spacing.sm + 1)
         .background(
-            RoundedRectangle(cornerRadius: 8, style: .continuous)
-                .fill(selected ? Color.accentColor.opacity(0.22) : Color.clear)
+            RoundedRectangle(cornerRadius: Theme.Radius.row, style: .continuous)
+                .fill(selected ? Theme.Colors.clipSelection : Color.clear)
         )
     }
 
@@ -79,7 +79,7 @@ private struct ClipboardRow: View {
                     .resizable()
                     .aspectRatio(contentMode: .fill)
                     .frame(width: 32, height: 22)
-                    .clipShape(RoundedRectangle(cornerRadius: 4))
+                    .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.thumbnail))
             } else {
                 Image(systemName: "photo").frame(width: 26, height: 20).foregroundStyle(.secondary)
             }
