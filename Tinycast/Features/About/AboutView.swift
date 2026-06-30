@@ -42,8 +42,8 @@ struct ChangelogView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 8) {
-                ForEach(Array(blocks.enumerated()), id: \.offset) { _, block in
-                    block.view
+                ForEach(Array(blocks.enumerated()), id: \.offset) { index, block in
+                    block.view(isFirst: index == 0)
                 }
             }
             .textSelection(.enabled)
@@ -97,12 +97,14 @@ enum MarkdownBlock {
         )) ?? AttributedString(s)
     }
 
-    @ViewBuilder var view: some View {
+    @ViewBuilder func view(isFirst: Bool) -> some View {
         switch self {
         case .heading(let level, let text):
             Text(text)
                 .font(Self.headingFont(level))
-                .padding(.top, level <= 2 ? 8 : 2)
+                // The first block sits flush against the container's top padding, so its heading
+                // gets no extra top inset — keeping the padding uniform on all four sides.
+                .padding(.top, isFirst ? 0 : (level <= 2 ? 8 : 2))
         case .bullet(let text):
             HStack(alignment: .firstTextBaseline, spacing: 8) {
                 Text("•").foregroundStyle(.secondary)
@@ -151,7 +153,17 @@ final class AuxWindowController: NSObject, NSWindowDelegate {
         }
         NSApp.activate(ignoringOtherApps: true)
         window.makeKeyAndOrderFront(nil)
-        window.orderFrontRegardless()
+
+        // A plain `NSWindow` can only become key while the app is active. When opened from the menu
+        // bar the app isn't active yet, and `NSApp.activate` is processed asynchronously — so the
+        // synchronous `makeKeyAndOrderFront` above can land *before* the app is active, leaving the
+        // window visible but not key. The first click then just makes the window key (NSTextField
+        // doesn't accept first-mouse) instead of focusing the control under it, which is why the
+        // hotkey recorder's key capture didn't arm on the first click. Re-asserting key on the next
+        // runloop, after activation has taken effect, makes the window truly key up front.
+        DispatchQueue.main.async {
+            window.makeKeyAndOrderFront(nil)
+        }
     }
 
     func windowWillClose(_ notification: Notification) {

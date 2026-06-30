@@ -21,7 +21,7 @@ struct GeneralSettingsView: View {
                 .onChange(of: settings.clipboardMaxItems) {
                     AppCore.shared.clipboardStore.maxItems = settings.clipboardMaxItems
                 }
-                Button("Clear Clipboard History") {
+                Button("Clear Clipboard History", role: .destructive) {
                     AppCore.shared.clipboardStore.clearAll()
                 }
             }
@@ -30,7 +30,7 @@ struct GeneralSettingsView: View {
                 LabeledContent("Accessibility (paste)") {
                     HStack(spacing: 8) {
                         Image(systemName: accessibilityTrusted ? "checkmark.circle.fill" : "exclamationmark.triangle.fill")
-                            .symbolRenderingMode(.multicolor)
+                            .foregroundStyle(accessibilityTrusted ? Color.green : Color.orange)
                         Button("Open Settings…") { Permissions.openAccessibilitySettings() }
                     }
                 }
