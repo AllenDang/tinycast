@@ -16,6 +16,7 @@ enum Theme {
         static let panel: CGFloat = 20
         static let row: CGFloat = 8
         static let menu: CGFloat = 6
+        static let menuPanel: CGFloat = 13
         static let thumbnail: CGFloat = 4
     }
 
@@ -52,9 +53,6 @@ enum Theme {
         static let rowHover = Color.primary.opacity(0.05)
         static let clipSelection = Color.accentColor.opacity(0.22)
         static let menuHover = Color.primary.opacity(0.12)
-        /// Soft white frost laid over the blur so the bottom-bar buttons read light, like Raycast.
-        static let frostTint = Color.white.opacity(0.08)
-        static let frostBorder = Color.white.opacity(0.15)
     }
 
     enum Opacity {
@@ -64,12 +62,9 @@ enum Theme {
 }
 
 extension View {
-    /// Raycast-style frosted control surface: a soft white-tinted blur with a hairline edge.
-    /// The white tint sits in front of the blur so the buttons read light on the dark panel,
-    /// instead of the near-invisible look of a bare `ultraThinMaterial`.
-    func frosted<S: InsettableShape>(in shape: S) -> some View {
-        background(Theme.Colors.frostTint, in: shape)
-            .background(.thinMaterial, in: shape)
-            .overlay(shape.strokeBorder(Theme.Colors.frostBorder, lineWidth: 1))
+    /// A stock Tahoe Liquid Glass control surface. `.interactive()` gives the native lensing +
+    /// hover/press response of the Control Center toggles — no hand-drawn material or border.
+    func frosted(in shape: some Shape) -> some View {
+        glassEffect(.regular.interactive(), in: shape)
     }
 }

@@ -43,7 +43,32 @@ struct RootPaletteView: View {
             content(apps: apps, clips: clips, selection: sel,
                     favoriteCount: favoriteCount, showSections: showSections)
             Divider().opacity(Theme.Opacity.divider)
-            bottomBar(selectedApp: selectedApp)
+            bottomBar
+        }
+        // Menus are in-window overlays anchored to a bottom corner, so they stay clipped inside the
+        // panel and sit over the bottom bar — never a system popover spilling outside the window.
+        .overlay {
+            if showAppMenu || showActions {
+                Color.black.opacity(0.001)
+                    .contentShape(Rectangle())
+                    .onTapGesture(perform: closeMenus)
+            }
+        }
+        .overlay(alignment: .bottomLeading) {
+            if showAppMenu {
+                appMenu
+                    .padding(Self.menuInset)
+                    .transition(Self.menuTransition(.bottomLeading))
+            }
+        }
+        .overlay(alignment: .bottomTrailing) {
+            if showActions, let app = selectedApp {
+                AppActionsMenu(app: app) { closeMenus() }
+                    .environmentObject(core)
+                    .environmentObject(favorites)
+                    .padding(Self.menuInset)
+                    .transition(Self.menuTransition(.bottomTrailing))
+            }
         }
         .frame(width: Theme.Size.panelWidth, height: Theme.Size.panelHeight)
         .background(Theme.Colors.panelTint)
@@ -55,7 +80,10 @@ struct RootPaletteView: View {
         .onAppear { searchFocused = true }
         .onKeyPress(.downArrow) { move(1); return .handled }
         .onKeyPress(.upArrow) { move(-1); return .handled }
-        .onKeyPress(.escape) { core.hidePalette(); return .handled }
+        .onKeyPress(.escape) {
+            if showActions || showAppMenu { closeMenus(); return .handled }
+            core.hidePalette(); return .handled
+        }
         .onKeyPress(.tab) { toggleMode(); return .handled }
         .onKeyPress(keys: [","], phases: .down) { press in
             guard press.modifiers.contains(.command) else { return .ignored }
@@ -97,7 +125,7 @@ struct RootPaletteView: View {
                 showSections: showSections,
                 onActions: { app in
                     if let index = apps.firstIndex(of: app) { vm.selection = index }
-                    showActions = true
+                    withAnimation(Self.menuAnimation) { showActions = true }
                 }
             )
         case .clipboard:
@@ -116,18 +144,18 @@ struct RootPaletteView: View {
         }
     }
 
-    private func bottomBar(selectedApp: AppEntry?) -> some View {
+    private var bottomBar: some View {
         HStack(spacing: 0) {
             appMenuButton
             Spacer()
-            actionPill(selectedApp: selectedApp)
+            actionPill
         }
         .padding(.horizontal, Theme.Spacing.xl)
         .frame(height: Theme.Size.bottomBarHeight)
     }
 
     private var appMenuButton: some View {
-        Button { showAppMenu = true } label: {
+        Button { withAnimation(Self.menuAnimation) { showAppMenu.toggle() } } label: {
             Image(systemName: "line.3.horizontal")
                 .font(.system(size: 13, weight: .semibold))
                 .foregroundStyle(.secondary)
@@ -136,23 +164,23 @@ struct RootPaletteView: View {
         }
         .buttonStyle(.plain)
         .frosted(in: Circle())
-        .popover(isPresented: $showAppMenu, arrowEdge: .top) {
-            PopoverMenu {
-                PopoverMenuRow(title: "Settings…", systemImage: "gearshape", shortcut: "⌘,") {
-                    showAppMenu = false; core.showSettings()
-                }
-                PopoverMenuRow(title: "About Tinycast", systemImage: "info.circle") {
-                    showAppMenu = false; core.showAbout()
-                }
-                PopoverMenuRow(title: "Changelog", systemImage: "doc.text") {
-                    showAppMenu = false; core.showChangelog()
-                }
+    }
+
+    private var appMenu: some View {
+        PopoverMenu {
+            PopoverMenuRow(title: "Settings…", systemImage: "gearshape", shortcut: "⌘,") {
+                closeMenus(); core.showSettings()
+            }
+            PopoverMenuRow(title: "About Tinycast", systemImage: "info.circle") {
+                closeMenus(); core.showAbout()
+            }
+            PopoverMenuRow(title: "Changelog", systemImage: "doc.text") {
+                closeMenus(); core.showChangelog()
             }
         }
     }
 
-    @ViewBuilder
-    private func actionPill(selectedApp: AppEntry?) -> some View {
+    private var actionPill: some View {
         Button(action: activateSelection) {
             HStack(spacing: Theme.Spacing.sm) {
                 Text(vm.mode == .launcher ? "Open Application" : "Paste")
@@ -166,13 +194,19 @@ struct RootPaletteView: View {
         }
         .buttonStyle(.plain)
         .frosted(in: Capsule())
-        .popover(isPresented: $showActions, arrowEdge: .top) {
-            if let app = selectedApp {
-                AppActionsMenu(app: app) { showActions = false }
-                    .environmentObject(core)
-                    .environmentObject(favorites)
-            }
-        }
+    }
+
+    private func closeMenus() {
+        withAnimation(Self.menuAnimation) { showActions = false; showAppMenu = false }
+    }
+
+    /// Inset of the menu panels from the window's bottom corners. Kept just inside the panel's
+    /// rounded corner so the menu's own corner isn't clipped.
+    private static let menuInset: CGFloat = 8
+    private static let menuAnimation: Animation = .easeOut(duration: 0.14)
+
+    private static func menuTransition(_ anchor: UnitPoint) -> AnyTransition {
+        .opacity.combined(with: .scale(scale: 0.96, anchor: anchor))
     }
 
     private func deleteSelectedClip() {

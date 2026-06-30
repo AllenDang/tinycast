@@ -1,7 +1,8 @@
 import SwiftUI
 
-/// Raycast-style popover menu chrome, reused by the bottom-left app menu and the row actions menu.
-/// Presented inside a SwiftUI `.popover`, whose vibrancy gives the translucent rounded panel.
+/// Raycast-style menu, reused by the bottom-left app menu and the row actions menu. Rendered as an
+/// in-window overlay anchored to a bottom corner (not a system popover), so it stays clipped inside
+/// the palette. The surface is stock Tahoe Liquid Glass so it reads like a native macOS menu.
 struct PopoverMenu<Content: View>: View {
     var header: String? = nil
     @ViewBuilder var content: Content
@@ -20,6 +21,8 @@ struct PopoverMenu<Content: View>: View {
         }
         .padding(Theme.Spacing.sm)
         .frame(width: Theme.Size.menuWidth)
+        .glassEffect(.regular, in: RoundedRectangle(cornerRadius: Theme.Radius.menuPanel, style: .continuous))
+        .shadow(color: .black.opacity(0.28), radius: 14, y: 6)
     }
 }
 
