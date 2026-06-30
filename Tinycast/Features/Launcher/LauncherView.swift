@@ -86,6 +86,7 @@ private struct SectionHeader: View {
     var body: some View {
         Text(title)
             .font(Theme.Typography.sectionHeader)
+            .textCase(.uppercase)
             .foregroundStyle(.secondary)
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.horizontal, Theme.Spacing.lg)
@@ -102,7 +103,7 @@ private struct AppRow: View {
 
     /// Selection wins over hover when a row is both; otherwise hover shows its fainter layer.
     private var fill: Color {
-        if selected { return Theme.Colors.rowSelection }
+        if selected { return Theme.Colors.selection }
         if hovered { return Theme.Colors.rowHover }
         return .clear
     }
@@ -115,7 +116,7 @@ private struct AppRow: View {
                 .overlay(alignment: .bottom) {
                     if running {
                         Circle()
-                            .fill(.secondary)
+                            .fill(selected ? Color.white : Color.secondary)
                             .frame(width: 4, height: 4)
                             .offset(y: 4)
                     }
@@ -123,10 +124,11 @@ private struct AppRow: View {
             Text(app.name)
                 .font(Theme.Typography.rowTitle)
                 .lineLimit(1)
+                .foregroundStyle(selected ? Color.white : Color.primary)
             Spacer()
             Text("Application")
                 .font(Theme.Typography.rowTrailing)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(selected ? Color.white.opacity(0.8) : Color.secondary)
         }
         .padding(.horizontal, Theme.Spacing.lg)
         .padding(.vertical, Theme.Spacing.sm)

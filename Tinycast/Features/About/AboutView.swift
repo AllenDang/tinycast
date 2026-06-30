@@ -14,7 +14,7 @@ struct AboutView: View {
                 .resizable()
                 .frame(width: 96, height: 96)
             Text("Tinycast")
-                .font(.system(size: 22, weight: .semibold))
+                .font(.title2.bold())
             Text(version)
                 .font(.callout)
                 .foregroundStyle(.secondary)
@@ -44,7 +44,7 @@ struct ChangelogView: View {
     var body: some View {
         ScrollView {
             Text(markdown)
-                .font(.system(size: 13))
+                .font(.body)
                 .textSelection(.enabled)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(20)

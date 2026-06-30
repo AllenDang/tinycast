@@ -30,7 +30,7 @@ struct GeneralSettingsView: View {
                 LabeledContent("Accessibility (paste)") {
                     HStack(spacing: 8) {
                         Image(systemName: accessibilityTrusted ? "checkmark.circle.fill" : "exclamationmark.triangle.fill")
-                            .foregroundStyle(accessibilityTrusted ? .green : .orange)
+                            .symbolRenderingMode(.multicolor)
                         Button("Open Settings…") { Permissions.openAccessibilitySettings() }
                     }
                 }

@@ -13,7 +13,7 @@ enum Theme {
     }
 
     enum Radius {
-        static let panel: CGFloat = 20
+        static let panel: CGFloat = 22
         static let row: CGFloat = 8
         static let menu: CGFloat = 6
         static let menuPanel: CGFloat = 13
@@ -32,39 +32,38 @@ enum Theme {
         static let menuIcon: CGFloat = 16
     }
 
+    /// System text styles (not hardcoded point sizes) so the UI honors Dynamic Type and matches
+    /// the metrics of first-party macOS apps.
     enum Typography {
-        static let searchField = Font.system(size: 18, weight: .regular)
-        static let headerIcon = Font.system(size: 17)
-        static let rowTitle = Font.system(size: 14)
-        static let rowTrailing = Font.system(size: 12)
-        static let sectionHeader = Font.system(size: 11, weight: .semibold)
-        static let pill = Font.system(size: 13, weight: .medium)
-        static let menuRow = Font.system(size: 13)
-        static let menuShortcut = Font.system(size: 12)
-        static let menuIcon = Font.system(size: 13)
+        static let searchField = Font.title2
+        static let headerIcon = Font.title2
+        static let rowTitle = Font.body
+        static let rowTrailing = Font.callout
+        static let sectionHeader = Font.caption.weight(.semibold)
+        static let pill = Font.body.weight(.medium)
+        static let menuRow = Font.body
+        static let menuShortcut = Font.callout
+        static let menuIcon = Font.body
     }
 
     enum Colors {
-        static let hairline = Color.white.opacity(0.10)
-        static let panelTint = Color.black.opacity(0.10)
-        /// Keyboard selection — the stronger highlight; what Enter activates.
-        static let rowSelection = Color.primary.opacity(0.10)
-        /// Mouse hover — a fainter, visually distinct layer that follows the cursor (Raycast-style).
-        static let rowHover = Color.primary.opacity(0.05)
-        static let clipSelection = Color.accentColor.opacity(0.22)
-        static let menuHover = Color.primary.opacity(0.12)
-    }
-
-    enum Opacity {
-        static let divider = 0.08
-        static let previewDivider = 0.35
+        /// Spotlight/Finder-style selection: a filled row in the system accent color. The same
+        /// token is used by the launcher and clipboard so the two lists read identically.
+        static let selection = Color.accentColor
+        /// Mouse hover — a fainter, visually distinct layer that follows the cursor (Raycast-style),
+        /// kept neutral so it never competes with the accent selection.
+        static let rowHover = Color.primary.opacity(0.06)
+        static let menuHover = Color.primary.opacity(0.08)
     }
 }
 
 extension View {
     /// A stock Tahoe Liquid Glass control surface. `.interactive()` gives the native lensing +
     /// hover/press response of the Control Center toggles — no hand-drawn material or border.
+    /// `.tint(.clear)` is required on macOS for glass controls to render with the correct,
+    /// untinted material.
     func frosted(in shape: some Shape) -> some View {
         glassEffect(.regular.interactive(), in: shape)
+            .tint(.clear)
     }
 }

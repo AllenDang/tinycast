@@ -39,10 +39,10 @@ struct RootPaletteView: View {
 
         return VStack(spacing: 0) {
             header
-            Divider().opacity(Theme.Opacity.divider)
+            Divider()
             content(apps: apps, clips: clips, selection: sel,
                     favoriteCount: favoriteCount, showSections: showSections)
-            Divider().opacity(Theme.Opacity.divider)
+            Divider()
             bottomBar
         }
         // Menus are in-window overlays anchored to a bottom corner, so they stay clipped inside the
@@ -71,7 +71,6 @@ struct RootPaletteView: View {
             }
         }
         .frame(width: Theme.Size.panelWidth, height: Theme.Size.panelHeight)
-        .background(Theme.Colors.panelTint)
         .background(VisualEffectView())
         .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.panel, style: .continuous))
         .onChange(of: vm.focusToken) { searchFocused = true }
@@ -101,6 +100,7 @@ struct RootPaletteView: View {
         HStack(spacing: Theme.Spacing.lg) {
             Image(systemName: vm.mode.systemImage)
                 .font(Theme.Typography.headerIcon)
+                .symbolRenderingMode(.hierarchical)
                 .foregroundStyle(.secondary)
             TextField(vm.mode.placeholder, text: $vm.query)
                 .textFieldStyle(.plain)
@@ -138,17 +138,22 @@ struct RootPaletteView: View {
                     onActivate: activateSelection
                 )
                 .frame(width: Theme.Size.clipboardListWidth)
-                Divider().opacity(Theme.Opacity.previewDivider)
+                Divider()
                 ClipboardPreview(item: selected)
             }
         }
     }
 
     private var bottomBar: some View {
-        HStack(spacing: 0) {
-            appMenuButton
-            Spacer()
-            actionPill
+        // Both footer controls are Liquid Glass, so they share one GlassEffectContainer — glass
+        // can't sample other glass, and a shared container gives them a single, consistent
+        // sampling region (avoids the mismatched look of independent glass surfaces).
+        GlassEffectContainer(spacing: Theme.Spacing.sm) {
+            HStack(spacing: 0) {
+                appMenuButton
+                Spacer()
+                actionPill
+            }
         }
         .padding(.horizontal, Theme.Spacing.xl)
         .frame(height: Theme.Size.bottomBarHeight)
@@ -156,13 +161,12 @@ struct RootPaletteView: View {
 
     private var appMenuButton: some View {
         Button { withAnimation(Self.menuAnimation) { showAppMenu.toggle() } } label: {
-            VStack(alignment: .leading, spacing: 4) {
-                Capsule().frame(width: 15, height: 2.5)
-                Capsule().frame(width: 9, height: 2.5)
-            }
-            .foregroundStyle(.secondary)
-            .frame(width: Theme.Size.menuButton, height: Theme.Size.menuButton)
-            .contentShape(.circle)
+            Image(systemName: "ellipsis")
+                .font(.title3)
+                .symbolRenderingMode(.hierarchical)
+                .foregroundStyle(.secondary)
+                .frame(width: Theme.Size.menuButton, height: Theme.Size.menuButton)
+                .contentShape(.circle)
         }
         .buttonStyle(.plain)
         .frosted(in: Circle())
@@ -243,7 +247,8 @@ struct EmptyResults: View {
     let text: String
     var body: some View {
         VStack(spacing: 8) {
-            Image(systemName: "magnifyingglass").font(.system(size: 28)).foregroundStyle(.tertiary)
+            Image(systemName: "magnifyingglass").font(.largeTitle)
+                .symbolRenderingMode(.hierarchical).foregroundStyle(.tertiary)
             Text(text).foregroundStyle(.secondary)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)

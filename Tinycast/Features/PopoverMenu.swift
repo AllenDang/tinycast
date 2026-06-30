@@ -21,8 +21,9 @@ struct PopoverMenu<Content: View>: View {
         }
         .padding(Theme.Spacing.sm)
         .frame(width: Theme.Size.menuWidth)
+        // Tahoe glass carries its own elevation/shadow; a hand-tuned drop shadow on top of the
+        // newer, more opaque material reads heavy and non-native, so we let the glass own it.
         .glassEffect(.regular, in: RoundedRectangle(cornerRadius: Theme.Radius.menuPanel, style: .continuous))
-        .shadow(color: .black.opacity(0.28), radius: 14, y: 6)
     }
 }
 
@@ -40,6 +41,7 @@ struct PopoverMenuRow: View {
             HStack(spacing: Theme.Spacing.md) {
                 Image(systemName: systemImage)
                     .font(Theme.Typography.menuIcon)
+                    .symbolRenderingMode(.hierarchical)
                     .foregroundStyle(.secondary)
                     .frame(width: Theme.Size.menuIcon)
                 Text(title)

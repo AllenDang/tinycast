@@ -49,13 +49,14 @@ private struct ClipboardRow: View {
                 .font(Theme.Typography.menuRow)
                 .lineLimit(1)
                 .truncationMode(.tail)
+                .foregroundStyle(selected ? Color.white : Color.primary)
             Spacer(minLength: 0)
         }
         .padding(.horizontal, Theme.Spacing.md)
         .padding(.vertical, Theme.Spacing.sm + 1)
         .background(
             RoundedRectangle(cornerRadius: Theme.Radius.row, style: .continuous)
-                .fill(selected ? Theme.Colors.clipSelection : Color.clear)
+                .fill(selected ? Theme.Colors.selection : Color.clear)
         )
     }
 
@@ -66,13 +67,17 @@ private struct ClipboardRow: View {
         }
     }
 
+    /// On the accent-filled selected row, monochrome glyphs switch to white; otherwise secondary.
+    private var glyphStyle: Color { selected ? .white : .secondary }
+
     @ViewBuilder
     private var thumbnail: some View {
         switch item.kind {
         case .text:
             Image(systemName: "text.alignleft")
+                .symbolRenderingMode(.hierarchical)
                 .frame(width: 26, height: 20)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(glyphStyle)
         case .image:
             if let url = imageURL, let image = ImageThumbnail.load(url, maxPixel: 64) {
                 Image(nsImage: image)
@@ -81,7 +86,10 @@ private struct ClipboardRow: View {
                     .frame(width: 32, height: 22)
                     .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.thumbnail))
             } else {
-                Image(systemName: "photo").frame(width: 26, height: 20).foregroundStyle(.secondary)
+                Image(systemName: "photo")
+                    .symbolRenderingMode(.hierarchical)
+                    .frame(width: 26, height: 20)
+                    .foregroundStyle(glyphStyle)
             }
         }
     }
@@ -111,7 +119,7 @@ struct ClipboardPreview: View {
         case .text:
             ScrollView {
                 Text(item.text ?? "")
-                    .font(.system(size: 13))
+                    .font(.body)
                     .textSelection(.enabled)
                     .frame(maxWidth: .infinity, alignment: .topLeading)
             }
@@ -122,7 +130,8 @@ struct ClipboardPreview: View {
                     .aspectRatio(contentMode: .fit)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
-                Image(systemName: "photo").font(.system(size: 40)).foregroundStyle(.tertiary)
+                Image(systemName: "photo").font(.system(.largeTitle))
+                    .symbolRenderingMode(.hierarchical).foregroundStyle(.tertiary)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
         }
