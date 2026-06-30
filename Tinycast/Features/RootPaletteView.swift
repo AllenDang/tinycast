@@ -70,9 +70,7 @@ struct RootPaletteView: View {
             }
         }
         .frame(width: Theme.Size.panelWidth, height: Theme.Size.panelHeight)
-        // A subtle dark wash over the vibrancy deepens the surface to match Raycast (the app is
-        // always dark, so this only darkens — it never muddies a light material).
-        .background(Color.black.opacity(0.50))
+        .background(Color.black.opacity(0.45))
         .background(VisualEffectView())
         .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.panel, style: .continuous))
         .onChange(of: vm.focusToken) { searchFocused = true }
@@ -257,30 +255,21 @@ struct EmptyResults: View {
     }
 }
 
-/// The Raycast-style scroll-edge treatment for the floating header/footer: a translucent blur
-/// that's strongest right at the panel edge — so the list scrolling underneath the search field
-/// and the action buttons goes soft and dim, never colliding with them — then fades smoothly to
-/// nothing toward the middle of the list. No hard edge, no bar.
 private struct EdgeFade: View {
     let edge: VerticalEdge
 
     var body: some View {
         let start: UnitPoint = edge == .top ? .top : .bottom
         let end: UnitPoint = edge == .top ? .bottom : .top
-        // Hold full strength near the edge, then fade out — this is what removes the hard line.
         let fade = LinearGradient(
             stops: [
-                .init(color: .black, location: 0.0),
-                .init(color: .black, location: 0.4),
+                .init(color: .black.opacity(1), location: 0.0),
+                .init(color: .black.opacity(0.90), location: 0.4),
                 .init(color: .clear, location: 1.0),
             ],
             startPoint: start, endPoint: end
         )
-        // Just the edge blur — no darkening wash. Where no rows sit behind it, the blurred
-        // material resolves to the window background and disappears; only content scrolling under
-        // the edge goes soft. That's why Raycast's edge is invisible at rest.
-        Rectangle()
-            .fill(.ultraThinMaterial)
+        VisualEffectView(material: .hudWindow, blending: .withinWindow)
             .mask(fade)
     }
 }
