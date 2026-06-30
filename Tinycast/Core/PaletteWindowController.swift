@@ -27,6 +27,12 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
         if restoreFocus { previousApp?.activate() }
     }
 
+    /// Paste the item into the previously focused app while leaving the palette open and frontmost.
+    /// The keystroke is delivered directly to that app's process, so Tinycast never loses focus.
+    func pasteKeepingWindowOpen(_ item: ClipboardItem, store: ClipboardStore) {
+        Paster.pasteInPlace(item, store: store, into: previousApp)
+    }
+
     // MARK: - NSWindowDelegate
 
     /// Dismiss when the palette loses key status (click-away, ⌘-Tab, app switch).

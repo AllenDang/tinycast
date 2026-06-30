@@ -7,7 +7,27 @@ struct AppEntry: Identifiable, Hashable, Sendable {
     let bundleID: String?
 
     @MainActor var icon: NSImage {
-        NSWorkspace.shared.icon(forFile: url.path)
+        IconCache.icon(forFile: url.path)
+    }
+}
+
+/// Caches app icons by file path so list rows don't re-hit `NSWorkspace` on every render. The app
+/// set is small and stable, so a plain count-capped `NSCache` (system-evicted under pressure) is
+/// enough — mirrors the `ImageThumbnail` cache.
+enum IconCache {
+    private static let cache: NSCache<NSString, NSImage> = {
+        let cache = NSCache<NSString, NSImage>()
+        cache.countLimit = 512
+        return cache
+    }()
+
+    @MainActor
+    static func icon(forFile path: String) -> NSImage {
+        let key = path as NSString
+        if let cached = cache.object(forKey: key) { return cached }
+        let icon = NSWorkspace.shared.icon(forFile: path)
+        cache.setObject(icon, forKey: key)
+        return icon
     }
 }
 

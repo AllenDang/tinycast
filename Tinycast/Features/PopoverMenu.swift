@@ -13,6 +13,8 @@ struct PopoverMenu<Content: View>: View {
                 Text(header)
                     .font(Theme.Typography.sectionHeader)
                     .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
                     .padding(.horizontal, Theme.Spacing.md)
                     .padding(.top, Theme.Spacing.xs)
                     .padding(.bottom, Theme.Spacing.xs / 2)
@@ -32,6 +34,8 @@ struct PopoverMenuRow: View {
     let title: String
     let systemImage: String
     var shortcut: String? = nil
+    /// Destructive rows (delete) tint their icon + label red, matching the native menu convention.
+    var isDestructive: Bool = false
     let action: () -> Void
 
     @State private var hovering = false
@@ -42,10 +46,11 @@ struct PopoverMenuRow: View {
                 Image(systemName: systemImage)
                     .font(Theme.Typography.menuIcon)
                     .symbolRenderingMode(.hierarchical)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(isDestructive ? Color.red : Color.secondary)
                     .frame(width: Theme.Size.menuIcon)
                 Text(title)
                     .font(Theme.Typography.menuRow)
+                    .foregroundStyle(isDestructive ? Color.red : Color.primary)
                 Spacer(minLength: Theme.Spacing.sm)
                 if let shortcut {
                     Text(shortcut)

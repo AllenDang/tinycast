@@ -8,9 +8,6 @@ struct LauncherList: View {
     let onActions: (AppEntry) -> Void
     @EnvironmentObject private var core: AppCore
     @EnvironmentObject private var runningApps: RunningAppsMonitor
-    /// The mouse-hovered row — a layer that's independent of (and visually distinct from) the
-    /// keyboard selection, just like Raycast. Hover never moves the selection or scrolls.
-    @State private var hoveredID: AppEntry.ID?
 
     private enum Row: Identifiable {
         case header(String)
@@ -55,14 +52,9 @@ struct LauncherList: View {
                                     AppRow(
                                         app: app,
                                         selected: app.id == selectedID,
-                                        hovered: app.id == hoveredID,
                                         running: app.bundleID.map(runningApps.runningBundleIDs.contains) ?? false
                                     )
                                     .contentShape(Rectangle())
-                                    // Only set on enter; clearing happens once at the list level
-                                    // (below). A fast sweep is a clean run of enters with no
-                                    // transient nil, so the hover layer never flickers.
-                                    .onHover { if $0 { hoveredID = app.id } }
                                     .onTapGesture { core.launch(app) }
                                     .onRightClick { onActions(app) }
                                 }
@@ -70,8 +62,6 @@ struct LauncherList: View {
                         }
                         .padding(Theme.Spacing.sm)
                     }
-                    // Clear hover only when the cursor leaves the whole list, not between rows.
-                    .onHover { inside in if !inside { hoveredID = nil } }
                     .onChange(of: selectedID) { _, id in
                         if let id { proxy.scrollTo(id, anchor: .center) }
                     }
@@ -98,8 +88,10 @@ private struct SectionHeader: View {
 private struct AppRow: View {
     let app: AppEntry
     let selected: Bool
-    let hovered: Bool
     let running: Bool
+    /// Hover lives on the row itself, so moving the mouse repaints only the rows entering/leaving —
+    /// it never invalidates the parent list body (which would rebuild every row on each sweep).
+    @State private var hovered = false
 
     /// Selection wins over hover when a row is both; otherwise hover shows its fainter layer.
     private var fill: Color {
@@ -135,6 +127,7 @@ private struct AppRow: View {
             RoundedRectangle(cornerRadius: Theme.Radius.row, style: .continuous)
                 .fill(fill)
         )
+        .onHover { hovered = $0 }
     }
 }
 

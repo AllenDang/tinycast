@@ -36,6 +36,7 @@ struct RootPaletteView: View {
         let showSections = vm.mode == .launcher && isQueryEmpty && !favorites.keys.isEmpty
         let favoriteCount = showSections ? apps.prefix(while: { favorites.isFavorite($0) }).count : 0
         let selectedApp = apps.indices.contains(sel) ? apps[sel] : nil
+        let selectedClip = clips.indices.contains(sel) ? clips[sel] : nil
 
         // The results layer fills the whole panel; the search header and action bar float on top
         // as translucent Liquid Glass bars (via safeAreaInset). The list scrolls *behind* them and
@@ -61,10 +62,8 @@ struct RootPaletteView: View {
             }
         }
         .overlay(alignment: .bottomTrailing) {
-            if showActions, let app = selectedApp {
-                AppActionsMenu(app: app) { closeMenus() }
-                    .environmentObject(core)
-                    .environmentObject(favorites)
+            if showActions {
+                actionsMenu(app: selectedApp, clip: selectedClip)
                     .padding(Self.menuInset)
                     .transition(Self.menuTransition(.bottomTrailing))
             }
@@ -73,7 +72,9 @@ struct RootPaletteView: View {
         .background(Color.black.opacity(0.40))
         .background(VisualEffectView())
         .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.panel, style: .continuous))
-        .onChange(of: vm.focusToken) { searchFocused = true }
+        // Every show bumps focusToken — refocus search and drop any menu left open from last time
+        // (e.g. when the palette was dismissed by clicking away while a context menu was up).
+        .onChange(of: vm.focusToken) { searchFocused = true; showActions = false; showAppMenu = false }
         .onChange(of: vm.query) { vm.selection = 0 }
         .onChange(of: vm.mode) { vm.selection = 0; showActions = false }
         .onAppear { searchFocused = true }
@@ -131,16 +132,45 @@ struct RootPaletteView: View {
                 }
             )
         case .clipboard:
-            let selected = clips.indices.contains(selection) ? clips[selection] : nil
-            HStack(spacing: 0) {
-                ClipboardList(
-                    results: clips,
-                    selectedID: selected?.id,
-                    onSelect: { item in vm.selection = clips.firstIndex(of: item) ?? 0 },
-                    onActivate: activateSelection
-                )
-                .frame(width: Theme.Size.clipboardListWidth)
-                ClipboardPreview(item: selected)
+            // Empty history: center one message across the whole panel rather than wedging it into
+            // the narrow list column beside a blank preview.
+            if clips.isEmpty {
+                EmptyResults(text: "Clipboard history is empty")
+            } else {
+                let selected = clips.indices.contains(selection) ? clips[selection] : nil
+                HStack(spacing: 0) {
+                    ClipboardList(
+                        results: clips,
+                        selectedID: selected?.id,
+                        onSelect: { item in vm.selection = clips.firstIndex(of: item) ?? 0 },
+                        onActivate: activateSelection,
+                        onActions: { item in
+                            if let index = clips.firstIndex(of: item) { vm.selection = index }
+                            withAnimation(Self.menuAnimation) { showActions = true }
+                        }
+                    )
+                    .frame(width: Theme.Size.clipboardListWidth)
+                    ClipboardPreview(item: selected)
+                }
+            }
+        }
+    }
+
+    /// The bottom-right actions popover for the current mode's selection.
+    @ViewBuilder
+    private func actionsMenu(app: AppEntry?, clip: ClipboardItem?) -> some View {
+        switch vm.mode {
+        case .launcher:
+            if let app {
+                AppActionsMenu(app: app) { closeMenus() }
+                    .environmentObject(core)
+                    .environmentObject(favorites)
+            }
+        case .clipboard:
+            if let clip {
+                ClipboardActionsMenu(item: clip) { closeMenus() }
+                    .environmentObject(core)
+                    .environmentObject(store)
             }
         }
     }

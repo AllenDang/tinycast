@@ -131,4 +131,19 @@ final class AppCore: ObservableObject {
         hidePalette(restoreFocus: false)
         Paster.paste(item, store: clipboardStore, previousApp: previous)
     }
+
+    func pasteKeepingWindowOpen(_ item: ClipboardItem) {
+        windowController.pasteKeepingWindowOpen(item, store: clipboardStore)
+    }
+
+    func copyToClipboard(_ item: ClipboardItem) {
+        hidePalette(restoreFocus: false)
+        Paster.copy(item, store: clipboardStore)
+    }
+
+    func revealClipboardImage(_ item: ClipboardItem) {
+        guard let url = clipboardStore.imageURL(for: item) else { return }
+        hidePalette(restoreFocus: false)
+        AppLauncher.showInFinder(url)
+    }
 }

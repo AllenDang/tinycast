@@ -5,33 +5,77 @@ struct ClipboardList: View {
     let selectedID: ClipboardItem.ID?
     let onSelect: (ClipboardItem) -> Void
     let onActivate: () -> Void
+    let onActions: (ClipboardItem) -> Void
     @EnvironmentObject private var store: ClipboardStore
 
     var body: some View {
-        Group {
-            if results.isEmpty {
-                EmptyResults(text: "Clipboard history is empty")
-            } else {
-                ScrollViewReader { proxy in
-                    ScrollView {
-                        LazyVStack(spacing: 2) {
-                            ForEach(results) { item in
-                                ClipboardRow(item: item, selected: item.id == selectedID, imageURL: store.imageURL(for: item))
-                                    .contentShape(Rectangle())
-                                    .onTapGesture(count: 2) { onSelect(item); onActivate() }
-                                    .onTapGesture { onSelect(item) }
-                                    .contextMenu {
-                                        Button("Paste") { onSelect(item); onActivate() }
-                                        Button("Delete", role: .destructive) { store.remove(item) }
-                                    }
-                            }
-                        }
-                        .padding(8)
-                    }
-                    .onChange(of: selectedID) { _, id in
-                        if let id { proxy.scrollTo(id, anchor: .center) }
+        ScrollViewReader { proxy in
+            ScrollView {
+                LazyVStack(spacing: 2) {
+                    ForEach(results) { item in
+                        ClipboardRow(item: item, selected: item.id == selectedID, imageURL: store.imageURL(for: item))
+                            .contentShape(Rectangle())
+                            // Single click selects *instantly* — the double-click-to-paste gesture
+                            // is `.simultaneousGesture`, so the single tap never waits on the
+                            // double-click timeout to disambiguate. Right-click uses the lightweight
+                            // catcher — not SwiftUI's `.contextMenu`, which stalls clicks for
+                            // seconds inside a LazyVStack on macOS.
+                            .onTapGesture { onSelect(item) }
+                            .simultaneousGesture(TapGesture(count: 2).onEnded {
+                                onSelect(item); onActivate()
+                            })
+                            .onRightClick { onActions(item) }
                     }
                 }
+                .padding(8)
+            }
+            .onChange(of: selectedID) { _, id in
+                if let id { proxy.scrollTo(id, anchor: .center) }
+            }
+        }
+    }
+}
+
+/// Actions popover for a clipboard entry — shown anchored bottom-right on right-click, mirroring the
+/// launcher's `AppActionsMenu`. Same stock Liquid Glass `PopoverMenu` surface.
+struct ClipboardActionsMenu: View {
+    let item: ClipboardItem
+    let dismiss: () -> Void
+    @EnvironmentObject private var core: AppCore
+    @EnvironmentObject private var store: ClipboardStore
+
+    private var headerText: String {
+        switch item.kind {
+        case .text:
+            // Collapse all whitespace/newlines to single spaces so a multi-line copy stays a clean
+            // one-line title.
+            let oneLine = (item.text ?? "").split(whereSeparator: \.isWhitespace).joined(separator: " ")
+            return String(oneLine.prefix(40))
+        case .image: return "Image"
+        }
+    }
+
+    var body: some View {
+        PopoverMenu(header: headerText) {
+            PopoverMenuRow(title: "Paste", systemImage: "doc.on.clipboard", shortcut: "↵") {
+                core.paste(item); dismiss()
+            }
+            PopoverMenuRow(title: "Copy to Clipboard", systemImage: "doc.on.doc") {
+                core.copyToClipboard(item); dismiss()
+            }
+            PopoverMenuRow(title: "Paste & Keep Window Open", systemImage: "pin") {
+                core.pasteKeepingWindowOpen(item); dismiss()
+            }
+            if item.kind == .image {
+                PopoverMenuRow(title: "Show in Finder", systemImage: "folder") {
+                    core.revealClipboardImage(item); dismiss()
+                }
+            }
+            PopoverMenuRow(title: "Delete Entry", systemImage: "trash", isDestructive: true) {
+                store.remove(item); dismiss()
+            }
+            PopoverMenuRow(title: "Delete All Entries", systemImage: "trash.fill", isDestructive: true) {
+                store.clearAll(); dismiss()
             }
         }
     }
@@ -61,7 +105,8 @@ private struct ClipboardRow: View {
 
     private var previewText: String {
         switch item.kind {
-        case .text: return (item.text ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+        // Single-line row, so cap before trimming — never walk a multi-MB clipboard string per row.
+        case .text: return String((item.text ?? "").prefix(200)).trimmingCharacters(in: .whitespacesAndNewlines)
         case .image: return "Image"
         }
     }

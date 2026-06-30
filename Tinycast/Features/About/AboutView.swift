@@ -30,7 +30,9 @@ struct AboutView: View {
 }
 
 struct ChangelogView: View {
-    private var markdown: AttributedString {
+    // Read + parse the bundled markdown once; the file is static, so a `let` avoids re-decoding it
+    // on every body evaluation.
+    private let markdown: AttributedString = {
         guard let url = Bundle.module.url(forResource: "CHANGELOG", withExtension: "md"),
               let text = try? String(contentsOf: url, encoding: .utf8),
               let attributed = try? AttributedString(
@@ -39,7 +41,7 @@ struct ChangelogView: View {
               )
         else { return AttributedString("No changelog available.") }
         return attributed
-    }
+    }()
 
     var body: some View {
         ScrollView {
@@ -52,10 +54,11 @@ struct ChangelogView: View {
     }
 }
 
-/// Hosts auxiliary SwiftUI windows (About, Changelog) for the accessory app. Caches one window per
-/// id so reopening keeps state, and raises it to the front like `AppCore.showSettings()` does.
+/// Hosts auxiliary SwiftUI windows (About, Changelog, Settings) for the accessory app. Each window
+/// is torn down on close so its SwiftUI tree — and any timers it drives — deallocates instead of
+/// lingering for the app's lifetime. Reopening rebuilds instantly (the views read live state).
 @MainActor
-final class AuxWindowController {
+final class AuxWindowController: NSObject, NSWindowDelegate {
     private var windows: [String: NSWindow] = [:]
 
     func show<Content: View>(id: String, title: String, size: CGSize, @ViewBuilder content: () -> Content) {
@@ -72,11 +75,18 @@ final class AuxWindowController {
             window.title = title
             window.isReleasedWhenClosed = false
             window.contentView = NSHostingView(rootView: content())
+            window.delegate = self
             window.center()
             windows[id] = window
         }
         NSApp.activate(ignoringOtherApps: true)
         window.makeKeyAndOrderFront(nil)
         window.orderFrontRegardless()
+    }
+
+    func windowWillClose(_ notification: Notification) {
+        guard let window = notification.object as? NSWindow,
+              let id = windows.first(where: { $0.value === window })?.key else { return }
+        windows.removeValue(forKey: id)
     }
 }
