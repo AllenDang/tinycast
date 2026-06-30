@@ -72,7 +72,7 @@ struct RootPaletteView: View {
         .frame(width: Theme.Size.panelWidth, height: Theme.Size.panelHeight)
         // A subtle dark wash over the vibrancy deepens the surface to match Raycast (the app is
         // always dark, so this only darkens — it never muddies a light material).
-        .background(Color.black.opacity(0.22))
+        .background(Color.black.opacity(0.50))
         .background(VisualEffectView())
         .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.panel, style: .continuous))
         .onChange(of: vm.focusToken) { searchFocused = true }
@@ -276,12 +276,11 @@ private struct EdgeFade: View {
             ],
             startPoint: start, endPoint: end
         )
+        // Just the edge blur — no darkening wash. Where no rows sit behind it, the blurred
+        // material resolves to the window background and disappears; only content scrolling under
+        // the edge goes soft. That's why Raycast's edge is invisible at rest.
         Rectangle()
-            .fill(.ultraThinMaterial)                 // the blur of the content behind
-            .overlay(                                  // a dark wash so it stays deep, not washed-out
-                LinearGradient(colors: [Color.black.opacity(0.45), .clear],
-                               startPoint: start, endPoint: end)
-            )
+            .fill(.ultraThinMaterial)
             .mask(fade)
     }
 }
