@@ -6,17 +6,17 @@ enum Theme {
     enum Spacing {
         static let xs: CGFloat = 4
         static let sm: CGFloat = 6
-        static let md: CGFloat = 10
-        static let lg: CGFloat = 12
-        static let xl: CGFloat = 14
+        static let md: CGFloat = 8
+        static let lg: CGFloat = 10
+        static let xl: CGFloat = 12
         static let xxl: CGFloat = 20
     }
 
     enum Radius {
-        static let panel: CGFloat = 22
+        static let panel: CGFloat = 24
         static let row: CGFloat = 8
         static let menu: CGFloat = 6
-        static let menuPanel: CGFloat = 13
+        static let menuPanel: CGFloat = 14
         static let thumbnail: CGFloat = 4
     }
 
@@ -25,7 +25,7 @@ enum Theme {
         static let panelHeight: CGFloat = 470
         static let headerHeight: CGFloat = 54
         static let bottomBarHeight: CGFloat = 52
-        static let rowIcon: CGFloat = 22
+        static let rowIcon: CGFloat = 24
         static let menuButton: CGFloat = 36
         static let clipboardListWidth: CGFloat = 290
         static let menuWidth: CGFloat = 240
@@ -39,7 +39,8 @@ enum Theme {
         static let headerIcon = Font.title2
         static let rowTitle = Font.body
         static let rowTrailing = Font.callout
-        static let sectionHeader = Font.caption.weight(.semibold)
+        static let sectionHeader = Font.subheadline.weight(.semibold)
+        static let keyCap = Font.caption
         static let pill = Font.body.weight(.medium)
         static let menuRow = Font.body
         static let menuShortcut = Font.callout

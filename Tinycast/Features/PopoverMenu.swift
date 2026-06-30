@@ -15,7 +15,7 @@ struct PopoverMenu<Content: View>: View {
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
                     .truncationMode(.tail)
-                    .padding(.horizontal, Theme.Spacing.md)
+                    .padding(.horizontal, Theme.Spacing.lg)
                     .padding(.top, Theme.Spacing.xs)
                     .padding(.bottom, Theme.Spacing.xs / 2)
             }
@@ -42,7 +42,7 @@ struct PopoverMenuRow: View {
 
     var body: some View {
         Button(action: action) {
-            HStack(spacing: Theme.Spacing.md) {
+            HStack(spacing: Theme.Spacing.lg) {
                 Image(systemName: systemImage)
                     .font(Theme.Typography.menuIcon)
                     .symbolRenderingMode(.hierarchical)

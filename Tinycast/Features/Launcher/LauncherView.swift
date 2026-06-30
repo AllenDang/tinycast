@@ -1,4 +1,5 @@
 import SwiftUI
+import KeyboardShortcuts
 
 struct LauncherList: View {
     let results: [AppEntry]
@@ -60,7 +61,7 @@ struct LauncherList: View {
                                 }
                             }
                         }
-                        .padding(Theme.Spacing.sm)
+                        .padding(Theme.Spacing.md)
                         .thinOverlayScrollbar()
                     }
                     .onChange(of: selectedID) { _, id in
@@ -77,11 +78,10 @@ private struct SectionHeader: View {
     var body: some View {
         Text(title)
             .font(Theme.Typography.sectionHeader)
-            .textCase(.uppercase)
             .foregroundStyle(.secondary)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.horizontal, Theme.Spacing.lg)
-            .padding(.top, Theme.Spacing.sm)
+            .padding(.horizontal, Theme.Spacing.md)
+            .padding(.top, Theme.Spacing.md)
             .padding(.bottom, Theme.Spacing.xs / 2)
     }
 }
@@ -93,6 +93,9 @@ private struct AppRow: View {
     /// Hover lives on the row itself, so moving the mouse repaints only the rows entering/leaving —
     /// it never invalidates the parent list body (which would rebuild every row on each sweep).
     @State private var hovered = false
+    /// Observed so a hotkey set/cleared in Settings re-renders the row and updates its keycaps
+    /// immediately — the persisted palette tree wouldn't otherwise re-read the shortcut.
+    @EnvironmentObject private var hotKeys: HotKeyManager
 
     /// Selection wins over hover when a row is both; otherwise hover shows its fainter layer.
     private var fill: Color {
@@ -101,8 +104,17 @@ private struct AppRow: View {
         return .clear
     }
 
+    /// Raycast-style keycaps for this app's per-app hotkey, or `nil` if none is bound.
+    private var shortcutCaps: [String]? {
+        guard let bundleID = app.bundleID,
+              let shortcut = KeyboardShortcuts.getShortcut(for: .app(bundleID))
+        else { return nil }
+        let caps = KeyCap.split(shortcut)
+        return caps.isEmpty ? nil : caps
+    }
+
     var body: some View {
-        HStack(spacing: Theme.Spacing.md) {
+        HStack(spacing: Theme.Spacing.lg) {
             Image(nsImage: app.icon)
                 .resizable()
                 .frame(width: Theme.Size.rowIcon, height: Theme.Size.rowIcon)
@@ -117,18 +129,66 @@ private struct AppRow: View {
             Text(app.name)
                 .font(Theme.Typography.rowTitle)
                 .lineLimit(1)
+            if let caps = shortcutCaps {
+                HStack(spacing: Theme.Spacing.xs) {
+                    ForEach(Array(caps.enumerated()), id: \.offset) { _, cap in
+                        KeyCap(text: cap)
+                    }
+                }
+            }
             Spacer()
             Text("Application")
                 .font(Theme.Typography.rowTrailing)
                 .foregroundStyle(.secondary)
         }
-        .padding(.horizontal, Theme.Spacing.lg)
-        .padding(.vertical, Theme.Spacing.sm)
+        .padding(.horizontal, Theme.Spacing.md)
+        .padding(.vertical, Theme.Spacing.md)
         .background(
             RoundedRectangle(cornerRadius: Theme.Radius.row, style: .continuous)
                 .fill(fill)
         )
         .onHover { hovered = $0 }
+    }
+}
+
+/// A single Raycast-style keycap (one modifier symbol or the key) shown next to an app with a
+/// bound hotkey.
+private struct KeyCap: View {
+    let text: String
+
+    var body: some View {
+        Text(text)
+            .font(Theme.Typography.keyCap)
+            .foregroundStyle(.secondary)
+            .padding(.horizontal, Theme.Spacing.xs)
+            .frame(minWidth: 18, minHeight: 18)
+            .background(
+                RoundedRectangle(cornerRadius: Theme.Radius.menu, style: .continuous)
+                    .fill(Color.primary.opacity(0.08))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: Theme.Radius.menu, style: .continuous)
+                            .strokeBorder(Color.primary.opacity(0.10), lineWidth: 1)
+                    )
+            )
+    }
+
+    /// Splits a shortcut's native string (e.g. "⌥T", "⌘⇧K") into individual keycaps: each modifier
+    /// symbol becomes its own cap, and the remaining key (which may be multi-character like "F1")
+    /// becomes the last cap.
+    static func split(_ shortcut: KeyboardShortcuts.Shortcut) -> [String] {
+        let modifierSymbols: Set<Character> = ["⌘", "⌥", "⌃", "⇧"]
+        var caps: [String] = []
+        var key = ""
+        for character in shortcut.description {
+            if modifierSymbols.contains(character) {
+                caps.append(String(character))
+            } else {
+                key.append(character)
+            }
+        }
+        let trimmedKey = key.trimmingCharacters(in: .whitespaces)
+        if !trimmedKey.isEmpty { caps.append(trimmedKey) }
+        return caps
     }
 }
 

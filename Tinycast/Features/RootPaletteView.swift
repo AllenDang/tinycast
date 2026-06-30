@@ -98,7 +98,7 @@ struct RootPaletteView: View {
     }
 
     private var header: some View {
-        HStack(spacing: Theme.Spacing.lg) {
+        HStack(spacing: Theme.Spacing.xl) {
             Image(systemName: vm.mode.systemImage)
                 .font(Theme.Typography.headerIcon)
                 .symbolRenderingMode(.hierarchical)
@@ -183,7 +183,7 @@ struct RootPaletteView: View {
             Spacer()
             actionPill
         }
-        .padding(.horizontal, Theme.Spacing.xl)
+        .padding(.horizontal, Theme.Spacing.md)
         .frame(height: Theme.Size.bottomBarHeight)
         .frame(maxWidth: .infinity)
         .background(EdgeFade(edge: .bottom))
@@ -224,8 +224,8 @@ struct RootPaletteView: View {
             }
             .font(Theme.Typography.pill)
             .foregroundStyle(.primary)
-            .padding(.horizontal, Theme.Spacing.lg)
-            .padding(.vertical, Theme.Spacing.md)
+            .padding(.horizontal, Theme.Spacing.xl)
+            .padding(.vertical, Theme.Spacing.lg)
             .contentShape(.capsule)
         }
         .buttonStyle(.plain)

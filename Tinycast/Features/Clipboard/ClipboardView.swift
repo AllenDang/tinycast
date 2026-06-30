@@ -11,7 +11,7 @@ struct ClipboardList: View {
     var body: some View {
         ScrollViewReader { proxy in
             ScrollView {
-                LazyVStack(spacing: 2) {
+                LazyVStack(spacing: 1) {
                     ForEach(results) { item in
                         ClipboardRow(item: item, selected: item.id == selectedID, imageURL: store.imageURL(for: item))
                             .contentShape(Rectangle())
@@ -27,7 +27,7 @@ struct ClipboardList: View {
                             .onRightClick { onActions(item) }
                     }
                 }
-                .padding(8)
+                .padding(Theme.Spacing.md)
                 .thinOverlayScrollbar()
             }
             .onChange(of: selectedID) { _, id in
@@ -88,7 +88,7 @@ private struct ClipboardRow: View {
     let imageURL: URL?
 
     var body: some View {
-        HStack(spacing: Theme.Spacing.md) {
+        HStack(spacing: Theme.Spacing.lg) {
             thumbnail
             Text(previewText)
                 .font(Theme.Typography.menuRow)
@@ -97,7 +97,7 @@ private struct ClipboardRow: View {
             Spacer(minLength: 0)
         }
         .padding(.horizontal, Theme.Spacing.md)
-        .padding(.vertical, Theme.Spacing.sm + 1)
+        .padding(.vertical, Theme.Spacing.md)
         .background(
             RoundedRectangle(cornerRadius: Theme.Radius.row, style: .continuous)
                 .fill(selected ? Theme.Colors.selection : Color.clear)
@@ -118,19 +118,19 @@ private struct ClipboardRow: View {
         case .text:
             Image(systemName: "text.alignleft")
                 .symbolRenderingMode(.hierarchical)
-                .frame(width: 26, height: 20)
+                .frame(width: Theme.Size.rowIcon, height: Theme.Size.rowIcon)
                 .foregroundStyle(.secondary)
         case .image:
             if let url = imageURL, let image = ImageThumbnail.load(url, maxPixel: 64) {
                 Image(nsImage: image)
                     .resizable()
                     .aspectRatio(contentMode: .fill)
-                    .frame(width: 32, height: 22)
+                    .frame(width: Theme.Size.rowIcon, height: Theme.Size.rowIcon)
                     .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.thumbnail))
             } else {
                 Image(systemName: "photo")
                     .symbolRenderingMode(.hierarchical)
-                    .frame(width: 26, height: 20)
+                    .frame(width: Theme.Size.rowIcon, height: Theme.Size.rowIcon)
                     .foregroundStyle(.secondary)
             }
         }

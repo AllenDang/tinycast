@@ -8,7 +8,7 @@ extension KeyboardShortcuts.Name {
 }
 
 @MainActor
-final class HotKeyManager {
+final class HotKeyManager: ObservableObject {
     var onTogglePalette: (() -> Void)?
     var onToggleClipboard: (() -> Void)?
 
@@ -29,8 +29,10 @@ final class HotKeyManager {
         UserDefaults.standard.stringArray(forKey: boundKey) ?? []
     }
 
-    /// Called by the per-app settings recorder when a shortcut is set or cleared.
+    /// Called by the per-app settings recorder when a shortcut is set or cleared. Publishing here
+    /// lets the launcher list re-read and show/hide each app's keycaps immediately.
     func setBinding(bundleID: String, hasShortcut: Bool) {
+        objectWillChange.send()
         var set = Set(boundBundleIDs)
         if hasShortcut {
             set.insert(bundleID)

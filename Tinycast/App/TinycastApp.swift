@@ -9,7 +9,7 @@ struct TinycastApp: App {
             Button("Open Tinycast") { AppCore.shared.showPalette(mode: .launcher) }
             Button("Clipboard History") { AppCore.shared.showPalette(mode: .clipboard) }
             Divider()
-            Button("Settings…") { AppCore.shared.showSettings() }
+            Button("Settings") { AppCore.shared.showSettings() }
                 .keyboardShortcut(",")
             Divider()
             Button("Quit Tinycast") { NSApp.terminate(nil) }
