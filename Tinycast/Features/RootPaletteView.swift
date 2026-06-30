@@ -70,6 +70,9 @@ struct RootPaletteView: View {
             }
         }
         .frame(width: Theme.Size.panelWidth, height: Theme.Size.panelHeight)
+        // A subtle dark wash over the vibrancy deepens the surface to match Raycast (the app is
+        // always dark, so this only darkens — it never muddies a light material).
+        .background(Color.black.opacity(0.22))
         .background(VisualEffectView())
         .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.panel, style: .continuous))
         .onChange(of: vm.focusToken) { searchFocused = true }
@@ -110,12 +113,7 @@ struct RootPaletteView: View {
         .padding(.horizontal, Theme.Spacing.xxl)
         .frame(height: Theme.Size.headerHeight)
         .frame(maxWidth: .infinity)
-        // A soft dark fade — not a bar. Strongest at the very top, clear toward the list, so the
-        // search stays legible while rows scroll behind it with no hard edge.
-        .background(
-            LinearGradient(colors: [Color.black.opacity(0.5), .clear],
-                           startPoint: .top, endPoint: .bottom)
-        )
+        .background(EdgeFade(edge: .top))
     }
 
     @ViewBuilder
@@ -160,10 +158,7 @@ struct RootPaletteView: View {
         .padding(.horizontal, Theme.Spacing.xl)
         .frame(height: Theme.Size.bottomBarHeight)
         .frame(maxWidth: .infinity)
-        .background(
-            LinearGradient(colors: [.clear, Color.black.opacity(0.5)],
-                           startPoint: .top, endPoint: .bottom)
-        )
+        .background(EdgeFade(edge: .bottom))
     }
 
     private var appMenuButton: some View {
@@ -259,5 +254,34 @@ struct EmptyResults: View {
             Text(text).foregroundStyle(.secondary)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+}
+
+/// The Raycast-style scroll-edge treatment for the floating header/footer: a translucent blur
+/// that's strongest right at the panel edge — so the list scrolling underneath the search field
+/// and the action buttons goes soft and dim, never colliding with them — then fades smoothly to
+/// nothing toward the middle of the list. No hard edge, no bar.
+private struct EdgeFade: View {
+    let edge: VerticalEdge
+
+    var body: some View {
+        let start: UnitPoint = edge == .top ? .top : .bottom
+        let end: UnitPoint = edge == .top ? .bottom : .top
+        // Hold full strength near the edge, then fade out — this is what removes the hard line.
+        let fade = LinearGradient(
+            stops: [
+                .init(color: .black, location: 0.0),
+                .init(color: .black, location: 0.4),
+                .init(color: .clear, location: 1.0),
+            ],
+            startPoint: start, endPoint: end
+        )
+        Rectangle()
+            .fill(.ultraThinMaterial)                 // the blur of the content behind
+            .overlay(                                  // a dark wash so it stays deep, not washed-out
+                LinearGradient(colors: [Color.black.opacity(0.45), .clear],
+                               startPoint: start, endPoint: end)
+            )
+            .mask(fade)
     }
 }
