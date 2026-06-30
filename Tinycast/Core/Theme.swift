@@ -47,21 +47,20 @@ enum Theme {
     }
 
     enum Colors {
-        /// Spotlight/Finder-style selection: a filled row in the system accent color. The same
-        /// token is used by the launcher and clipboard so the two lists read identically.
-        static let selection = Color.accentColor
-        /// Mouse hover — a fainter, visually distinct layer that follows the cursor (Raycast-style),
-        /// kept neutral so it never competes with the accent selection.
+        /// Raycast-style selection: a soft, neutral translucent fill (not a saturated accent
+        /// block). In the always-dark palette this reads as a gentle lighter row. The same token
+        /// is shared by the launcher and clipboard so the two lists look identical.
+        static let selection = Color.primary.opacity(0.12)
+        /// Mouse hover — a fainter layer that follows the cursor, visually distinct from selection.
         static let rowHover = Color.primary.opacity(0.06)
-        static let menuHover = Color.primary.opacity(0.08)
+        static let menuHover = Color.primary.opacity(0.10)
     }
 }
 
 extension View {
-    /// A stock Tahoe Liquid Glass control surface. `.interactive()` gives the native lensing +
-    /// hover/press response of the Control Center toggles — no hand-drawn material or border.
-    /// `.tint(.clear)` is required on macOS for glass controls to render with the correct,
-    /// untinted material.
+    /// A floating Tahoe Liquid Glass control surface (the action pill + menu button). The glass
+    /// sits over the app list, so `.interactive()` gives the native lensing/press response and
+    /// `.tint(.clear)` keeps the material untinted on macOS.
     func frosted(in shape: some Shape) -> some View {
         glassEffect(.regular.interactive(), in: shape)
             .tint(.clear)

@@ -116,7 +116,7 @@ private struct AppRow: View {
                 .overlay(alignment: .bottom) {
                     if running {
                         Circle()
-                            .fill(selected ? Color.white : Color.secondary)
+                            .fill(.secondary)
                             .frame(width: 4, height: 4)
                             .offset(y: 4)
                     }
@@ -124,11 +124,10 @@ private struct AppRow: View {
             Text(app.name)
                 .font(Theme.Typography.rowTitle)
                 .lineLimit(1)
-                .foregroundStyle(selected ? Color.white : Color.primary)
             Spacer()
             Text("Application")
                 .font(Theme.Typography.rowTrailing)
-                .foregroundStyle(selected ? Color.white.opacity(0.8) : Color.secondary)
+                .foregroundStyle(.secondary)
         }
         .padding(.horizontal, Theme.Spacing.lg)
         .padding(.vertical, Theme.Spacing.sm)

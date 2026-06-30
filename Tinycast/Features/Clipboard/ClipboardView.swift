@@ -49,7 +49,6 @@ private struct ClipboardRow: View {
                 .font(Theme.Typography.menuRow)
                 .lineLimit(1)
                 .truncationMode(.tail)
-                .foregroundStyle(selected ? Color.white : Color.primary)
             Spacer(minLength: 0)
         }
         .padding(.horizontal, Theme.Spacing.md)
@@ -67,9 +66,6 @@ private struct ClipboardRow: View {
         }
     }
 
-    /// On the accent-filled selected row, monochrome glyphs switch to white; otherwise secondary.
-    private var glyphStyle: Color { selected ? .white : .secondary }
-
     @ViewBuilder
     private var thumbnail: some View {
         switch item.kind {
@@ -77,7 +73,7 @@ private struct ClipboardRow: View {
             Image(systemName: "text.alignleft")
                 .symbolRenderingMode(.hierarchical)
                 .frame(width: 26, height: 20)
-                .foregroundStyle(glyphStyle)
+                .foregroundStyle(.secondary)
         case .image:
             if let url = imageURL, let image = ImageThumbnail.load(url, maxPixel: 64) {
                 Image(nsImage: image)
@@ -89,7 +85,7 @@ private struct ClipboardRow: View {
                 Image(systemName: "photo")
                     .symbolRenderingMode(.hierarchical)
                     .frame(width: 26, height: 20)
-                    .foregroundStyle(glyphStyle)
+                    .foregroundStyle(.secondary)
             }
         }
     }
@@ -104,7 +100,6 @@ struct ClipboardPreview: View {
             VStack(alignment: .leading, spacing: 0) {
                 content(for: item)
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-                Divider()
                 footer(for: item)
             }
             .padding(16)

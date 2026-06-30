@@ -37,14 +37,13 @@ struct RootPaletteView: View {
         let favoriteCount = showSections ? apps.prefix(while: { favorites.isFavorite($0) }).count : 0
         let selectedApp = apps.indices.contains(sel) ? apps[sel] : nil
 
-        return VStack(spacing: 0) {
-            header
-            Divider()
-            content(apps: apps, clips: clips, selection: sel,
-                    favoriteCount: favoriteCount, showSections: showSections)
-            Divider()
-            bottomBar
-        }
+        // The results layer fills the whole panel; the search header and action bar float on top
+        // as translucent Liquid Glass bars (via safeAreaInset). The list scrolls *behind* them and
+        // stays faintly visible through the glass — the Raycast look, with no hard dividers.
+        return content(apps: apps, clips: clips, selection: sel,
+                       favoriteCount: favoriteCount, showSections: showSections)
+        .safeAreaInset(edge: .top, spacing: 0) { header }
+        .safeAreaInset(edge: .bottom, spacing: 0) { bottomBar }
         // Menus are in-window overlays anchored to a bottom corner, so they stay clipped inside the
         // panel and sit over the bottom bar — never a system popover spilling outside the window.
         .overlay {
@@ -110,6 +109,13 @@ struct RootPaletteView: View {
         }
         .padding(.horizontal, Theme.Spacing.xxl)
         .frame(height: Theme.Size.headerHeight)
+        .frame(maxWidth: .infinity)
+        // A soft dark fade — not a bar. Strongest at the very top, clear toward the list, so the
+        // search stays legible while rows scroll behind it with no hard edge.
+        .background(
+            LinearGradient(colors: [Color.black.opacity(0.5), .clear],
+                           startPoint: .top, endPoint: .bottom)
+        )
     }
 
     @ViewBuilder
@@ -138,25 +144,26 @@ struct RootPaletteView: View {
                     onActivate: activateSelection
                 )
                 .frame(width: Theme.Size.clipboardListWidth)
-                Divider()
                 ClipboardPreview(item: selected)
             }
         }
     }
 
     private var bottomBar: some View {
-        // Both footer controls are Liquid Glass, so they share one GlassEffectContainer — glass
-        // can't sample other glass, and a shared container gives them a single, consistent
-        // sampling region (avoids the mismatched look of independent glass surfaces).
-        GlassEffectContainer(spacing: Theme.Spacing.sm) {
-            HStack(spacing: 0) {
-                appMenuButton
-                Spacer()
-                actionPill
-            }
+        // No bar — just floating glass buttons over the list, with a soft dark fade up from the
+        // bottom edge so they read clearly without any hard-edged strip.
+        HStack(spacing: 0) {
+            appMenuButton
+            Spacer()
+            actionPill
         }
         .padding(.horizontal, Theme.Spacing.xl)
         .frame(height: Theme.Size.bottomBarHeight)
+        .frame(maxWidth: .infinity)
+        .background(
+            LinearGradient(colors: [.clear, Color.black.opacity(0.5)],
+                           startPoint: .top, endPoint: .bottom)
+        )
     }
 
     private var appMenuButton: some View {
