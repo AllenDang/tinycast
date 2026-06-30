@@ -61,6 +61,7 @@ struct LauncherList: View {
                             }
                         }
                         .padding(Theme.Spacing.sm)
+                        .thinOverlayScrollbar()
                     }
                     .onChange(of: selectedID) { _, id in
                         if let id { proxy.scrollTo(id, anchor: .center) }

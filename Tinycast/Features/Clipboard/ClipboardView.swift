@@ -28,6 +28,7 @@ struct ClipboardList: View {
                     }
                 }
                 .padding(8)
+                .thinOverlayScrollbar()
             }
             .onChange(of: selectedID) { _, id in
                 if let id { proxy.scrollTo(id, anchor: .center) }
