@@ -35,8 +35,8 @@ enum Theme {
     /// System text styles (not hardcoded point sizes) so the UI honors Dynamic Type and matches
     /// the metrics of first-party macOS apps.
     enum Typography {
-        static let searchField = Font.title2
-        static let headerIcon = Font.title2
+        static let searchField = Font.title
+        static let headerIcon = Font.title
         static let rowTitle = Font.body
         static let rowTrailing = Font.callout
         static let sectionHeader = Font.subheadline.weight(.semibold)

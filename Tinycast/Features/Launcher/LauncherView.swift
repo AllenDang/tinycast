@@ -6,6 +6,9 @@ struct LauncherList: View {
     let selectedID: AppEntry.ID?
     let favoriteCount: Int
     let showSections: Bool
+    /// Changes only when the list should scroll to follow the selection (keyboard nav / reset), so
+    /// mouse selection never yanks the scroll position.
+    let scrollToken: UUID
     let onActions: (AppEntry) -> Void
     @EnvironmentObject private var core: AppCore
     @EnvironmentObject private var runningApps: RunningAppsMonitor
@@ -67,8 +70,8 @@ struct LauncherList: View {
                         .padding(.bottom, Theme.Spacing.md)
                         .thinOverlayScrollbar()
                     }
-                    .onChange(of: selectedID) { _, id in
-                        if let id { proxy.scrollTo(id, anchor: .center) }
+                    .onChange(of: scrollToken) {
+                        if let selectedID { proxy.scrollTo(selectedID, anchor: .center) }
                     }
                 }
             }
@@ -76,7 +79,9 @@ struct LauncherList: View {
     }
 }
 
-private struct SectionHeader: View {
+/// Section label above a group of rows. Shared by the launcher (Favorites/Applications) and the
+/// clipboard (Today/Yesterday/…) so both lists use one identical header + row layout.
+struct SectionHeader: View {
     let title: String
     var body: some View {
         Text(title)

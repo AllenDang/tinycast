@@ -3,34 +3,69 @@ import SwiftUI
 struct ClipboardList: View {
     let results: [ClipboardItem]
     let selectedID: ClipboardItem.ID?
+    /// Changes only when the list should scroll to follow the selection (keyboard nav / reset), so
+    /// mouse selection never yanks the scroll position.
+    let scrollToken: UUID
     let onSelect: (ClipboardItem) -> Void
     let onActivate: () -> Void
     let onActions: (ClipboardItem) -> Void
     @EnvironmentObject private var store: ClipboardStore
 
+    private enum Row: Identifiable {
+        case header(String)
+        case item(ClipboardItem)
+        var id: String {
+            switch self {
+            case .header(let title): return "header-" + title
+            case .item(let item): return item.id.uuidString
+            }
+        }
+    }
+
+    /// Items are newest-first, so grouping is just a walk that emits a date header whenever the
+    /// bucket changes — mirrors the launcher's Favorites/Applications sectioning.
+    private var rows: [Row] {
+        var rows: [Row] = []
+        var currentBucket: DateBucket?
+        for item in results {
+            let bucket = DateBucket(for: item.createdAt)
+            if bucket != currentBucket {
+                rows.append(.header(bucket.title))
+                currentBucket = bucket
+            }
+            rows.append(.item(item))
+        }
+        return rows
+    }
+
     var body: some View {
         ScrollViewReader { proxy in
             ScrollView {
                 LazyVStack(spacing: 1) {
-                    ForEach(results) { item in
-                        ClipboardRow(
-                            item: item, selected: item.id == selectedID,
-                            imageURL: store.imageURL(for: item)
-                        )
-                        .contentShape(Rectangle())
-                        // Single click selects *instantly* — the double-click-to-paste gesture
-                        // is `.simultaneousGesture`, so the single tap never waits on the
-                        // double-click timeout to disambiguate. Right-click uses the lightweight
-                        // catcher — not SwiftUI's `.contextMenu`, which stalls clicks for
-                        // seconds inside a LazyVStack on macOS.
-                        .onTapGesture { onSelect(item) }
-                        .simultaneousGesture(
-                            TapGesture(count: 2).onEnded {
-                                onSelect(item)
-                                onActivate()
-                            }
-                        )
-                        .onRightClick { onActions(item) }
+                    ForEach(rows) { row in
+                        switch row {
+                        case .header(let title):
+                            SectionHeader(title: title)
+                        case .item(let item):
+                            ClipboardRow(
+                                item: item, selected: item.id == selectedID,
+                                imageURL: store.imageURL(for: item)
+                            )
+                            .contentShape(Rectangle())
+                            // Single click selects *instantly* — the double-click-to-paste gesture
+                            // is `.simultaneousGesture`, so the single tap never waits on the
+                            // double-click timeout to disambiguate. Right-click uses the lightweight
+                            // catcher — not SwiftUI's `.contextMenu`, which stalls clicks for
+                            // seconds inside a LazyVStack on macOS.
+                            .onTapGesture { onSelect(item) }
+                            .simultaneousGesture(
+                                TapGesture(count: 2).onEnded {
+                                    onSelect(item)
+                                    onActivate()
+                                }
+                            )
+                            .onRightClick { onActions(item) }
+                        }
                     }
                 }
                 .padding(.horizontal, Theme.Spacing.md)
@@ -38,9 +73,39 @@ struct ClipboardList: View {
                 .padding(.bottom, Theme.Spacing.md)
                 .thinOverlayScrollbar()
             }
-            .onChange(of: selectedID) { _, id in
-                if let id { proxy.scrollTo(id, anchor: .center) }
+            .onChange(of: scrollToken) {
+                if let selectedID { proxy.scrollTo(selectedID.uuidString, anchor: .center) }
             }
+        }
+    }
+}
+
+/// Coarse date buckets for grouping clipboard entries into sections, mirroring Raycast's
+/// Today / Yesterday / This Week / … history grouping. Ordered newest-first by raw value.
+private enum DateBucket: Int {
+    case today, yesterday, thisWeek, thisMonth, earlier
+
+    var title: String {
+        switch self {
+        case .today: return "Today"
+        case .yesterday: return "Yesterday"
+        case .thisWeek: return "This Week"
+        case .thisMonth: return "This Month"
+        case .earlier: return "Earlier"
+        }
+    }
+
+    init(for date: Date, now: Date = Date(), calendar: Calendar = .current) {
+        if calendar.isDateInToday(date) {
+            self = .today
+        } else if calendar.isDateInYesterday(date) {
+            self = .yesterday
+        } else if calendar.isDate(date, equalTo: now, toGranularity: .weekOfYear) {
+            self = .thisWeek
+        } else if calendar.isDate(date, equalTo: now, toGranularity: .month) {
+            self = .thisMonth
+        } else {
+            self = .earlier
         }
     }
 }

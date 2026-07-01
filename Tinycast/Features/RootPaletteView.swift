@@ -9,6 +9,10 @@ struct RootPaletteView: View {
     @FocusState private var searchFocused: Bool
     @State private var showActions = false
     @State private var showAppMenu = false
+    /// Bumped only when the selection should pull the scroll view with it — keyboard navigation and
+    /// list resets. Mouse selection (click / right-click) targets an already-visible row, so it never
+    /// bumps this and the list stays put.
+    @State private var scrollToken = UUID()
 
     private var isQueryEmpty: Bool { vm.query.trimmingCharacters(in: .whitespaces).isEmpty }
 
@@ -82,10 +86,14 @@ struct RootPaletteView: View {
             showActions = false
             showAppMenu = false
         }
-        .onChange(of: vm.query) { vm.selection = 0 }
+        .onChange(of: vm.query) {
+            vm.selection = 0
+            scrollToken = UUID()
+        }
         .onChange(of: vm.mode) {
             vm.selection = 0
             showActions = false
+            scrollToken = UUID()
         }
         .onAppear { searchFocused = true }
         .onKeyPress(.downArrow) {
@@ -153,6 +161,7 @@ struct RootPaletteView: View {
                 selectedID: selectedID,
                 favoriteCount: favoriteCount,
                 showSections: showSections,
+                scrollToken: scrollToken,
                 onActions: { app in
                     if let index = apps.firstIndex(of: app) { vm.selection = index }
                     withAnimation(Self.menuAnimation) { showActions = true }
@@ -169,6 +178,7 @@ struct RootPaletteView: View {
                     ClipboardList(
                         results: clips,
                         selectedID: selected?.id,
+                        scrollToken: scrollToken,
                         onSelect: { item in vm.selection = clips.firstIndex(of: item) ?? 0 },
                         onActivate: activateSelection,
                         onActions: { item in
@@ -293,6 +303,7 @@ struct RootPaletteView: View {
     private func move(_ delta: Int) {
         guard resultCount > 0 else { return }
         vm.selection = min(max(selection + delta, 0), resultCount - 1)
+        scrollToken = UUID()
     }
 
     private func toggleMode() {
