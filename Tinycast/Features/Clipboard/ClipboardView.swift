@@ -168,6 +168,16 @@ private struct ClipboardRow: View {
     let item: ClipboardItem
     let selected: Bool
     let imageURL: URL?
+    /// Hover lives on the row itself so a mouse sweep repaints only the rows entering/leaving — it
+    /// never invalidates the parent list body. Mirrors the launcher's `AppRow`.
+    @State private var hovered = false
+
+    /// Selection wins over hover when a row is both; otherwise hover shows its fainter layer.
+    private var fill: Color {
+        if selected { return Theme.Colors.selection }
+        if hovered { return Theme.Colors.rowHover }
+        return .clear
+    }
 
     var body: some View {
         HStack(spacing: Theme.Spacing.lg) {
@@ -182,8 +192,9 @@ private struct ClipboardRow: View {
         .padding(.vertical, Theme.Spacing.md)
         .background(
             RoundedRectangle(cornerRadius: Theme.Radius.row, style: .continuous)
-                .fill(selected ? Theme.Colors.selection : Color.clear)
+                .fill(fill)
         )
+        .onHover { hovered = $0 }
     }
 
     private var previewText: String {
@@ -297,7 +308,8 @@ struct ClipboardPreview: View {
                     .frame(maxWidth: .infinity, alignment: .topLeading)
             }
         case .image:
-            AsyncThumbnail(url: store.imageURL(for: item), maxPixel: Self.previewMaxPixel) { image in
+            AsyncThumbnail(url: store.imageURL(for: item), maxPixel: Self.previewMaxPixel) {
+                image in
                 image
                     .resizable()
                     .aspectRatio(contentMode: .fit)
