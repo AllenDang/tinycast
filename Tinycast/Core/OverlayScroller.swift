@@ -19,15 +19,24 @@ private struct OverlayScrollerConfigurator: NSViewRepresentable {
 
         override func viewDidMoveToWindow() {
             super.viewDidMoveToWindow()
-            // enclosingScrollView is only wired up once we're in the hierarchy.
-            DispatchQueue.main.async { [weak self] in self?.applyOverlayStyle() }
+            applyOverlayStyle()
         }
 
         func applyOverlayStyle() {
-            guard let scrollView = enclosingScrollView else { return }
+            guard let scrollView = enclosingScrollView else {
+                // Not yet spliced into the scroll view's hierarchy; retry next tick.
+                DispatchQueue.main.async { [weak self] in self?.applyOverlayStyle() }
+                return
+            }
+            guard scrollView.scrollerStyle != .overlay else { return }
             scrollView.scrollerStyle = .overlay  // thin + appears-on-scroll + auto-hide
             scrollView.autohidesScrollers = true
             scrollView.hasHorizontalScroller = false
+            // A legacy scroller reserves a fixed strip of layout width; switching to overlay frees it,
+            // but the content only reclaims that width on the next full layout — which, in a reused
+            // panel, doesn't happen until a reopen. Re-tile now so the clip view (and the hosted
+            // content it sizes) expands to full width immediately, on this same pass.
+            scrollView.tile()
         }
     }
 }

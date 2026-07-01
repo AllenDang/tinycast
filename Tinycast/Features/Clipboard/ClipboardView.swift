@@ -202,14 +202,14 @@ private struct ClipboardRow: View {
         case .text:
             glyphTile("doc.text")
         case .image:
-            if let url = imageURL, let image = ImageThumbnail.load(url, maxPixel: 64) {
-                Image(nsImage: image)
+            AsyncThumbnail(url: imageURL, maxPixel: 64) { image in
+                image
                     .resizable()
                     .aspectRatio(contentMode: .fill)
                     .frame(width: Theme.Size.rowIcon, height: Theme.Size.rowIcon)
                     .clipShape(
                         RoundedRectangle(cornerRadius: Theme.Radius.thumbnail, style: .continuous))
-            } else {
+            } placeholder: {
                 glyphTile("photo")
             }
         }
@@ -227,6 +227,41 @@ private struct ClipboardRow: View {
                     .symbolRenderingMode(.hierarchical)
                     .foregroundStyle(.secondary)
             )
+    }
+}
+
+/// Renders a downsampled clipboard thumbnail, decoding misses off the main thread so the UI never
+/// stalls when the clipboard first appears. Cache hits resolve on the first task tick; misses show
+/// `placeholder` until the background decode completes. `content` styles the loaded image per site
+/// (row thumbnail vs. large preview).
+private struct AsyncThumbnail<Content: View, Placeholder: View>: View {
+    let url: URL?
+    let maxPixel: CGFloat
+    @ViewBuilder let content: (Image) -> Content
+    @ViewBuilder let placeholder: () -> Placeholder
+
+    @State private var image: NSImage?
+
+    var body: some View {
+        Group {
+            if let image {
+                content(Image(nsImage: image))
+            } else {
+                placeholder()
+            }
+        }
+        .task(id: url) {
+            guard let url else {
+                image = nil
+                return
+            }
+            if let hit = ImageThumbnail.cached(url, maxPixel: maxPixel) {
+                image = hit
+                return
+            }
+            image = nil  // show the placeholder while a new image decodes
+            image = await ImageThumbnail.loadAsync(url, maxPixel: maxPixel)
+        }
     }
 }
 
@@ -258,14 +293,12 @@ struct ClipboardPreview: View {
                     .frame(maxWidth: .infinity, alignment: .topLeading)
             }
         case .image:
-            if let url = store.imageURL(for: item),
-                let image = ImageThumbnail.load(url, maxPixel: 1200)
-            {
-                Image(nsImage: image)
+            AsyncThumbnail(url: store.imageURL(for: item), maxPixel: 1200) { image in
+                image
                     .resizable()
                     .aspectRatio(contentMode: .fit)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
-            } else {
+            } placeholder: {
                 Image(systemName: "photo").font(.system(.largeTitle))
                     .symbolRenderingMode(.hierarchical).foregroundStyle(.tertiary)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
