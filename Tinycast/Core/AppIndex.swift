@@ -11,13 +11,18 @@ struct AppEntry: Identifiable, Hashable, Sendable {
     }
 }
 
-/// Caches app icons by file path so list rows don't re-hit `NSWorkspace` on every render. The app
-/// set is small and stable, so a plain count-capped `NSCache` (system-evicted under pressure) is
-/// enough — mirrors the `ImageThumbnail` cache.
+/// Caches app icons by file path so list rows don't re-hit `NSWorkspace` on every render.
+///
+/// `NSWorkspace` returns a multi-representation icon with reps up to 512/1024px, but we only ever draw
+/// it at ≤24pt — caching those raw is what spiked Settings' App-Hotkeys list to hundreds of MB. So we
+/// downsample each icon once to a small fixed bitmap and byte-bound the cache (system-evicted under
+/// pressure, like `ImageThumbnail`).
 enum IconCache {
+    private static let displayPixel: CGFloat = 128  // crisp for 24pt at any Retina scale
+
     private static let cache: NSCache<NSString, NSImage> = {
         let cache = NSCache<NSString, NSImage>()
-        cache.countLimit = 512
+        cache.totalCostLimit = 32 * 1024 * 1024
         return cache
     }()
 
@@ -25,9 +30,36 @@ enum IconCache {
     static func icon(forFile path: String) -> NSImage {
         let key = path as NSString
         if let cached = cache.object(forKey: key) { return cached }
-        let icon = NSWorkspace.shared.icon(forFile: path)
-        cache.setObject(icon, forKey: key)
+        let (icon, cost) = downsampled(NSWorkspace.shared.icon(forFile: path))
+        cache.setObject(icon, forKey: key, cost: cost)
         return icon
+    }
+
+    /// Rasterize the multi-rep workspace icon into one `displayPixel`-square bitmap so the cache holds
+    /// ~64–256KB per app instead of multi-MB. Returns the image and its decoded byte cost.
+    @MainActor
+    private static func downsampled(_ source: NSImage) -> (NSImage, Int) {
+        let scale = NSScreen.main?.backingScaleFactor ?? 2
+        let pixels = Int(displayPixel * scale)
+        let fallbackCost = Int(displayPixel * displayPixel * 4)
+        guard
+            let rep = NSBitmapImageRep(
+                bitmapDataPlanes: nil, pixelsWide: pixels, pixelsHigh: pixels, bitsPerSample: 8,
+                samplesPerPixel: 4, hasAlpha: true, isPlanar: false, colorSpaceName: .deviceRGB,
+                bytesPerRow: 0, bitsPerPixel: 0)
+        else { return (source, fallbackCost) }
+        rep.size = NSSize(width: displayPixel, height: displayPixel)
+        guard let ctx = NSGraphicsContext(bitmapImageRep: rep) else { return (source, fallbackCost) }
+
+        NSGraphicsContext.saveGraphicsState()
+        NSGraphicsContext.current = ctx
+        ctx.imageInterpolation = .high
+        source.draw(in: NSRect(origin: .zero, size: rep.size))
+        NSGraphicsContext.restoreGraphicsState()
+
+        let image = NSImage(size: rep.size)
+        image.addRepresentation(rep)
+        return (image, rep.bytesPerRow * rep.pixelsHigh)
     }
 }
 

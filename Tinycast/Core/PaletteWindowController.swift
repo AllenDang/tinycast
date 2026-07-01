@@ -24,6 +24,9 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
 
     func hide(restoreFocus: Bool) {
         panel?.orderOut(nil)
+        // Drop the multi-MB clipboard preview bitmaps now the window is gone, so idle RAM returns near
+        // baseline. Row thumbnails stay cached, so the next open is still instant.
+        ImageThumbnail.purgePreviews()
         if restoreFocus { previousApp?.activate() }
     }
 

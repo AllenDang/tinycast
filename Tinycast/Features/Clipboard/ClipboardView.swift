@@ -266,6 +266,10 @@ private struct AsyncThumbnail<Content: View, Placeholder: View>: View {
 }
 
 struct ClipboardPreview: View {
+    /// The preview pane is ~460pt wide (panel 750 − list 290); 900px keeps it crisp at 2× Retina
+    /// without over-decoding — 1200px would allocate ~1.8× the pixels it can ever display.
+    private static let previewMaxPixel: CGFloat = 900
+
     let item: ClipboardItem?
     @EnvironmentObject private var store: ClipboardStore
 
@@ -293,7 +297,7 @@ struct ClipboardPreview: View {
                     .frame(maxWidth: .infinity, alignment: .topLeading)
             }
         case .image:
-            AsyncThumbnail(url: store.imageURL(for: item), maxPixel: 1200) { image in
+            AsyncThumbnail(url: store.imageURL(for: item), maxPixel: Self.previewMaxPixel) { image in
                 image
                     .resizable()
                     .aspectRatio(contentMode: .fit)
