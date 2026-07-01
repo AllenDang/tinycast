@@ -18,7 +18,11 @@ struct AppEntry: Identifiable, Hashable, Sendable {
 /// downsample each icon once to a small fixed bitmap and byte-bound the cache (system-evicted under
 /// pressure, like `ImageThumbnail`).
 enum IconCache {
-    private static let displayPixel: CGFloat = 128  // crisp for 24pt at any Retina scale
+    // Icons display at ≤24pt, so 48pt (2× for Retina) is plenty crisp. Keeping each icon this small is
+    // also what stops the launcher from ballooning: a `LazyVStack` scrolled to the bottom materializes
+    // every app row and pins its icon, so per-icon size sets the ceiling. At ~36KB the whole app set is
+    // a shared ~18MB (fits the cache with no eviction) instead of 500 distinct 256KB copies (~128MB).
+    private static let displayPixel: CGFloat = 48
 
     private static let cache: NSCache<NSString, NSImage> = {
         let cache = NSCache<NSString, NSImage>()
