@@ -33,7 +33,9 @@ struct ClipboardList: View {
                         .onRightClick { onActions(item) }
                     }
                 }
-                .padding(Theme.Spacing.md)
+                .padding(.horizontal, Theme.Spacing.md)
+                .padding(.top, Theme.Spacing.xs)
+                .padding(.bottom, Theme.Spacing.md)
                 .thinOverlayScrollbar()
             }
             .onChange(of: selectedID) { _, id in

@@ -121,7 +121,7 @@ struct RootPaletteView: View {
     }
 
     private var header: some View {
-        HStack(spacing: Theme.Spacing.xl) {
+        HStack(alignment: .firstTextBaseline, spacing: Theme.Spacing.md) {
             Image(systemName: vm.mode.systemImage)
                 .font(Theme.Typography.headerIcon)
                 .symbolRenderingMode(.hierarchical)
@@ -132,8 +132,10 @@ struct RootPaletteView: View {
                 .focused($searchFocused)
                 .onSubmit(activateSelection)
         }
-        .padding(.horizontal, Theme.Spacing.xxl)
+        // Align the search icon with the list rows and section headers below (list inset + row inset).
+        .padding(.horizontal, Theme.Spacing.md * 2)
         .frame(height: Theme.Size.headerHeight)
+        .padding(.top, Theme.Spacing.md)
         .frame(maxWidth: .infinity)
         .background(EdgeFade(edge: .top))
     }

@@ -62,7 +62,9 @@ struct LauncherList: View {
                                 }
                             }
                         }
-                        .padding(Theme.Spacing.md)
+                        .padding(.horizontal, Theme.Spacing.md)
+                        .padding(.top, Theme.Spacing.xs)
+                        .padding(.bottom, Theme.Spacing.md)
                         .thinOverlayScrollbar()
                     }
                     .onChange(of: selectedID) { _, id in
@@ -82,7 +84,7 @@ private struct SectionHeader: View {
             .foregroundStyle(.secondary)
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.horizontal, Theme.Spacing.md)
-            .padding(.top, Theme.Spacing.md)
+            .padding(.top, Theme.Spacing.xs)
             .padding(.bottom, Theme.Spacing.xs / 2)
     }
 }
