@@ -34,15 +34,18 @@ struct RootPaletteView: View {
         let count = vm.mode == .launcher ? apps.count : clips.count
         let sel = count == 0 ? 0 : min(max(vm.selection, 0), count - 1)
         let showSections = vm.mode == .launcher && isQueryEmpty && !favorites.keys.isEmpty
-        let favoriteCount = showSections ? apps.prefix(while: { favorites.isFavorite($0) }).count : 0
+        let favoriteCount =
+            showSections ? apps.prefix(while: { favorites.isFavorite($0) }).count : 0
         let selectedApp = apps.indices.contains(sel) ? apps[sel] : nil
         let selectedClip = clips.indices.contains(sel) ? clips[sel] : nil
 
         // The results layer fills the whole panel; the search header and action bar float on top
         // as translucent Liquid Glass bars (via safeAreaInset). The list scrolls *behind* them and
         // stays faintly visible through the glass — the Raycast look, with no hard dividers.
-        return content(apps: apps, clips: clips, selection: sel,
-                       favoriteCount: favoriteCount, showSections: showSections)
+        return content(
+            apps: apps, clips: clips, selection: sel,
+            favoriteCount: favoriteCount, showSections: showSections
+        )
         .safeAreaInset(edge: .top, spacing: 0) { header }
         .safeAreaInset(edge: .bottom, spacing: 0) { bottomBar }
         // Menus are in-window overlays anchored to a bottom corner, so they stay clipped inside the
@@ -74,17 +77,37 @@ struct RootPaletteView: View {
         .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.panel, style: .continuous))
         // Every show bumps focusToken — refocus search and drop any menu left open from last time
         // (e.g. when the palette was dismissed by clicking away while a context menu was up).
-        .onChange(of: vm.focusToken) { searchFocused = true; showActions = false; showAppMenu = false }
-        .onChange(of: vm.query) { vm.selection = 0 }
-        .onChange(of: vm.mode) { vm.selection = 0; showActions = false }
-        .onAppear { searchFocused = true }
-        .onKeyPress(.downArrow) { move(1); return .handled }
-        .onKeyPress(.upArrow) { move(-1); return .handled }
-        .onKeyPress(.escape) {
-            if showActions || showAppMenu { closeMenus(); return .handled }
-            core.hidePalette(); return .handled
+        .onChange(of: vm.focusToken) {
+            searchFocused = true
+            showActions = false
+            showAppMenu = false
         }
-        .onKeyPress(.tab) { toggleMode(); return .handled }
+        .onChange(of: vm.query) { vm.selection = 0 }
+        .onChange(of: vm.mode) {
+            vm.selection = 0
+            showActions = false
+        }
+        .onAppear { searchFocused = true }
+        .onKeyPress(.downArrow) {
+            move(1)
+            return .handled
+        }
+        .onKeyPress(.upArrow) {
+            move(-1)
+            return .handled
+        }
+        .onKeyPress(.escape) {
+            if showActions || showAppMenu {
+                closeMenus()
+                return .handled
+            }
+            core.hidePalette()
+            return .handled
+        }
+        .onKeyPress(.tab) {
+            toggleMode()
+            return .handled
+        }
         .onKeyPress(keys: [","], phases: .down) { press in
             guard press.modifiers.contains(.command) else { return .ignored }
             core.showSettings()
@@ -116,8 +139,10 @@ struct RootPaletteView: View {
     }
 
     @ViewBuilder
-    private func content(apps: [AppEntry], clips: [ClipboardItem], selection: Int,
-                         favoriteCount: Int, showSections: Bool) -> some View {
+    private func content(
+        apps: [AppEntry], clips: [ClipboardItem], selection: Int,
+        favoriteCount: Int, showSections: Bool
+    ) -> some View {
         switch vm.mode {
         case .launcher:
             let selectedID = apps.indices.contains(selection) ? apps[selection].id : nil
@@ -193,7 +218,9 @@ struct RootPaletteView: View {
     }
 
     private var appMenuButton: some View {
-        Button { withAnimation(Self.menuAnimation) { showAppMenu.toggle() } } label: {
+        Button {
+            withAnimation(Self.menuAnimation) { showAppMenu.toggle() }
+        } label: {
             Image(systemName: "ellipsis")
                 .font(.title3)
                 .symbolRenderingMode(.hierarchical)
@@ -207,14 +234,17 @@ struct RootPaletteView: View {
 
     private var appMenu: some View {
         PopoverMenu {
-           PopoverMenuRow(title: "Changelog", systemImage: "doc.text") {
-                closeMenus(); core.showChangelog()
+            PopoverMenuRow(title: "Changelog", systemImage: "doc.text") {
+                closeMenus()
+                core.showChangelog()
             }
             PopoverMenuRow(title: "About Tinycast", systemImage: "info.circle") {
-                closeMenus(); core.showAbout()
+                closeMenus()
+                core.showAbout()
             }
-              PopoverMenuRow(title: "Settings", systemImage: "gearshape", shortcut: "⌘,") {
-                closeMenus(); core.showSettings()
+            PopoverMenuRow(title: "Settings", systemImage: "gearshape", shortcut: "⌘,") {
+                closeMenus()
+                core.showSettings()
             }
         }
     }
@@ -236,7 +266,10 @@ struct RootPaletteView: View {
     }
 
     private func closeMenus() {
-        withAnimation(Self.menuAnimation) { showActions = false; showAppMenu = false }
+        withAnimation(Self.menuAnimation) {
+            showActions = false
+            showAppMenu = false
+        }
     }
 
     /// Inset of the menu panels from the window's bottom corners. Kept just inside the panel's

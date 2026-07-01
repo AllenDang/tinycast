@@ -13,18 +13,24 @@ struct ClipboardList: View {
             ScrollView {
                 LazyVStack(spacing: 1) {
                     ForEach(results) { item in
-                        ClipboardRow(item: item, selected: item.id == selectedID, imageURL: store.imageURL(for: item))
-                            .contentShape(Rectangle())
-                            // Single click selects *instantly* — the double-click-to-paste gesture
-                            // is `.simultaneousGesture`, so the single tap never waits on the
-                            // double-click timeout to disambiguate. Right-click uses the lightweight
-                            // catcher — not SwiftUI's `.contextMenu`, which stalls clicks for
-                            // seconds inside a LazyVStack on macOS.
-                            .onTapGesture { onSelect(item) }
-                            .simultaneousGesture(TapGesture(count: 2).onEnded {
-                                onSelect(item); onActivate()
-                            })
-                            .onRightClick { onActions(item) }
+                        ClipboardRow(
+                            item: item, selected: item.id == selectedID,
+                            imageURL: store.imageURL(for: item)
+                        )
+                        .contentShape(Rectangle())
+                        // Single click selects *instantly* — the double-click-to-paste gesture
+                        // is `.simultaneousGesture`, so the single tap never waits on the
+                        // double-click timeout to disambiguate. Right-click uses the lightweight
+                        // catcher — not SwiftUI's `.contextMenu`, which stalls clicks for
+                        // seconds inside a LazyVStack on macOS.
+                        .onTapGesture { onSelect(item) }
+                        .simultaneousGesture(
+                            TapGesture(count: 2).onEnded {
+                                onSelect(item)
+                                onActivate()
+                            }
+                        )
+                        .onRightClick { onActions(item) }
                     }
                 }
                 .padding(Theme.Spacing.md)
@@ -50,7 +56,8 @@ struct ClipboardActionsMenu: View {
         case .text:
             // Collapse all whitespace/newlines to single spaces so a multi-line copy stays a clean
             // one-line title.
-            let oneLine = (item.text ?? "").split(whereSeparator: \.isWhitespace).joined(separator: " ")
+            let oneLine = (item.text ?? "").split(whereSeparator: \.isWhitespace).joined(
+                separator: " ")
             return String(oneLine.prefix(40))
         case .image: return "Image"
         }
@@ -59,24 +66,32 @@ struct ClipboardActionsMenu: View {
     var body: some View {
         PopoverMenu(header: headerText) {
             PopoverMenuRow(title: "Paste", systemImage: "doc.on.clipboard", shortcut: "↵") {
-                core.paste(item); dismiss()
+                core.paste(item)
+                dismiss()
             }
             PopoverMenuRow(title: "Copy to Clipboard", systemImage: "doc.on.doc") {
-                core.copyToClipboard(item); dismiss()
+                core.copyToClipboard(item)
+                dismiss()
             }
             PopoverMenuRow(title: "Paste & Keep Window Open", systemImage: "pin") {
-                core.pasteKeepingWindowOpen(item); dismiss()
+                core.pasteKeepingWindowOpen(item)
+                dismiss()
             }
             if item.kind == .image {
                 PopoverMenuRow(title: "Show in Finder", systemImage: "folder") {
-                    core.revealClipboardImage(item); dismiss()
+                    core.revealClipboardImage(item)
+                    dismiss()
                 }
             }
             PopoverMenuRow(title: "Delete Entry", systemImage: "trash", isDestructive: true) {
-                store.remove(item); dismiss()
+                store.remove(item)
+                dismiss()
             }
-            PopoverMenuRow(title: "Delete All Entries", systemImage: "trash.fill", isDestructive: true) {
-                store.clearAll(); dismiss()
+            PopoverMenuRow(
+                title: "Delete All Entries", systemImage: "trash.fill", isDestructive: true
+            ) {
+                store.clearAll()
+                dismiss()
             }
         }
     }
@@ -107,7 +122,9 @@ private struct ClipboardRow: View {
     private var previewText: String {
         switch item.kind {
         // Single-line row, so cap before trimming — never walk a multi-MB clipboard string per row.
-        case .text: return String((item.text ?? "").prefix(200)).trimmingCharacters(in: .whitespacesAndNewlines)
+        case .text:
+            return String((item.text ?? "").prefix(200)).trimmingCharacters(
+                in: .whitespacesAndNewlines)
         case .image: return "Image"
         }
     }
@@ -123,7 +140,8 @@ private struct ClipboardRow: View {
                     .resizable()
                     .aspectRatio(contentMode: .fill)
                     .frame(width: Theme.Size.rowIcon, height: Theme.Size.rowIcon)
-                    .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.thumbnail, style: .continuous))
+                    .clipShape(
+                        RoundedRectangle(cornerRadius: Theme.Radius.thumbnail, style: .continuous))
             } else {
                 glyphTile("photo")
             }
@@ -173,7 +191,9 @@ struct ClipboardPreview: View {
                     .frame(maxWidth: .infinity, alignment: .topLeading)
             }
         case .image:
-            if let url = store.imageURL(for: item), let image = ImageThumbnail.load(url, maxPixel: 1200) {
+            if let url = store.imageURL(for: item),
+                let image = ImageThumbnail.load(url, maxPixel: 1200)
+            {
                 Image(nsImage: image)
                     .resizable()
                     .aspectRatio(contentMode: .fit)

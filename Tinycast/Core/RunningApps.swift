@@ -10,9 +10,12 @@ final class RunningAppsMonitor: ObservableObject {
     init() {
         refresh()
         let center = NSWorkspace.shared.notificationCenter
-        for name in [NSWorkspace.didLaunchApplicationNotification,
-                     NSWorkspace.didTerminateApplicationNotification] {
-            let token = center.addObserver(forName: name, object: nil, queue: .main) { [weak self] _ in
+        for name in [
+            NSWorkspace.didLaunchApplicationNotification,
+            NSWorkspace.didTerminateApplicationNotification,
+        ] {
+            let token = center.addObserver(forName: name, object: nil, queue: .main) {
+                [weak self] _ in
                 MainActor.assumeIsolated { self?.refresh() }
             }
             observers.append(token)
@@ -24,6 +27,7 @@ final class RunningAppsMonitor: ObservableObject {
     }
 
     private func refresh() {
-        runningBundleIDs = Set(NSWorkspace.shared.runningApplications.compactMap(\.bundleIdentifier))
+        runningBundleIDs = Set(
+            NSWorkspace.shared.runningApplications.compactMap(\.bundleIdentifier))
     }
 }

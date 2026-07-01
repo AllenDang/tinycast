@@ -1,5 +1,5 @@
-import SwiftUI
 import KeyboardShortcuts
+import SwiftUI
 
 struct GeneralSettingsView: View {
     @ObservedObject private var settings = AppCore.shared.settings
@@ -29,8 +29,11 @@ struct GeneralSettingsView: View {
             Section("Permissions") {
                 LabeledContent("Accessibility (paste)") {
                     HStack(spacing: 8) {
-                        Image(systemName: accessibilityTrusted ? "checkmark.circle.fill" : "exclamationmark.triangle.fill")
-                            .foregroundStyle(accessibilityTrusted ? Color.green : Color.orange)
+                        Image(
+                            systemName: accessibilityTrusted
+                                ? "checkmark.circle.fill" : "exclamationmark.triangle.fill"
+                        )
+                        .foregroundStyle(accessibilityTrusted ? Color.green : Color.orange)
                         Button("Open Settings…") { Permissions.openAccessibilitySettings() }
                     }
                 }

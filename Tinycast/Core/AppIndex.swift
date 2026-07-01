@@ -1,8 +1,8 @@
 import AppKit
 
 struct AppEntry: Identifiable, Hashable, Sendable {
-    let id: String          // file path — always unique
-    let name: String        // clean display name, never includes ".app"
+    let id: String  // file path — always unique
+    let name: String  // clean display name, never includes ".app"
     let url: URL
     let bundleID: String?
 
@@ -58,22 +58,27 @@ final class AppIndex: ObservableObject {
         var seenBundleIDs = Set<String>()
         var result: [AppEntry] = []
         for dir in searchDirs {
-            guard let items = try? fm.contentsOfDirectory(
-                at: dir, includingPropertiesForKeys: nil, options: [.skipsHiddenFiles]
-            ) else { continue }
+            guard
+                let items = try? fm.contentsOfDirectory(
+                    at: dir, includingPropertiesForKeys: nil, options: [.skipsHiddenFiles]
+                )
+            else { continue }
             for url in items where url.pathExtension == "app" {
                 let bundle = Bundle(url: url)
                 let bundleID = bundle?.bundleIdentifier
                 // Dedup by bundle id; first directory (/Applications) wins.
                 if let bundleID, !seenBundleIDs.insert(bundleID).inserted { continue }
 
-                let name = (bundle?.object(forInfoDictionaryKey: "CFBundleDisplayName") as? String)
+                let name =
+                    (bundle?.object(forInfoDictionaryKey: "CFBundleDisplayName") as? String)
                     ?? (bundle?.object(forInfoDictionaryKey: "CFBundleName") as? String)
                     ?? url.deletingPathExtension().lastPathComponent
                 result.append(AppEntry(id: url.path, name: name, url: url, bundleID: bundleID))
             }
         }
-        return result.sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
+        return result.sorted {
+            $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending
+        }
     }
 
     /// Ranked matches. Empty query returns the full alphabetical list.
@@ -91,7 +96,8 @@ final class AppIndex: ObservableObject {
             guard let score = FuzzyMatch.score(query: q, candidate: app.name) else { return nil }
             return (app, score)
         }
-        return scored
+        return
+            scored
             .sorted {
                 $0.1 != $1.1
                     ? $0.1 > $1.1

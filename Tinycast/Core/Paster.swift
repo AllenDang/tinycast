@@ -5,7 +5,9 @@ enum Paster {
     /// Write the item onto the system pasteboard and paste it into `previousApp` via a synthetic
     /// ⌘V, activating that app so the keystroke lands there.
     @MainActor
-    static func paste(_ item: ClipboardItem, store: ClipboardStore, previousApp: NSRunningApplication?) {
+    static func paste(
+        _ item: ClipboardItem, store: ClipboardStore, previousApp: NSRunningApplication?
+    ) {
         write(item, store: store)
         previousApp?.activate()
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.08) {
@@ -23,7 +25,9 @@ enum Paster {
     /// Paste into `app` *without* activating it, by delivering the ⌘V straight to that process.
     /// This leaves Tinycast frontmost, so the palette can stay open with no focus flicker.
     @MainActor
-    static func pasteInPlace(_ item: ClipboardItem, store: ClipboardStore, into app: NSRunningApplication?) {
+    static func pasteInPlace(
+        _ item: ClipboardItem, store: ClipboardStore, into app: NSRunningApplication?
+    ) {
         write(item, store: store)
         guard let pid = app?.processIdentifier else { return }
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {

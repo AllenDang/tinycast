@@ -1,0 +1,29 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      // Assembles the real .app bundle via make-app.sh. DEVELOPER_DIR forces Xcode's
+      // toolchain (Command Line Tools can't build this — SwiftUI macros are missing),
+      // regardless of what `xcode-select` points at.
+      "label": "Build Tinycast.app (debug)",
+      "type": "shell",
+      "command": "Packaging/make-app.sh debug",
+      "options": {
+        "cwd": "${workspaceFolder}",
+        "env": { "DEVELOPER_DIR": "/Applications/Xcode.app/Contents/Developer" }
+      },
+      "group": "build",
+      "problemMatcher": ["$swiftc"]
+    },
+    {
+      // Rebuild, then relaunch the menu-bar app. Default build task (⌘⇧B).
+      "label": "Build & Run Tinycast (debug)",
+      "type": "shell",
+      "command": "killall Tinycast 2>/dev/null; open build/Tinycast.app",
+      "options": { "cwd": "${workspaceFolder}" },
+      "dependsOn": "Build Tinycast.app (debug)",
+      "group": { "kind": "build", "isDefault": true },
+      "problemMatcher": []
+    }
+  ]
+}

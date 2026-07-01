@@ -1,5 +1,5 @@
-import SwiftUI
 import KeyboardShortcuts
+import SwiftUI
 
 struct LauncherList: View {
     let results: [AppEntry]
@@ -53,7 +53,8 @@ struct LauncherList: View {
                                     AppRow(
                                         app: app,
                                         selected: app.id == selectedID,
-                                        running: app.bundleID.map(runningApps.runningBundleIDs.contains) ?? false
+                                        running: app.bundleID.map(
+                                            runningApps.runningBundleIDs.contains) ?? false
                                     )
                                     .contentShape(Rectangle())
                                     .onTapGesture { core.launch(app) }
@@ -107,7 +108,7 @@ private struct AppRow: View {
     /// Raycast-style keycaps for this app's per-app hotkey, or `nil` if none is bound.
     private var shortcutCaps: [String]? {
         guard let bundleID = app.bundleID,
-              let shortcut = KeyboardShortcuts.getShortcut(for: .app(bundleID))
+            let shortcut = KeyboardShortcuts.getShortcut(for: .app(bundleID))
         else { return nil }
         let caps = KeyCap.split(shortcut)
         return caps.isEmpty ? nil : caps
@@ -202,7 +203,9 @@ struct AppActionsMenu: View {
 
     var body: some View {
         PopoverMenu(header: app.name) {
-            PopoverMenuRow(title: "Open Application", systemImage: "list.bullet.rectangle", shortcut: "↵") {
+            PopoverMenuRow(
+                title: "Open Application", systemImage: "list.bullet.rectangle", shortcut: "↵"
+            ) {
                 core.launch(app)
                 dismiss()
             }

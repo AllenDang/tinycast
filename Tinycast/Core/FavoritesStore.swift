@@ -30,7 +30,8 @@ final class FavoritesStore: ObservableObject {
     /// Split `apps` into favorites (in stored order) and the rest (order preserved).
     func ordered(_ apps: [AppEntry]) -> (favorites: [AppEntry], rest: [AppEntry]) {
         guard !keys.isEmpty else { return ([], apps) }
-        let byKey = Dictionary(apps.map { (key(for: $0), $0) }, uniquingKeysWith: { first, _ in first })
+        let byKey = Dictionary(
+            apps.map { (key(for: $0), $0) }, uniquingKeysWith: { first, _ in first })
         let favorites = keys.compactMap { byKey[$0] }
         let favoriteKeys = Set(keys)
         let rest = apps.filter { !favoriteKeys.contains(key(for: $0)) }

@@ -103,13 +103,15 @@ final class AppCore: ObservableObject {
     }
 
     func showAbout() {
-        auxWindows.show(id: "about", title: "About Tinycast", size: CGSize(width: 320, height: 320)) {
+        auxWindows.show(id: "about", title: "About Tinycast", size: CGSize(width: 320, height: 320))
+        {
             AboutView()
         }
     }
 
     func showChangelog() {
-        auxWindows.show(id: "changelog", title: "Changelog", size: CGSize(width: 460, height: 480)) {
+        auxWindows.show(id: "changelog", title: "Changelog", size: CGSize(width: 460, height: 480))
+        {
             ChangelogView()
         }
     }

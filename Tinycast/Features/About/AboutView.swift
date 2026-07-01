@@ -34,7 +34,7 @@ struct ChangelogView: View {
     // on every body evaluation.
     private let blocks: [MarkdownBlock] = {
         guard let url = Bundle.module.url(forResource: "CHANGELOG", withExtension: "md"),
-              let text = try? String(contentsOf: url, encoding: .utf8)
+            let text = try? String(contentsOf: url, encoding: .utf8)
         else { return [.paragraph(AttributedString("No changelog available."))] }
         return MarkdownBlock.parse(text)
     }()
@@ -70,7 +70,8 @@ enum MarkdownBlock {
             let trimmed = line.trimmingCharacters(in: .whitespaces)
             if trimmed.isEmpty { continue }
             if let level = headingLevel(trimmed) {
-                blocks.append(.heading(level: level, text: inline(String(trimmed.dropFirst(level + 1)))))
+                blocks.append(
+                    .heading(level: level, text: inline(String(trimmed.dropFirst(level + 1)))))
             } else if trimmed.hasPrefix("- ") || trimmed.hasPrefix("* ") {
                 blocks.append(.bullet(inline(String(trimmed.dropFirst(2)))))
             } else {
@@ -133,7 +134,9 @@ enum MarkdownBlock {
 final class AuxWindowController: NSObject, NSWindowDelegate {
     private var windows: [String: NSWindow] = [:]
 
-    func show<Content: View>(id: String, title: String, size: CGSize, @ViewBuilder content: () -> Content) {
+    func show<Content: View>(
+        id: String, title: String, size: CGSize, @ViewBuilder content: () -> Content
+    ) {
         let window: NSWindow
         if let existing = windows[id] {
             window = existing
@@ -168,7 +171,8 @@ final class AuxWindowController: NSObject, NSWindowDelegate {
 
     func windowWillClose(_ notification: Notification) {
         guard let window = notification.object as? NSWindow,
-              let id = windows.first(where: { $0.value === window })?.key else { return }
+            let id = windows.first(where: { $0.value === window })?.key
+        else { return }
         windows.removeValue(forKey: id)
     }
 }

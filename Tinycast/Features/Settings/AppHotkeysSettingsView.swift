@@ -1,5 +1,5 @@
-import SwiftUI
 import KeyboardShortcuts
+import SwiftUI
 
 struct AppHotkeysSettingsView: View {
     @EnvironmentObject private var appIndex: AppIndex
@@ -29,7 +29,8 @@ struct AppHotkeysSettingsView: View {
                             Spacer()
                             if let bundleID = app.bundleID {
                                 KeyboardShortcuts.Recorder(for: .app(bundleID)) { shortcut in
-                                    AppCore.shared.hotKeys.setBinding(bundleID: bundleID, hasShortcut: shortcut != nil)
+                                    AppCore.shared.hotKeys.setBinding(
+                                        bundleID: bundleID, hasShortcut: shortcut != nil)
                                 }
                             } else {
                                 Text("—").foregroundStyle(.tertiary)

@@ -66,7 +66,7 @@ panel and `AppCore`. Showing the palette calls `prepare(mode:)`, which resets st
 
 **Focus restoration is load-bearing.** `PaletteWindowController` records `previousApp` (the frontmost
 app) on show. Paste then targets that app: `Paster.paste` activates it and posts a synthetic ⌘V via
-`CGEvent`; `Paster.pasteInPlace` posts ⌘V straight to the app's PID *without* activating it, so the
+`CGEvent`; `Paster.pasteInPlace` posts ⌘V straight to the app's PID _without_ activating it, so the
 palette can stay open and frontmost (used by "paste keeping window open"). Both require the Accessibility
 permission (`Permissions.ensureAccessibility()`).
 

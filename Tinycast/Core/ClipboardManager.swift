@@ -30,7 +30,8 @@ final class ClipboardManager {
         if pb.types?.contains(Self.internalType) == true { return }
 
         if let text = pb.string(forType: .string),
-           !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        {
             store.addText(text)
             return
         }
@@ -38,7 +39,9 @@ final class ClipboardManager {
         if let type = pb.availableType(from: [.png, .tiff]), let data = pb.data(forType: type) {
             if type == .png {
                 store.addImage(data)
-            } else if let png = NSBitmapImageRep(data: data)?.representation(using: .png, properties: [:]) {
+            } else if let png = NSBitmapImageRep(data: data)?.representation(
+                using: .png, properties: [:])
+            {
                 store.addImage(png)
             }
         }

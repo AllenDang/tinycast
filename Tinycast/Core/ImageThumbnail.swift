@@ -25,9 +25,11 @@ enum ImageThumbnail {
             kCGImageSourceShouldCacheImmediately: true,
             kCGImageSourceThumbnailMaxPixelSize: maxPixel,
         ]
-        guard let cgImage = CGImageSourceCreateThumbnailAtIndex(source, 0, options as CFDictionary) else { return nil }
+        guard let cgImage = CGImageSourceCreateThumbnailAtIndex(source, 0, options as CFDictionary)
+        else { return nil }
 
-        let image = NSImage(cgImage: cgImage, size: NSSize(width: cgImage.width, height: cgImage.height))
+        let image = NSImage(
+            cgImage: cgImage, size: NSSize(width: cgImage.width, height: cgImage.height))
         cache.setObject(image, forKey: key)
         return image
     }
@@ -35,9 +37,10 @@ enum ImageThumbnail {
     /// Pixel dimensions read from image metadata — no full decode.
     static func pixelSize(of url: URL) -> CGSize? {
         guard let source = CGImageSourceCreateWithURL(url as CFURL, nil),
-              let props = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [CFString: Any],
-              let width = props[kCGImagePropertyPixelWidth] as? Int,
-              let height = props[kCGImagePropertyPixelHeight] as? Int else { return nil }
+            let props = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [CFString: Any],
+            let width = props[kCGImagePropertyPixelWidth] as? Int,
+            let height = props[kCGImagePropertyPixelHeight] as? Int
+        else { return nil }
         return CGSize(width: width, height: height)
     }
 }

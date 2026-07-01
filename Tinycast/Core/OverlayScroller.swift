@@ -25,7 +25,7 @@ private struct OverlayScrollerConfigurator: NSViewRepresentable {
 
         func applyOverlayStyle() {
             guard let scrollView = enclosingScrollView else { return }
-            scrollView.scrollerStyle = .overlay     // thin + appears-on-scroll + auto-hide
+            scrollView.scrollerStyle = .overlay  // thin + appears-on-scroll + auto-hide
             scrollView.autohidesScrollers = true
             scrollView.hasHorizontalScroller = false
         }

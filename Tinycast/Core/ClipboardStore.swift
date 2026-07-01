@@ -52,7 +52,8 @@ final class ClipboardStore: ObservableObject {
 
     func load() {
         guard let data = try? Data(contentsOf: indexURL),
-              let decoded = try? JSONDecoder().decode([ClipboardItem].self, from: data) else { return }
+            let decoded = try? JSONDecoder().decode([ClipboardItem].self, from: data)
+        else { return }
         items = decoded
     }
 
