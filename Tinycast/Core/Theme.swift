@@ -18,11 +18,12 @@ enum Theme {
         static let menu: CGFloat = 6
         static let menuPanel: CGFloat = 14
         static let thumbnail: CGFloat = 6
+        static let card: CGFloat = 10
     }
 
     enum Size {
-        static let panelWidth: CGFloat = 720
-        static let panelHeight: CGFloat = 470
+        static let panelWidth: CGFloat = 750
+        static let panelHeight: CGFloat = 480
         static let headerHeight: CGFloat = 44
         static let bottomBarHeight: CGFloat = 52
         static let rowIcon: CGFloat = 24
@@ -30,6 +31,9 @@ enum Theme {
         static let clipboardListWidth: CGFloat = 290
         static let menuWidth: CGFloat = 240
         static let menuIcon: CGFloat = 16
+        /// Settings window: sidebar column width and the small icon used in setting rows.
+        static let settingsSidebar: CGFloat = 184
+        static let settingsRowIcon: CGFloat = 20
     }
 
     /// System text styles (not hardcoded point sizes) so the UI honors Dynamic Type and matches
@@ -55,6 +59,10 @@ enum Theme {
         /// Mouse hover — a fainter layer that follows the cursor, visually distinct from selection.
         static let rowHover = Color.primary.opacity(0.06)
         static let menuHover = Color.primary.opacity(0.10)
+        /// Settings grouped "card": a faint raised surface with a hairline border. The border color
+        /// doubles as the inset divider between rows in a card.
+        static let cardFill = Color.primary.opacity(0.04)
+        static let cardStroke = Color.primary.opacity(0.08)
     }
 }
 

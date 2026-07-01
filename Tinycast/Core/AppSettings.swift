@@ -1,5 +1,12 @@
 import SwiftUI
 
+/// UserDefaults keys shared between `@AppStorage` call sites (scene state that isn't part of the
+/// `AppSettings` model), so the App and the Settings UI bind to the same key.
+enum SettingsKey {
+    /// Menu-bar icon visibility — read by `MenuBarExtra(isInserted:)` and the Settings toggle.
+    static let showInMenuBar = "showInMenuBar"
+}
+
 @MainActor
 final class AppSettings: ObservableObject {
     private let defaults = UserDefaults.standard

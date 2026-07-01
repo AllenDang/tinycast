@@ -97,7 +97,10 @@ final class AppCore: ObservableObject {
     /// Settings runs in its own window (the SwiftUI `Settings` scene is unreliable for accessory
     /// apps), raised to the front via the same controller as About/Changelog.
     func showSettings() {
-        auxWindows.show(id: "settings", title: "Settings", size: CGSize(width: 500, height: 440)) {
+        auxWindows.show(
+            id: "settings", title: "Settings", size: CGSize(width: 640, height: 432),
+            seamlessTitleBar: true
+        ) {
             SettingsRootView().environmentObject(self.appIndex)
         }
     }

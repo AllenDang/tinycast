@@ -3,57 +3,61 @@ import SwiftUI
 
 struct GeneralSettingsView: View {
     @ObservedObject private var settings = AppCore.shared.settings
-    @State private var accessibilityTrusted = Permissions.isAccessibilityTrusted()
-    private let refreshTimer = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
+    // Same UserDefaults key the `App` binds its `MenuBarExtra(isInserted:)` to — toggling here
+    // updates the menu-bar icon live, with no shared observable object between them.
+    @AppStorage(SettingsKey.showInMenuBar) private var showInMenuBar = true
 
     var body: some View {
-        Form {
-            Section("Global Shortcuts") {
-                KeyboardShortcuts.Recorder("App Launcher:", name: .togglePalette)
-                KeyboardShortcuts.Recorder("Clipboard History:", name: .toggleClipboard)
+        SettingsPane(
+            title: "General",
+            subtitle: "Global shortcuts and startup behaviour."
+        ) {
+            SettingsCard(header: "Global Shortcuts") {
+                SettingsRow(
+                    title: "App Launcher",
+                    subtitle: "Summon the fuzzy app launcher.",
+                    systemImage: "magnifyingglass",
+                    tint: .blue
+                ) {
+                    KeyboardShortcuts.Recorder("", name: .togglePalette)
+                }
+                SettingsDivider()
+                SettingsRow(
+                    title: "Clipboard History",
+                    subtitle: "Open the clipboard history browser.",
+                    systemImage: "doc.on.clipboard",
+                    tint: .orange
+                ) {
+                    KeyboardShortcuts.Recorder("", name: .toggleClipboard)
+                }
             }
 
-            Section("Clipboard") {
-                Stepper(
-                    "History size: \(settings.clipboardMaxItems) items",
-                    value: $settings.clipboardMaxItems, in: 50...2000, step: 50
-                )
-                .onChange(of: settings.clipboardMaxItems) {
-                    AppCore.shared.clipboardStore.maxItems = settings.clipboardMaxItems
+            SettingsCard(header: "General") {
+                SettingsRow(
+                    title: "Launch at login",
+                    subtitle: "Start Tinycast automatically when you log in.",
+                    systemImage: "power",
+                    tint: .green
+                ) {
+                    Toggle("", isOn: $settings.launchAtLogin)
+                        .labelsHidden()
+                        .toggleStyle(.switch)
+                        .controlSize(.small)
                 }
-                Button("Clear Clipboard History", role: .destructive) {
-                    AppCore.shared.clipboardStore.clearAll()
+                SettingsDivider()
+                SettingsRow(
+                    title: "Show in menu bar",
+                    subtitle:
+                        "Keep the Tinycast icon in the menu bar. Hotkeys still work when hidden.",
+                    systemImage: "menubar.arrow.up.rectangle",
+                    tint: .gray
+                ) {
+                    Toggle("", isOn: $showInMenuBar)
+                        .labelsHidden()
+                        .toggleStyle(.switch)
+                        .controlSize(.small)
                 }
             }
-
-            Section("Permissions") {
-                LabeledContent("Accessibility (paste)") {
-                    HStack(spacing: 8) {
-                        Image(
-                            systemName: accessibilityTrusted
-                                ? "checkmark.circle.fill" : "exclamationmark.triangle.fill"
-                        )
-                        .foregroundStyle(accessibilityTrusted ? Color.green : Color.orange)
-                        Button("Open Settings…") { Permissions.openAccessibilitySettings() }
-                    }
-                }
-                Text("Required so Tinycast can paste a clipboard item into the app you were using.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-
-            Section("Startup") {
-                Toggle("Launch Tinycast at login", isOn: $settings.launchAtLogin)
-                    // Attached to a row (not the Form) so the configurator lands inside the
-                    // Form's own scroll view, where `enclosingScrollView` can find it.
-                    .thinOverlayScrollbar()
-            }
-        }
-        .formStyle(.grouped)
-        .onAppear { accessibilityTrusted = Permissions.isAccessibilityTrusted() }
-        .onReceive(refreshTimer) { _ in
-            let trusted = Permissions.isAccessibilityTrusted()
-            if trusted != accessibilityTrusted { accessibilityTrusted = trusted }
         }
     }
 }

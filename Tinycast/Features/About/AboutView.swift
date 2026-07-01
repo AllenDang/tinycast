@@ -135,19 +135,29 @@ final class AuxWindowController: NSObject, NSWindowDelegate {
     private var windows: [String: NSWindow] = [:]
 
     func show<Content: View>(
-        id: String, title: String, size: CGSize, @ViewBuilder content: () -> Content
+        id: String, title: String, size: CGSize, seamlessTitleBar: Bool = false,
+        @ViewBuilder content: () -> Content
     ) {
         let window: NSWindow
         if let existing = windows[id] {
             window = existing
         } else {
+            var style: NSWindow.StyleMask = [.titled, .closable]
+            if seamlessTitleBar { style.insert(.fullSizeContentView) }
             window = NSWindow(
                 contentRect: NSRect(origin: .zero, size: size),
-                styleMask: [.titled, .closable],
+                styleMask: style,
                 backing: .buffered,
                 defer: false
             )
             window.title = title
+            // Let the content (e.g. the Settings sidebar) run edge-to-edge under a transparent
+            // titlebar so the window reads as one continuous surface — the modern inspector look.
+            if seamlessTitleBar {
+                window.titlebarAppearsTransparent = true
+                window.titleVisibility = .hidden
+                window.isMovableByWindowBackground = true
+            }
             window.isReleasedWhenClosed = false
             window.contentView = NSHostingView(rootView: content())
             window.delegate = self
