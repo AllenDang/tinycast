@@ -1,0 +1,79 @@
+name: Release
+
+# Manually triggered from the Actions tab. Pick a channel and a base version;
+# alpha/beta builds get an auto-incrementing suffix so re-running never collides.
+on:
+  workflow_dispatch:
+    inputs:
+      channel:
+        description: "Release channel"
+        type: choice
+        options: [alpha, beta, stable]
+        default: alpha
+      version:
+        description: "Base version, e.g. 0.2.0 (no channel suffix)"
+        type: string
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: macos-26
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Select Xcode 26
+        run: |
+          XCODE_PATH="$(ls -d /Applications/Xcode_26*.app 2>/dev/null | sort -V | tail -n1)"
+          if [ -z "$XCODE_PATH" ]; then
+            echo "::error::No Xcode 26.x found on this runner. Installed Xcodes:"
+            ls /Applications | grep -i xcode || true
+            exit 1
+          fi
+          echo "Using $XCODE_PATH"
+          echo "DEVELOPER_DIR=$XCODE_PATH/Contents/Developer" >> "$GITHUB_ENV"
+
+      - name: Compute release metadata
+        id: meta
+        run: |
+          CHANNEL="${{ github.event.inputs.channel }}"
+          BASE_VERSION="${{ github.event.inputs.version }}"
+          case "$CHANNEL" in
+            alpha)  SUFFIX="-alpha.${GITHUB_RUN_NUMBER}"; DISPLAY="Tinycast Alpha"; DMG="Tinycast-Alpha"; PRERELEASE=true ;;
+            beta)   SUFFIX="-beta.${GITHUB_RUN_NUMBER}";  DISPLAY="Tinycast Beta";  DMG="Tinycast-Beta";  PRERELEASE=true ;;
+            stable) SUFFIX="";                            DISPLAY="Tinycast";       DMG="Tinycast";       PRERELEASE=false ;;
+          esac
+          echo "full_version=${BASE_VERSION}${SUFFIX}" >> "$GITHUB_OUTPUT"
+          echo "display_name=$DISPLAY" >> "$GITHUB_OUTPUT"
+          echo "dmg_name=$DMG" >> "$GITHUB_OUTPUT"
+          echo "prerelease=$PRERELEASE" >> "$GITHUB_OUTPUT"
+
+      - name: Build DMG
+        env:
+          VERSION: ${{ steps.meta.outputs.full_version }}
+          DISPLAY_NAME: ${{ steps.meta.outputs.display_name }}
+          DMG_NAME: ${{ steps.meta.outputs.dmg_name }}
+          BUILD_NUMBER: ${{ github.run_number }}
+        run: Packaging/build-dmg.sh
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.meta.outputs.dmg_name }}-${{ steps.meta.outputs.full_version }}
+          path: build/${{ steps.meta.outputs.dmg_name }}.dmg
+
+      - name: Publish GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TAG="v${{ steps.meta.outputs.full_version }}"
+          PRERELEASE_FLAG=""
+          if [ "${{ steps.meta.outputs.prerelease }}" = "true" ]; then
+            PRERELEASE_FLAG="--prerelease"
+          fi
+          gh release create "$TAG" \
+            "build/${{ steps.meta.outputs.dmg_name }}.dmg" \
+            --title "Tinycast ${{ steps.meta.outputs.full_version }}" \
+            --notes "Channel: ${{ github.event.inputs.channel }}. Built from ${{ github.sha }}. Unsigned/ad-hoc build — see README for the Gatekeeper workaround (\`xattr -cr\`)." \
+            $PRERELEASE_FLAG
