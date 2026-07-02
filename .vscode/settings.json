@@ -7,6 +7,13 @@
   // Developer/usr/bin. Point the debugger at it so F5 (Run and Debug) works.
   "swift.debugger.path": "/Applications/Xcode.app/Contents/Developer/usr/bin/lldb-dap",
 
+  // Stop the Swift extension from auto-appending "Debug/Release Tinycast" launch
+  // configs (and reformatting) on every workspace load. Those launch the bare
+  // SwiftPM executable (target: Tinycast), which doesn't work for this menu-bar
+  // accessory app — we debug the binary inside the assembled .app bundle instead
+  // (see launch.json).
+  "swift.autoGenerateLaunchConfigurations": false,
+
   // Format Swift files on save using swift-format (from the selected Xcode toolchain).
   "[swift]": {
     "editor.defaultFormatter": "swiftlang.swift-vscode",
