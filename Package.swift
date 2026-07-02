@@ -5,7 +5,9 @@ let package = Package(
     name: "Tinycast",
     platforms: [.macOS("26.0")],
     dependencies: [
-        .package(url: "https://github.com/sindresorhus/KeyboardShortcuts", from: "2.3.0")
+        // Vendored (see third-party/KeyboardShortcuts) to patch resource-bundle resolution, which
+        // otherwise `fatalError`s inside our hand-assembled `.app`. Keep pinned to upstream 2.4.0.
+        .package(name: "KeyboardShortcuts", path: "third-party/KeyboardShortcuts")
     ],
     targets: [
         .executableTarget(

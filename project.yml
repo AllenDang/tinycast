@@ -18,9 +18,10 @@ settings:
     SWIFT_STRICT_CONCURRENCY: complete
 
 packages:
+  # Vendored (see third-party/KeyboardShortcuts) to patch resource-bundle resolution. Kept in sync
+  # with Package.swift per the two-project-definitions note in CLAUDE.md.
   KeyboardShortcuts:
-    url: https://github.com/sindresorhus/KeyboardShortcuts
-    from: "2.3.0"
+    path: third-party/KeyboardShortcuts
 
 targets:
   Tinycast:

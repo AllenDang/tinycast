@@ -33,7 +33,7 @@ struct ChangelogView: View {
     // Read + parse the bundled markdown once; the file is static, so a `let` avoids re-parsing it
     // on every body evaluation.
     private let blocks: [MarkdownBlock] = {
-        guard let url = Bundle.module.url(forResource: "CHANGELOG", withExtension: "md"),
+        guard let url = Bundle.tinycastResources.url(forResource: "CHANGELOG", withExtension: "md"),
             let text = try? String(contentsOf: url, encoding: .utf8)
         else { return [.paragraph(AttributedString("No changelog available."))] }
         return MarkdownBlock.parse(text)
