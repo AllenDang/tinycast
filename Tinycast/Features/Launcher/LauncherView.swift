@@ -68,8 +68,9 @@ struct LauncherList: View {
                         .padding(.horizontal, Theme.Spacing.md)
                         .padding(.top, Theme.Spacing.xs)
                         .padding(.bottom, Theme.Spacing.md)
-                        .thinOverlayScrollbar()
+                        .hideNativeScrollers()
                     }
+                    .thinScrollbar()
                     .onChange(of: scrollToken) {
                         if let selectedID { proxy.scrollTo(selectedID, anchor: .center) }
                     }
@@ -150,7 +151,7 @@ private struct AppRow: View {
                 .foregroundStyle(.secondary)
         }
         .padding(.horizontal, Theme.Spacing.md)
-        .padding(.vertical, Theme.Spacing.md)
+        .padding(.vertical, Theme.Spacing.sm)
         .background(
             RoundedRectangle(cornerRadius: Theme.Radius.row, style: .continuous)
                 .fill(fill)

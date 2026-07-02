@@ -71,8 +71,9 @@ struct ClipboardList: View {
                 .padding(.horizontal, Theme.Spacing.md)
                 .padding(.top, Theme.Spacing.xs)
                 .padding(.bottom, Theme.Spacing.md)
-                .thinOverlayScrollbar()
+                .hideNativeScrollers()
             }
+            .thinScrollbar()
             .onChange(of: scrollToken) {
                 if let selectedID { proxy.scrollTo(selectedID.uuidString, anchor: .center) }
             }
@@ -189,7 +190,7 @@ private struct ClipboardRow: View {
             Spacer(minLength: 0)
         }
         .padding(.horizontal, Theme.Spacing.md)
-        .padding(.vertical, Theme.Spacing.md)
+        .padding(.vertical, Theme.Spacing.sm)
         .background(
             RoundedRectangle(cornerRadius: Theme.Radius.row, style: .continuous)
                 .fill(fill)

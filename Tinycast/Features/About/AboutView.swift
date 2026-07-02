@@ -49,8 +49,9 @@ struct ChangelogView: View {
             .textSelection(.enabled)
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(24)
-            .thinOverlayScrollbar()
+            .hideNativeScrollers()
         }
+        .thinScrollbar()
     }
 }
 

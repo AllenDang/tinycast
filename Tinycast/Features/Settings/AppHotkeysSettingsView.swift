@@ -76,8 +76,9 @@ struct AppHotkeysSettingsView: View {
             }
             .padding(.horizontal, Theme.Spacing.sm)
             .padding(.vertical, Theme.Spacing.sm)
-            .thinOverlayScrollbar()
+            .hideNativeScrollers()
         }
+        .thinScrollbar()
         .background(
             RoundedRectangle(cornerRadius: Theme.Radius.card, style: .continuous)
                 .fill(Theme.Colors.cardFill)

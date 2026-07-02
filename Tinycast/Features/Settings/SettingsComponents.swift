@@ -22,8 +22,9 @@ struct SettingsPane<Content: View>: View {
             // (The titlebar clearance is handled by the ScrollView's safe area, not by extra padding.)
             .padding(Theme.Spacing.xxl)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .thinOverlayScrollbar()
+            .hideNativeScrollers()
         }
+        .thinScrollbar()
     }
 }
 
