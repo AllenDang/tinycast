@@ -36,14 +36,52 @@ There is also an XcodeGen `project.yml` to open the project in the Xcode IDE
 ## Package a DMG
 
 ```sh
-Packaging/build-dmg.sh        # -> build/Tinycast.dmg
+Packaging/build-dmg.sh        # -> build/Tinycast.dmg (release build)
 ```
+
+To cut a one-off test build (different display name/version, e.g. an alpha to hand to a
+tester) without touching the script, override the defaults via env vars:
+
+```sh
+DISPLAY_NAME="Tinycast Alpha" VERSION="0.1.0-alpha.1" DMG_NAME="Tinycast-Alpha" \
+    Packaging/build-dmg.sh    # -> build/Tinycast-Alpha.dmg
+```
+
+`build-dmg.sh` always runs `make-app.sh release` first, so the DMG is a Release build,
+never debug.
+
+## CI releases
+
+`.github/workflows/release.yml` builds and publishes a DMG from GitHub Actions — no local
+machine needed. Run it from the **Actions** tab (`Release` → **Run workflow**) and pick:
+
+- **channel** — `alpha`, `beta`, or `stable`. Alpha/beta get an auto-incrementing
+  `-alpha.N`/`-beta.N` suffix (`N` is the Actions run number) so re-running never collides;
+  stable ships the version as-is.
+- **version** — base semver, e.g. `0.2.0`.
+
+It builds on a `macos-26` runner with Xcode 26, packages the DMG (same ad-hoc/self-signed
+path as a local build — no Developer ID involved), and publishes a GitHub Release tagged
+`v<version>` with the DMG attached, marked prerelease for alpha/beta.
 
 ## First launch (Gatekeeper)
 
-Tinycast is ad-hoc signed, not notarized. The first time you open it macOS will block it.
-Go to **System Settings → Privacy & Security**, scroll to the Tinycast warning, and click
-**Open Anyway**. (On macOS 15+ this replaces the old right-click → Open trick.)
+Tinycast has no Apple Developer ID and isn't notarized — there's no $99/yr account behind
+it, so macOS has nothing it can vouch for. What you'll see depends on how the app arrived:
+
+- **Built it yourself locally** (`make-app.sh`, no transfer involved): macOS shows the
+  ordinary "unidentified developer" warning. Go to **System Settings → Privacy &
+  Security**, scroll to the Tinycast entry, click **Open Anyway**, then open the app again
+  (the click only unlocks the permission — it doesn't launch the app).
+- **Received the `.app`/DMG from someone else** (AirDrop, Messages, Slack, browser
+  download): the transfer stamps a quarantine flag, and an unsigned/self-signed app under
+  quarantine gets a harder block — *"Tinycast is damaged and can't be opened, move it to
+  the Trash."* This is misleading; the app isn't actually corrupted. Fix it in Terminal:
+  ```sh
+  xattr -cr /Applications/Tinycast.app
+  ```
+  then open normally. There's no GUI path around this message on modern macOS — only the
+  Terminal command.
 
 ## Permissions
 

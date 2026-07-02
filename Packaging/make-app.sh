@@ -6,8 +6,9 @@ set -euo pipefail
 CONFIG="${1:-release}"
 APP_NAME="Tinycast"
 BUNDLE_ID="com.tinycast.app"
-VERSION="0.1.0"
-BUILD_NUMBER="1"
+VERSION="${VERSION:-0.1.0}"
+BUILD_NUMBER="${BUILD_NUMBER:-1}"
+DISPLAY_NAME="${DISPLAY_NAME:-$APP_NAME}"
 MIN_OS="26.0"
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
@@ -47,7 +48,7 @@ cat > "$APP/Contents/Info.plist" <<PLIST
 	<key>CFBundleName</key>
 	<string>$APP_NAME</string>
 	<key>CFBundleDisplayName</key>
-	<string>$APP_NAME</string>
+	<string>$DISPLAY_NAME</string>
 	<key>CFBundleExecutable</key>
 	<string>$APP_NAME</string>
 	<key>CFBundleIdentifier</key>
