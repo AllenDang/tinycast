@@ -13,7 +13,9 @@ struct PopoverMenu<Content: View>: View {
                 Text(header)
                     .font(Theme.Typography.sectionHeader)
                     .foregroundStyle(.secondary)
-                    .padding(.horizontal, Theme.Spacing.md)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+                    .padding(.horizontal, Theme.Spacing.lg)
                     .padding(.top, Theme.Spacing.xs)
                     .padding(.bottom, Theme.Spacing.xs / 2)
             }
@@ -21,8 +23,11 @@ struct PopoverMenu<Content: View>: View {
         }
         .padding(Theme.Spacing.sm)
         .frame(width: Theme.Size.menuWidth)
-        .glassEffect(.regular, in: RoundedRectangle(cornerRadius: Theme.Radius.menuPanel, style: .continuous))
-        .shadow(color: .black.opacity(0.28), radius: 14, y: 6)
+        // Tahoe glass carries its own elevation/shadow; a hand-tuned drop shadow on top of the
+        // newer, more opaque material reads heavy and non-native, so we let the glass own it.
+        .glassEffect(
+            .regular, in: RoundedRectangle(cornerRadius: Theme.Radius.menuPanel, style: .continuous)
+        )
     }
 }
 
@@ -31,19 +36,23 @@ struct PopoverMenuRow: View {
     let title: String
     let systemImage: String
     var shortcut: String? = nil
+    /// Destructive rows (delete) tint their icon + label red, matching the native menu convention.
+    var isDestructive: Bool = false
     let action: () -> Void
 
     @State private var hovering = false
 
     var body: some View {
         Button(action: action) {
-            HStack(spacing: Theme.Spacing.md) {
+            HStack(spacing: Theme.Spacing.lg) {
                 Image(systemName: systemImage)
                     .font(Theme.Typography.menuIcon)
-                    .foregroundStyle(.secondary)
+                    .symbolRenderingMode(.hierarchical)
+                    .foregroundStyle(isDestructive ? Color.red : Color.secondary)
                     .frame(width: Theme.Size.menuIcon)
                 Text(title)
                     .font(Theme.Typography.menuRow)
+                    .foregroundStyle(isDestructive ? Color.red : Color.primary)
                 Spacer(minLength: Theme.Spacing.sm)
                 if let shortcut {
                     Text(shortcut)

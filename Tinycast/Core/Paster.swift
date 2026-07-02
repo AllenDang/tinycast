@@ -2,8 +2,41 @@ import AppKit
 import Carbon.HIToolbox
 
 enum Paster {
+    /// Write the item onto the system pasteboard and paste it into `previousApp` via a synthetic
+    /// ⌘V, activating that app so the keystroke lands there.
     @MainActor
-    static func paste(_ item: ClipboardItem, store: ClipboardStore, previousApp: NSRunningApplication?) {
+    static func paste(
+        _ item: ClipboardItem, store: ClipboardStore, previousApp: NSRunningApplication?
+    ) {
+        write(item, store: store)
+        previousApp?.activate()
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.08) {
+            postCommandV()
+        }
+    }
+
+    /// Put the item on the system pasteboard without pasting. The internal marker keeps our own
+    /// poller from re-capturing it, so the history is left unchanged.
+    @MainActor
+    static func copy(_ item: ClipboardItem, store: ClipboardStore) {
+        write(item, store: store)
+    }
+
+    /// Paste into `app` *without* activating it, by delivering the ⌘V straight to that process.
+    /// This leaves Tinycast frontmost, so the palette can stay open with no focus flicker.
+    @MainActor
+    static func pasteInPlace(
+        _ item: ClipboardItem, store: ClipboardStore, into app: NSRunningApplication?
+    ) {
+        write(item, store: store)
+        guard let pid = app?.processIdentifier else { return }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+            postCommandV(toPid: pid)
+        }
+    }
+
+    @MainActor
+    private static func write(_ item: ClipboardItem, store: ClipboardStore) {
         let pb = NSPasteboard.general
         pb.clearContents()
 
@@ -20,15 +53,12 @@ enum Paster {
             }
         }
         pb.setData(Data(), forType: ClipboardManager.internalType)
-
-        previousApp?.activate()
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.08) {
-            postCommandV()
-        }
     }
 
+    /// Synthesize ⌘V. When `pid` is given, the event is delivered to that process only (keeping the
+    /// current app frontmost); otherwise it goes through the system tap to whatever is frontmost.
     @MainActor
-    private static func postCommandV() {
+    private static func postCommandV(toPid pid: pid_t? = nil) {
         guard Permissions.ensureAccessibility() else { return }
         let source = CGEventSource(stateID: .combinedSessionState)
         let v = CGKeyCode(kVK_ANSI_V)
@@ -36,7 +66,12 @@ enum Paster {
         let up = CGEvent(keyboardEventSource: source, virtualKey: v, keyDown: false)
         down?.flags = .maskCommand
         up?.flags = .maskCommand
-        down?.post(tap: .cghidEventTap)
-        up?.post(tap: .cghidEventTap)
+        if let pid {
+            down?.postToPid(pid)
+            up?.postToPid(pid)
+        } else {
+            down?.post(tap: .cghidEventTap)
+            up?.post(tap: .cghidEventTap)
+        }
     }
 }

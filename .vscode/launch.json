@@ -1,0 +1,17 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      // F5: build the .app bundle, then debug the binary *inside* the bundle so
+      // NSBundle.main resolves the Info.plist (LSUIElement) and resource bundles.
+      // Launching the bare SwiftPM executable (the old "target": "Tinycast" config)
+      // does not work for this menu-bar accessory app.
+      "type": "swift",
+      "request": "launch",
+      "name": "Run Tinycast (bundled .app)",
+      "program": "${workspaceFolder}/build/Tinycast.app/Contents/MacOS/Tinycast",
+      "cwd": "${workspaceFolder}",
+      "preLaunchTask": "Build Tinycast.app (debug)"
+    }
+  ]
+}

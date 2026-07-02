@@ -25,7 +25,8 @@ enum AppLauncher {
                 app.activate()
             }
         } else if let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundleID) {
-            NSWorkspace.shared.openApplication(at: url, configuration: NSWorkspace.OpenConfiguration())
+            NSWorkspace.shared.openApplication(
+                at: url, configuration: NSWorkspace.OpenConfiguration())
         }
     }
 }

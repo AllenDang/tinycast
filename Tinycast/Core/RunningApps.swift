@@ -5,19 +5,29 @@ import AppKit
 @MainActor
 final class RunningAppsMonitor: ObservableObject {
     @Published private(set) var runningBundleIDs: Set<String> = []
+    private var observers: [NSObjectProtocol] = []
 
     init() {
         refresh()
         let center = NSWorkspace.shared.notificationCenter
-        for name in [NSWorkspace.didLaunchApplicationNotification,
-                     NSWorkspace.didTerminateApplicationNotification] {
-            center.addObserver(forName: name, object: nil, queue: .main) { [weak self] _ in
+        for name in [
+            NSWorkspace.didLaunchApplicationNotification,
+            NSWorkspace.didTerminateApplicationNotification,
+        ] {
+            let token = center.addObserver(forName: name, object: nil, queue: .main) {
+                [weak self] _ in
                 MainActor.assumeIsolated { self?.refresh() }
             }
+            observers.append(token)
         }
     }
 
+    deinit {
+        observers.forEach(NSWorkspace.shared.notificationCenter.removeObserver)
+    }
+
     private func refresh() {
-        runningBundleIDs = Set(NSWorkspace.shared.runningApplications.compactMap(\.bundleIdentifier))
+        runningBundleIDs = Set(
+            NSWorkspace.shared.runningApplications.compactMap(\.bundleIdentifier))
     }
 }

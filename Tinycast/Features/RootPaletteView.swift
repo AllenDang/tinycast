@@ -9,6 +9,10 @@ struct RootPaletteView: View {
     @FocusState private var searchFocused: Bool
     @State private var showActions = false
     @State private var showAppMenu = false
+    /// Bumped only when the selection should pull the scroll view with it — keyboard navigation and
+    /// list resets. Mouse selection (click / right-click) targets an already-visible row, so it never
+    /// bumps this and the list stays put.
+    @State private var scrollToken = UUID()
 
     private var isQueryEmpty: Bool { vm.query.trimmingCharacters(in: .whitespaces).isEmpty }
 
@@ -34,17 +38,20 @@ struct RootPaletteView: View {
         let count = vm.mode == .launcher ? apps.count : clips.count
         let sel = count == 0 ? 0 : min(max(vm.selection, 0), count - 1)
         let showSections = vm.mode == .launcher && isQueryEmpty && !favorites.keys.isEmpty
-        let favoriteCount = showSections ? apps.prefix(while: { favorites.isFavorite($0) }).count : 0
+        let favoriteCount =
+            showSections ? apps.prefix(while: { favorites.isFavorite($0) }).count : 0
         let selectedApp = apps.indices.contains(sel) ? apps[sel] : nil
+        let selectedClip = clips.indices.contains(sel) ? clips[sel] : nil
 
-        return VStack(spacing: 0) {
-            header
-            Divider().opacity(Theme.Opacity.divider)
-            content(apps: apps, clips: clips, selection: sel,
-                    favoriteCount: favoriteCount, showSections: showSections)
-            Divider().opacity(Theme.Opacity.divider)
-            bottomBar
-        }
+        // The results layer fills the whole panel; the search header and action bar float on top
+        // as translucent Liquid Glass bars (via safeAreaInset). The list scrolls *behind* them and
+        // stays faintly visible through the glass — the Raycast look, with no hard dividers.
+        return content(
+            apps: apps, clips: clips, selection: sel,
+            favoriteCount: favoriteCount, showSections: showSections
+        )
+        .safeAreaInset(edge: .top, spacing: 0) { header }
+        .safeAreaInset(edge: .bottom, spacing: 0) { bottomBar }
         // Menus are in-window overlays anchored to a bottom corner, so they stay clipped inside the
         // panel and sit over the bottom bar — never a system popover spilling outside the window.
         .overlay {
@@ -62,29 +69,53 @@ struct RootPaletteView: View {
             }
         }
         .overlay(alignment: .bottomTrailing) {
-            if showActions, let app = selectedApp {
-                AppActionsMenu(app: app) { closeMenus() }
-                    .environmentObject(core)
-                    .environmentObject(favorites)
+            if showActions {
+                actionsMenu(app: selectedApp, clip: selectedClip)
                     .padding(Self.menuInset)
                     .transition(Self.menuTransition(.bottomTrailing))
             }
         }
         .frame(width: Theme.Size.panelWidth, height: Theme.Size.panelHeight)
-        .background(Theme.Colors.panelTint)
+        .background(Color.black.opacity(0.40))
         .background(VisualEffectView())
         .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.panel, style: .continuous))
-        .onChange(of: vm.focusToken) { searchFocused = true }
-        .onChange(of: vm.query) { vm.selection = 0 }
-        .onChange(of: vm.mode) { vm.selection = 0; showActions = false }
-        .onAppear { searchFocused = true }
-        .onKeyPress(.downArrow) { move(1); return .handled }
-        .onKeyPress(.upArrow) { move(-1); return .handled }
-        .onKeyPress(.escape) {
-            if showActions || showAppMenu { closeMenus(); return .handled }
-            core.hidePalette(); return .handled
+        // Every show bumps focusToken — refocus search and drop any menu left open from last time
+        // (e.g. when the palette was dismissed by clicking away while a context menu was up).
+        .onChange(of: vm.focusToken) {
+            searchFocused = true
+            showActions = false
+            showAppMenu = false
         }
-        .onKeyPress(.tab) { toggleMode(); return .handled }
+        .onChange(of: vm.query) {
+            vm.selection = 0
+            scrollToken = UUID()
+        }
+        .onChange(of: vm.mode) {
+            vm.selection = 0
+            showActions = false
+            scrollToken = UUID()
+        }
+        .onAppear { searchFocused = true }
+        .onKeyPress(.downArrow) {
+            move(1)
+            return .handled
+        }
+        .onKeyPress(.upArrow) {
+            move(-1)
+            return .handled
+        }
+        .onKeyPress(.escape) {
+            if showActions || showAppMenu {
+                closeMenus()
+                return .handled
+            }
+            core.hidePalette()
+            return .handled
+        }
+        .onKeyPress(.tab) {
+            toggleMode()
+            return .handled
+        }
         .onKeyPress(keys: [","], phases: .down) { press in
             guard press.modifiers.contains(.command) else { return .ignored }
             core.showSettings()
@@ -98,9 +129,10 @@ struct RootPaletteView: View {
     }
 
     private var header: some View {
-        HStack(spacing: Theme.Spacing.lg) {
+        HStack(alignment: .firstTextBaseline, spacing: Theme.Spacing.md) {
             Image(systemName: vm.mode.systemImage)
                 .font(Theme.Typography.headerIcon)
+                .symbolRenderingMode(.hierarchical)
                 .foregroundStyle(.secondary)
             TextField(vm.mode.placeholder, text: $vm.query)
                 .textFieldStyle(.plain)
@@ -108,13 +140,19 @@ struct RootPaletteView: View {
                 .focused($searchFocused)
                 .onSubmit(activateSelection)
         }
-        .padding(.horizontal, Theme.Spacing.xxl)
+        // Align the search icon with the list rows and section headers below (list inset + row inset).
+        .padding(.horizontal, Theme.Spacing.md * 2)
         .frame(height: Theme.Size.headerHeight)
+        .padding(.top, Theme.Spacing.md)
+        .frame(maxWidth: .infinity)
+        .background(EdgeFade(edge: .top))
     }
 
     @ViewBuilder
-    private func content(apps: [AppEntry], clips: [ClipboardItem], selection: Int,
-                         favoriteCount: Int, showSections: Bool) -> some View {
+    private func content(
+        apps: [AppEntry], clips: [ClipboardItem], selection: Int,
+        favoriteCount: Int, showSections: Bool
+    ) -> some View {
         switch vm.mode {
         case .launcher:
             let selectedID = apps.indices.contains(selection) ? apps[selection].id : nil
@@ -123,46 +161,84 @@ struct RootPaletteView: View {
                 selectedID: selectedID,
                 favoriteCount: favoriteCount,
                 showSections: showSections,
+                scrollToken: scrollToken,
                 onActions: { app in
                     if let index = apps.firstIndex(of: app) { vm.selection = index }
                     withAnimation(Self.menuAnimation) { showActions = true }
                 }
             )
         case .clipboard:
-            let selected = clips.indices.contains(selection) ? clips[selection] : nil
-            HStack(spacing: 0) {
-                ClipboardList(
-                    results: clips,
-                    selectedID: selected?.id,
-                    onSelect: { item in vm.selection = clips.firstIndex(of: item) ?? 0 },
-                    onActivate: activateSelection
-                )
-                .frame(width: Theme.Size.clipboardListWidth)
-                Divider().opacity(Theme.Opacity.previewDivider)
-                ClipboardPreview(item: selected)
+            // Empty history: center one message across the whole panel rather than wedging it into
+            // the narrow list column beside a blank preview.
+            if clips.isEmpty {
+                EmptyResults(text: "Clipboard history is empty")
+            } else {
+                let selected = clips.indices.contains(selection) ? clips[selection] : nil
+                HStack(spacing: 0) {
+                    ClipboardList(
+                        results: clips,
+                        selectedID: selected?.id,
+                        scrollToken: scrollToken,
+                        onSelect: { item in vm.selection = clips.firstIndex(of: item) ?? 0 },
+                        onActivate: activateSelection,
+                        onActions: { item in
+                            if let index = clips.firstIndex(of: item) { vm.selection = index }
+                            withAnimation(Self.menuAnimation) { showActions = true }
+                        }
+                    )
+                    .frame(width: Theme.Size.clipboardListWidth)
+                    Rectangle()
+                        .fill(Color.primary.opacity(0.10))
+                        .frame(width: 1)
+                    ClipboardPreview(item: selected)
+                }
+            }
+        }
+    }
+
+    /// The bottom-right actions popover for the current mode's selection.
+    @ViewBuilder
+    private func actionsMenu(app: AppEntry?, clip: ClipboardItem?) -> some View {
+        switch vm.mode {
+        case .launcher:
+            if let app {
+                AppActionsMenu(app: app) { closeMenus() }
+                    .environmentObject(core)
+                    .environmentObject(favorites)
+            }
+        case .clipboard:
+            if let clip {
+                ClipboardActionsMenu(item: clip) { closeMenus() }
+                    .environmentObject(core)
+                    .environmentObject(store)
             }
         }
     }
 
     private var bottomBar: some View {
+        // No bar — just floating glass buttons over the list, with a soft dark fade up from the
+        // bottom edge so they read clearly without any hard-edged strip.
         HStack(spacing: 0) {
             appMenuButton
             Spacer()
             actionPill
         }
-        .padding(.horizontal, Theme.Spacing.xl)
+        .padding(.horizontal, Theme.Spacing.md)
         .frame(height: Theme.Size.bottomBarHeight)
+        .frame(maxWidth: .infinity)
+        .background(EdgeFade(edge: .bottom))
     }
 
     private var appMenuButton: some View {
-        Button { withAnimation(Self.menuAnimation) { showAppMenu.toggle() } } label: {
-            VStack(alignment: .leading, spacing: 4) {
-                Capsule().frame(width: 15, height: 2.5)
-                Capsule().frame(width: 9, height: 2.5)
-            }
-            .foregroundStyle(.secondary)
-            .frame(width: Theme.Size.menuButton, height: Theme.Size.menuButton)
-            .contentShape(.circle)
+        Button {
+            withAnimation(Self.menuAnimation) { showAppMenu.toggle() }
+        } label: {
+            Image(systemName: "ellipsis")
+                .font(.title3)
+                .symbolRenderingMode(.hierarchical)
+                .foregroundStyle(.secondary)
+                .frame(width: Theme.Size.menuButton, height: Theme.Size.menuButton)
+                .contentShape(.circle)
         }
         .buttonStyle(.plain)
         .frosted(in: Circle())
@@ -170,14 +246,17 @@ struct RootPaletteView: View {
 
     private var appMenu: some View {
         PopoverMenu {
-            PopoverMenuRow(title: "Settings…", systemImage: "gearshape", shortcut: "⌘,") {
-                closeMenus(); core.showSettings()
+            PopoverMenuRow(title: "Changelog", systemImage: "doc.text") {
+                closeMenus()
+                core.showChangelog()
             }
             PopoverMenuRow(title: "About Tinycast", systemImage: "info.circle") {
-                closeMenus(); core.showAbout()
+                closeMenus()
+                core.showAbout()
             }
-            PopoverMenuRow(title: "Changelog", systemImage: "doc.text") {
-                closeMenus(); core.showChangelog()
+            PopoverMenuRow(title: "Settings", systemImage: "gearshape", shortcut: "⌘,") {
+                closeMenus()
+                core.showSettings()
             }
         }
     }
@@ -190,8 +269,8 @@ struct RootPaletteView: View {
             }
             .font(Theme.Typography.pill)
             .foregroundStyle(.primary)
-            .padding(.horizontal, Theme.Spacing.lg)
-            .padding(.vertical, Theme.Spacing.md)
+            .padding(.horizontal, Theme.Spacing.xl)
+            .padding(.vertical, Theme.Spacing.lg)
             .contentShape(.capsule)
         }
         .buttonStyle(.plain)
@@ -199,7 +278,10 @@ struct RootPaletteView: View {
     }
 
     private func closeMenus() {
-        withAnimation(Self.menuAnimation) { showActions = false; showAppMenu = false }
+        withAnimation(Self.menuAnimation) {
+            showActions = false
+            showAppMenu = false
+        }
     }
 
     /// Inset of the menu panels from the window's bottom corners. Kept just inside the panel's
@@ -221,6 +303,7 @@ struct RootPaletteView: View {
     private func move(_ delta: Int) {
         guard resultCount > 0 else { return }
         vm.selection = min(max(selection + delta, 0), resultCount - 1)
+        scrollToken = UUID()
     }
 
     private func toggleMode() {
@@ -243,9 +326,29 @@ struct EmptyResults: View {
     let text: String
     var body: some View {
         VStack(spacing: 8) {
-            Image(systemName: "magnifyingglass").font(.system(size: 28)).foregroundStyle(.tertiary)
+            Image(systemName: "magnifyingglass").font(.largeTitle)
+                .symbolRenderingMode(.hierarchical).foregroundStyle(.tertiary)
             Text(text).foregroundStyle(.secondary)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+}
+
+private struct EdgeFade: View {
+    let edge: VerticalEdge
+
+    var body: some View {
+        let start: UnitPoint = edge == .top ? .top : .bottom
+        let end: UnitPoint = edge == .top ? .bottom : .top
+        let fade = LinearGradient(
+            stops: [
+                .init(color: .black.opacity(1), location: 0.0),
+                .init(color: .black.opacity(0.90), location: 0.4),
+                .init(color: .clear, location: 1.0),
+            ],
+            startPoint: start, endPoint: end
+        )
+        VisualEffectView(material: .hudWindow, blending: .withinWindow)
+            .mask(fade)
     }
 }

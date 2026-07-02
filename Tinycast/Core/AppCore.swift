@@ -7,7 +7,7 @@ enum PaletteMode: String, CaseIterable, Identifiable {
 
     var id: String { rawValue }
     var title: String { self == .launcher ? "Apps" : "Clipboard" }
-    var systemImage: String { self == .launcher ? "magnifyingglass" : "doc.on.clipboard" }
+    var systemImage: String { self == .launcher ? "magnifyingglass" : "doc.on.doc" }
     var placeholder: String { self == .launcher ? "Search apps…" : "Search clipboard…" }
 }
 
@@ -51,6 +51,10 @@ final class AppCore: ObservableObject {
 
     func start() {
         NSApp.setActivationPolicy(.accessory)
+        // Tinycast is always dark — the Liquid Glass palette is tuned for a deep, Raycast-style
+        // dark surface, and forcing the appearance keeps the material from rendering washed-out
+        // when the system is in Light mode.
+        NSApp.appearance = NSAppearance(named: .darkAqua)
 
         clipboardStore.maxItems = settings.clipboardMaxItems
         clipboardStore.load()
@@ -93,19 +97,24 @@ final class AppCore: ObservableObject {
     /// Settings runs in its own window (the SwiftUI `Settings` scene is unreliable for accessory
     /// apps), raised to the front via the same controller as About/Changelog.
     func showSettings() {
-        auxWindows.show(id: "settings", title: "Settings", size: CGSize(width: 500, height: 440)) {
+        auxWindows.show(
+            id: "settings", title: "Settings", size: CGSize(width: 640, height: 432),
+            seamlessTitleBar: true
+        ) {
             SettingsRootView().environmentObject(self.appIndex)
         }
     }
 
     func showAbout() {
-        auxWindows.show(id: "about", title: "About Tinycast", size: CGSize(width: 320, height: 320)) {
+        auxWindows.show(id: "about", title: "About Tinycast", size: CGSize(width: 320, height: 320))
+        {
             AboutView()
         }
     }
 
     func showChangelog() {
-        auxWindows.show(id: "changelog", title: "Changelog", size: CGSize(width: 460, height: 480)) {
+        auxWindows.show(id: "changelog", title: "Changelog", size: CGSize(width: 460, height: 480))
+        {
             ChangelogView()
         }
     }
@@ -126,5 +135,20 @@ final class AppCore: ObservableObject {
         let previous = windowController.previousApp
         hidePalette(restoreFocus: false)
         Paster.paste(item, store: clipboardStore, previousApp: previous)
+    }
+
+    func pasteKeepingWindowOpen(_ item: ClipboardItem) {
+        windowController.pasteKeepingWindowOpen(item, store: clipboardStore)
+    }
+
+    func copyToClipboard(_ item: ClipboardItem) {
+        hidePalette(restoreFocus: false)
+        Paster.copy(item, store: clipboardStore)
+    }
+
+    func revealClipboardImage(_ item: ClipboardItem) {
+        guard let url = clipboardStore.imageURL(for: item) else { return }
+        hidePalette(restoreFocus: false)
+        AppLauncher.showInFinder(url)
     }
 }

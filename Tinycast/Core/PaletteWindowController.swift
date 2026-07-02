@@ -24,7 +24,16 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
 
     func hide(restoreFocus: Bool) {
         panel?.orderOut(nil)
+        // Drop the multi-MB clipboard preview bitmaps now the window is gone, so idle RAM returns near
+        // baseline. Row thumbnails stay cached, so the next open is still instant.
+        ImageThumbnail.purgePreviews()
         if restoreFocus { previousApp?.activate() }
+    }
+
+    /// Paste the item into the previously focused app while leaving the palette open and frontmost.
+    /// The keystroke is delivered directly to that app's process, so Tinycast never loses focus.
+    func pasteKeepingWindowOpen(_ item: ClipboardItem, store: ClipboardStore) {
+        Paster.pasteInPlace(item, store: store, into: previousApp)
     }
 
     // MARK: - NSWindowDelegate
@@ -46,6 +55,7 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
             .environmentObject(core.clipboardStore)
             .environmentObject(core.favorites)
             .environmentObject(core.runningApps)
+            .environmentObject(core.hotKeys)
         let panel = PalettePanel(rootView: root)
         panel.delegate = self
         self.panel = panel

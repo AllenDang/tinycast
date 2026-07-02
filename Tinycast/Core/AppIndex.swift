@@ -1,13 +1,69 @@
 import AppKit
 
 struct AppEntry: Identifiable, Hashable, Sendable {
-    let id: String          // file path — always unique
-    let name: String        // clean display name, never includes ".app"
+    let id: String  // file path — always unique
+    let name: String  // clean display name, never includes ".app"
     let url: URL
     let bundleID: String?
 
     @MainActor var icon: NSImage {
-        NSWorkspace.shared.icon(forFile: url.path)
+        IconCache.icon(forFile: url.path)
+    }
+}
+
+/// Caches app icons by file path so list rows don't re-hit `NSWorkspace` on every render.
+///
+/// `NSWorkspace` returns a multi-representation icon with reps up to 512/1024px, but we only ever draw
+/// it at ≤24pt — caching those raw is what spiked Settings' App-Hotkeys list to hundreds of MB. So we
+/// downsample each icon once to a small fixed bitmap and byte-bound the cache (system-evicted under
+/// pressure, like `ImageThumbnail`).
+enum IconCache {
+    // Icons display at ≤24pt, so 48pt (2× for Retina) is plenty crisp. Keeping each icon this small is
+    // also what stops the launcher from ballooning: a `LazyVStack` scrolled to the bottom materializes
+    // every app row and pins its icon, so per-icon size sets the ceiling. At ~36KB the whole app set is
+    // a shared ~18MB (fits the cache with no eviction) instead of 500 distinct 256KB copies (~128MB).
+    private static let displayPixel: CGFloat = 48
+
+    private static let cache: NSCache<NSString, NSImage> = {
+        let cache = NSCache<NSString, NSImage>()
+        cache.totalCostLimit = 32 * 1024 * 1024
+        return cache
+    }()
+
+    @MainActor
+    static func icon(forFile path: String) -> NSImage {
+        let key = path as NSString
+        if let cached = cache.object(forKey: key) { return cached }
+        let (icon, cost) = downsampled(NSWorkspace.shared.icon(forFile: path))
+        cache.setObject(icon, forKey: key, cost: cost)
+        return icon
+    }
+
+    /// Rasterize the multi-rep workspace icon into one `displayPixel`-square bitmap so the cache holds
+    /// ~64–256KB per app instead of multi-MB. Returns the image and its decoded byte cost.
+    @MainActor
+    private static func downsampled(_ source: NSImage) -> (NSImage, Int) {
+        let scale = NSScreen.main?.backingScaleFactor ?? 2
+        let pixels = Int(displayPixel * scale)
+        let fallbackCost = Int(displayPixel * displayPixel * 4)
+        guard
+            let rep = NSBitmapImageRep(
+                bitmapDataPlanes: nil, pixelsWide: pixels, pixelsHigh: pixels, bitsPerSample: 8,
+                samplesPerPixel: 4, hasAlpha: true, isPlanar: false, colorSpaceName: .deviceRGB,
+                bytesPerRow: 0, bitsPerPixel: 0)
+        else { return (source, fallbackCost) }
+        rep.size = NSSize(width: displayPixel, height: displayPixel)
+        guard let ctx = NSGraphicsContext(bitmapImageRep: rep) else { return (source, fallbackCost) }
+
+        NSGraphicsContext.saveGraphicsState()
+        NSGraphicsContext.current = ctx
+        ctx.imageInterpolation = .high
+        source.draw(in: NSRect(origin: .zero, size: rep.size))
+        NSGraphicsContext.restoreGraphicsState()
+
+        let image = NSImage(size: rep.size)
+        image.addRepresentation(rep)
+        return (image, rep.bytesPerRow * rep.pixelsHigh)
     }
 }
 
@@ -38,22 +94,27 @@ final class AppIndex: ObservableObject {
         var seenBundleIDs = Set<String>()
         var result: [AppEntry] = []
         for dir in searchDirs {
-            guard let items = try? fm.contentsOfDirectory(
-                at: dir, includingPropertiesForKeys: nil, options: [.skipsHiddenFiles]
-            ) else { continue }
+            guard
+                let items = try? fm.contentsOfDirectory(
+                    at: dir, includingPropertiesForKeys: nil, options: [.skipsHiddenFiles]
+                )
+            else { continue }
             for url in items where url.pathExtension == "app" {
                 let bundle = Bundle(url: url)
                 let bundleID = bundle?.bundleIdentifier
                 // Dedup by bundle id; first directory (/Applications) wins.
                 if let bundleID, !seenBundleIDs.insert(bundleID).inserted { continue }
 
-                let name = (bundle?.object(forInfoDictionaryKey: "CFBundleDisplayName") as? String)
+                let name =
+                    (bundle?.object(forInfoDictionaryKey: "CFBundleDisplayName") as? String)
                     ?? (bundle?.object(forInfoDictionaryKey: "CFBundleName") as? String)
                     ?? url.deletingPathExtension().lastPathComponent
                 result.append(AppEntry(id: url.path, name: name, url: url, bundleID: bundleID))
             }
         }
-        return result.sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
+        return result.sorted {
+            $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending
+        }
     }
 
     /// Ranked matches. Empty query returns the full alphabetical list.
@@ -71,7 +132,8 @@ final class AppIndex: ObservableObject {
             guard let score = FuzzyMatch.score(query: q, candidate: app.name) else { return nil }
             return (app, score)
         }
-        return scored
+        return
+            scored
             .sorted {
                 $0.1 != $1.1
                     ? $0.1 > $1.1

@@ -6,65 +6,72 @@ enum Theme {
     enum Spacing {
         static let xs: CGFloat = 4
         static let sm: CGFloat = 6
-        static let md: CGFloat = 10
-        static let lg: CGFloat = 12
-        static let xl: CGFloat = 14
+        static let md: CGFloat = 8
+        static let lg: CGFloat = 10
+        static let xl: CGFloat = 12
         static let xxl: CGFloat = 20
     }
 
     enum Radius {
-        static let panel: CGFloat = 20
+        static let panel: CGFloat = 24
         static let row: CGFloat = 8
         static let menu: CGFloat = 6
-        static let menuPanel: CGFloat = 13
-        static let thumbnail: CGFloat = 4
+        static let menuPanel: CGFloat = 14
+        static let thumbnail: CGFloat = 6
+        static let card: CGFloat = 10
     }
 
     enum Size {
-        static let panelWidth: CGFloat = 720
-        static let panelHeight: CGFloat = 470
-        static let headerHeight: CGFloat = 54
+        static let panelWidth: CGFloat = 750
+        static let panelHeight: CGFloat = 480
+        static let headerHeight: CGFloat = 44
         static let bottomBarHeight: CGFloat = 52
-        static let rowIcon: CGFloat = 22
+        static let rowIcon: CGFloat = 24
         static let menuButton: CGFloat = 36
         static let clipboardListWidth: CGFloat = 290
         static let menuWidth: CGFloat = 240
         static let menuIcon: CGFloat = 16
+        /// Settings window: sidebar column width and the small icon used in setting rows.
+        static let settingsSidebar: CGFloat = 184
+        static let settingsRowIcon: CGFloat = 20
     }
 
+    /// System text styles (not hardcoded point sizes) so the UI honors Dynamic Type and matches
+    /// the metrics of first-party macOS apps.
     enum Typography {
-        static let searchField = Font.system(size: 18, weight: .regular)
-        static let headerIcon = Font.system(size: 17)
-        static let rowTitle = Font.system(size: 14)
-        static let rowTrailing = Font.system(size: 12)
-        static let sectionHeader = Font.system(size: 11, weight: .semibold)
-        static let pill = Font.system(size: 13, weight: .medium)
-        static let menuRow = Font.system(size: 13)
-        static let menuShortcut = Font.system(size: 12)
-        static let menuIcon = Font.system(size: 13)
+        static let searchField = Font.title
+        static let headerIcon = Font.title
+        static let rowTitle = Font.body
+        static let rowTrailing = Font.callout
+        static let sectionHeader = Font.subheadline.weight(.semibold)
+        static let keyCap = Font.caption
+        static let pill = Font.body.weight(.medium)
+        static let menuRow = Font.body
+        static let menuShortcut = Font.callout
+        static let menuIcon = Font.body
     }
 
     enum Colors {
-        static let hairline = Color.white.opacity(0.10)
-        static let panelTint = Color.black.opacity(0.10)
-        /// Keyboard selection — the stronger highlight; what Enter activates.
-        static let rowSelection = Color.primary.opacity(0.10)
-        /// Mouse hover — a fainter, visually distinct layer that follows the cursor (Raycast-style).
-        static let rowHover = Color.primary.opacity(0.05)
-        static let clipSelection = Color.accentColor.opacity(0.22)
-        static let menuHover = Color.primary.opacity(0.12)
-    }
-
-    enum Opacity {
-        static let divider = 0.08
-        static let previewDivider = 0.35
+        /// Raycast-style selection: a soft, neutral translucent fill (not a saturated accent
+        /// block). In the always-dark palette this reads as a gentle lighter row. The same token
+        /// is shared by the launcher and clipboard so the two lists look identical.
+        static let selection = Color.primary.opacity(0.12)
+        /// Mouse hover — a fainter layer that follows the cursor, visually distinct from selection.
+        static let rowHover = Color.primary.opacity(0.06)
+        static let menuHover = Color.primary.opacity(0.10)
+        /// Settings grouped "card": a faint raised surface with a hairline border. The border color
+        /// doubles as the inset divider between rows in a card.
+        static let cardFill = Color.primary.opacity(0.04)
+        static let cardStroke = Color.primary.opacity(0.08)
     }
 }
 
 extension View {
-    /// A stock Tahoe Liquid Glass control surface. `.interactive()` gives the native lensing +
-    /// hover/press response of the Control Center toggles — no hand-drawn material or border.
+    /// A floating Tahoe Liquid Glass control surface (the action pill + menu button). The glass
+    /// sits over the app list, so `.interactive()` gives the native lensing/press response and
+    /// `.tint(.clear)` keeps the material untinted on macOS.
     func frosted(in shape: some Shape) -> some View {
         glassEffect(.regular.interactive(), in: shape)
+            .tint(.clear)
     }
 }

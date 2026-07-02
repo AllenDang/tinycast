@@ -3,35 +3,163 @@ import SwiftUI
 struct ClipboardList: View {
     let results: [ClipboardItem]
     let selectedID: ClipboardItem.ID?
+    /// Changes only when the list should scroll to follow the selection (keyboard nav / reset), so
+    /// mouse selection never yanks the scroll position.
+    let scrollToken: UUID
     let onSelect: (ClipboardItem) -> Void
     let onActivate: () -> Void
+    let onActions: (ClipboardItem) -> Void
     @EnvironmentObject private var store: ClipboardStore
 
+    private enum Row: Identifiable {
+        case header(String)
+        case item(ClipboardItem)
+        var id: String {
+            switch self {
+            case .header(let title): return "header-" + title
+            case .item(let item): return item.id.uuidString
+            }
+        }
+    }
+
+    /// Items are newest-first, so grouping is just a walk that emits a date header whenever the
+    /// bucket changes — mirrors the launcher's Favorites/Applications sectioning.
+    private var rows: [Row] {
+        var rows: [Row] = []
+        var currentBucket: DateBucket?
+        for item in results {
+            let bucket = DateBucket(for: item.createdAt)
+            if bucket != currentBucket {
+                rows.append(.header(bucket.title))
+                currentBucket = bucket
+            }
+            rows.append(.item(item))
+        }
+        return rows
+    }
+
     var body: some View {
-        Group {
-            if results.isEmpty {
-                EmptyResults(text: "Clipboard history is empty")
-            } else {
-                ScrollViewReader { proxy in
-                    ScrollView {
-                        LazyVStack(spacing: 2) {
-                            ForEach(results) { item in
-                                ClipboardRow(item: item, selected: item.id == selectedID, imageURL: store.imageURL(for: item))
-                                    .contentShape(Rectangle())
-                                    .onTapGesture(count: 2) { onSelect(item); onActivate() }
-                                    .onTapGesture { onSelect(item) }
-                                    .contextMenu {
-                                        Button("Paste") { onSelect(item); onActivate() }
-                                        Button("Delete", role: .destructive) { store.remove(item) }
-                                    }
-                            }
+        ScrollViewReader { proxy in
+            ScrollView {
+                LazyVStack(spacing: 1) {
+                    ForEach(rows) { row in
+                        switch row {
+                        case .header(let title):
+                            SectionHeader(title: title)
+                        case .item(let item):
+                            ClipboardRow(
+                                item: item, selected: item.id == selectedID,
+                                imageURL: store.imageURL(for: item)
+                            )
+                            .contentShape(Rectangle())
+                            // Single click selects *instantly* — the double-click-to-paste gesture
+                            // is `.simultaneousGesture`, so the single tap never waits on the
+                            // double-click timeout to disambiguate. Right-click uses the lightweight
+                            // catcher — not SwiftUI's `.contextMenu`, which stalls clicks for
+                            // seconds inside a LazyVStack on macOS.
+                            .onTapGesture { onSelect(item) }
+                            .simultaneousGesture(
+                                TapGesture(count: 2).onEnded {
+                                    onSelect(item)
+                                    onActivate()
+                                }
+                            )
+                            .onRightClick { onActions(item) }
                         }
-                        .padding(8)
-                    }
-                    .onChange(of: selectedID) { _, id in
-                        if let id { proxy.scrollTo(id, anchor: .center) }
                     }
                 }
+                .padding(.horizontal, Theme.Spacing.md)
+                .padding(.top, Theme.Spacing.xs)
+                .padding(.bottom, Theme.Spacing.md)
+                .hideNativeScrollers()
+            }
+            .thinScrollbar()
+            .onChange(of: scrollToken) {
+                if let selectedID { proxy.scrollTo(selectedID.uuidString, anchor: .center) }
+            }
+        }
+    }
+}
+
+/// Coarse date buckets for grouping clipboard entries into sections, mirroring Raycast's
+/// Today / Yesterday / This Week / … history grouping. Ordered newest-first by raw value.
+private enum DateBucket: Int {
+    case today, yesterday, thisWeek, thisMonth, earlier
+
+    var title: String {
+        switch self {
+        case .today: return "Today"
+        case .yesterday: return "Yesterday"
+        case .thisWeek: return "This Week"
+        case .thisMonth: return "This Month"
+        case .earlier: return "Earlier"
+        }
+    }
+
+    init(for date: Date, now: Date = Date(), calendar: Calendar = .current) {
+        if calendar.isDateInToday(date) {
+            self = .today
+        } else if calendar.isDateInYesterday(date) {
+            self = .yesterday
+        } else if calendar.isDate(date, equalTo: now, toGranularity: .weekOfYear) {
+            self = .thisWeek
+        } else if calendar.isDate(date, equalTo: now, toGranularity: .month) {
+            self = .thisMonth
+        } else {
+            self = .earlier
+        }
+    }
+}
+
+/// Actions popover for a clipboard entry — shown anchored bottom-right on right-click, mirroring the
+/// launcher's `AppActionsMenu`. Same stock Liquid Glass `PopoverMenu` surface.
+struct ClipboardActionsMenu: View {
+    let item: ClipboardItem
+    let dismiss: () -> Void
+    @EnvironmentObject private var core: AppCore
+    @EnvironmentObject private var store: ClipboardStore
+
+    private var headerText: String {
+        switch item.kind {
+        case .text:
+            // Collapse all whitespace/newlines to single spaces so a multi-line copy stays a clean
+            // one-line title.
+            let oneLine = (item.text ?? "").split(whereSeparator: \.isWhitespace).joined(
+                separator: " ")
+            return String(oneLine.prefix(40))
+        case .image: return "Image"
+        }
+    }
+
+    var body: some View {
+        PopoverMenu(header: headerText) {
+            PopoverMenuRow(title: "Paste", systemImage: "doc.on.clipboard", shortcut: "↵") {
+                core.paste(item)
+                dismiss()
+            }
+            PopoverMenuRow(title: "Copy to Clipboard", systemImage: "doc.on.doc") {
+                core.copyToClipboard(item)
+                dismiss()
+            }
+            PopoverMenuRow(title: "Paste & Keep Window Open", systemImage: "pin") {
+                core.pasteKeepingWindowOpen(item)
+                dismiss()
+            }
+            if item.kind == .image {
+                PopoverMenuRow(title: "Show in Finder", systemImage: "folder") {
+                    core.revealClipboardImage(item)
+                    dismiss()
+                }
+            }
+            PopoverMenuRow(title: "Delete Entry", systemImage: "trash", isDestructive: true) {
+                store.remove(item)
+                dismiss()
+            }
+            PopoverMenuRow(
+                title: "Delete All Entries", systemImage: "trash.fill", isDestructive: true
+            ) {
+                store.clearAll()
+                dismiss()
             }
         }
     }
@@ -41,9 +169,19 @@ private struct ClipboardRow: View {
     let item: ClipboardItem
     let selected: Bool
     let imageURL: URL?
+    /// Hover lives on the row itself so a mouse sweep repaints only the rows entering/leaving — it
+    /// never invalidates the parent list body. Mirrors the launcher's `AppRow`.
+    @State private var hovered = false
+
+    /// Selection wins over hover when a row is both; otherwise hover shows its fainter layer.
+    private var fill: Color {
+        if selected { return Theme.Colors.selection }
+        if hovered { return Theme.Colors.rowHover }
+        return .clear
+    }
 
     var body: some View {
-        HStack(spacing: Theme.Spacing.md) {
+        HStack(spacing: Theme.Spacing.lg) {
             thumbnail
             Text(previewText)
                 .font(Theme.Typography.menuRow)
@@ -52,16 +190,20 @@ private struct ClipboardRow: View {
             Spacer(minLength: 0)
         }
         .padding(.horizontal, Theme.Spacing.md)
-        .padding(.vertical, Theme.Spacing.sm + 1)
+        .padding(.vertical, Theme.Spacing.sm)
         .background(
             RoundedRectangle(cornerRadius: Theme.Radius.row, style: .continuous)
-                .fill(selected ? Theme.Colors.clipSelection : Color.clear)
+                .fill(fill)
         )
+        .onHover { hovered = $0 }
     }
 
     private var previewText: String {
         switch item.kind {
-        case .text: return (item.text ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+        // Single-line row, so cap before trimming — never walk a multi-MB clipboard string per row.
+        case .text:
+            return String((item.text ?? "").prefix(200)).trimmingCharacters(
+                in: .whitespacesAndNewlines)
         case .image: return "Image"
         }
     }
@@ -70,24 +212,76 @@ private struct ClipboardRow: View {
     private var thumbnail: some View {
         switch item.kind {
         case .text:
-            Image(systemName: "text.alignleft")
-                .frame(width: 26, height: 20)
-                .foregroundStyle(.secondary)
+            glyphTile("doc.text")
         case .image:
-            if let url = imageURL, let image = ImageThumbnail.load(url, maxPixel: 64) {
-                Image(nsImage: image)
+            AsyncThumbnail(url: imageURL, maxPixel: 64) { image in
+                image
                     .resizable()
                     .aspectRatio(contentMode: .fill)
-                    .frame(width: 32, height: 22)
-                    .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.thumbnail))
-            } else {
-                Image(systemName: "photo").frame(width: 26, height: 20).foregroundStyle(.secondary)
+                    .frame(width: Theme.Size.rowIcon, height: Theme.Size.rowIcon)
+                    .clipShape(
+                        RoundedRectangle(cornerRadius: Theme.Radius.thumbnail, style: .continuous))
+            } placeholder: {
+                glyphTile("photo")
             }
+        }
+    }
+
+    /// An SF Symbol centered on a rounded tile, sized to match the launcher's app icon so text and
+    /// image clipboard rows share one consistent thumbnail shape.
+    private func glyphTile(_ systemName: String) -> some View {
+        RoundedRectangle(cornerRadius: Theme.Radius.thumbnail, style: .continuous)
+            .fill(Color.primary.opacity(0.08))
+            .frame(width: Theme.Size.rowIcon, height: Theme.Size.rowIcon)
+            .overlay(
+                Image(systemName: systemName)
+                    .font(.system(size: 13))
+                    .symbolRenderingMode(.hierarchical)
+                    .foregroundStyle(.secondary)
+            )
+    }
+}
+
+/// Renders a downsampled clipboard thumbnail, decoding misses off the main thread so the UI never
+/// stalls when the clipboard first appears. Cache hits resolve on the first task tick; misses show
+/// `placeholder` until the background decode completes. `content` styles the loaded image per site
+/// (row thumbnail vs. large preview).
+private struct AsyncThumbnail<Content: View, Placeholder: View>: View {
+    let url: URL?
+    let maxPixel: CGFloat
+    @ViewBuilder let content: (Image) -> Content
+    @ViewBuilder let placeholder: () -> Placeholder
+
+    @State private var image: NSImage?
+
+    var body: some View {
+        Group {
+            if let image {
+                content(Image(nsImage: image))
+            } else {
+                placeholder()
+            }
+        }
+        .task(id: url) {
+            guard let url else {
+                image = nil
+                return
+            }
+            if let hit = ImageThumbnail.cached(url, maxPixel: maxPixel) {
+                image = hit
+                return
+            }
+            image = nil  // show the placeholder while a new image decodes
+            image = await ImageThumbnail.loadAsync(url, maxPixel: maxPixel)
         }
     }
 }
 
 struct ClipboardPreview: View {
+    /// The preview pane is ~460pt wide (panel 750 − list 290); 900px keeps it crisp at 2× Retina
+    /// without over-decoding — 1200px would allocate ~1.8× the pixels it can ever display.
+    private static let previewMaxPixel: CGFloat = 900
+
     let item: ClipboardItem?
     @EnvironmentObject private var store: ClipboardStore
 
@@ -96,7 +290,6 @@ struct ClipboardPreview: View {
             VStack(alignment: .leading, spacing: 0) {
                 content(for: item)
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-                Divider()
                 footer(for: item)
             }
             .padding(16)
@@ -111,18 +304,20 @@ struct ClipboardPreview: View {
         case .text:
             ScrollView {
                 Text(item.text ?? "")
-                    .font(.system(size: 13))
+                    .font(.body)
                     .textSelection(.enabled)
                     .frame(maxWidth: .infinity, alignment: .topLeading)
             }
         case .image:
-            if let url = store.imageURL(for: item), let image = ImageThumbnail.load(url, maxPixel: 1200) {
-                Image(nsImage: image)
+            AsyncThumbnail(url: store.imageURL(for: item), maxPixel: Self.previewMaxPixel) {
+                image in
+                image
                     .resizable()
                     .aspectRatio(contentMode: .fit)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
-            } else {
-                Image(systemName: "photo").font(.system(size: 40)).foregroundStyle(.tertiary)
+            } placeholder: {
+                Image(systemName: "photo").font(.system(.largeTitle))
+                    .symbolRenderingMode(.hierarchical).foregroundStyle(.tertiary)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
         }

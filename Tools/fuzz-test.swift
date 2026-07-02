@@ -27,13 +27,27 @@ enum FuzzyMatch {
     }
 
     private static func subsequenceScore(_ q: [Character], _ c: [Character]) -> Int? {
-        var qi = 0, score = 0, run = 0, prev = -2
+        var qi = 0
+        var score = 0
+        var run = 0
+        var prev = -2
         for (ci, ch) in c.enumerated() where qi < q.count && ch == q[qi] {
             var bonus = 1
-            if ci == prev + 1 { run += 1; bonus += run * 3 } else { run = 0 }
-            if ci == 0 { bonus += 12 }
-            else { let b = c[ci - 1]; if !b.isLetter && !b.isNumber { bonus += 8 } }
-            score += bonus; prev = ci; qi += 1
+            if ci == prev + 1 {
+                run += 1
+                bonus += run * 3
+            } else {
+                run = 0
+            }
+            if ci == 0 {
+                bonus += 12
+            } else {
+                let b = c[ci - 1]
+                if !b.isLetter && !b.isNumber { bonus += 8 }
+            }
+            score += bonus
+            prev = ci
+            qi += 1
         }
         guard qi == q.count else { return nil }
         return score
@@ -57,8 +71,12 @@ func rank(_ query: String) -> [String] {
 
 var failures = 0
 func check(_ desc: String, _ cond: Bool, _ detail: String = "") {
-    if cond { print("PASS  \(desc)") }
-    else { print("FAIL  \(desc)  \(detail)"); failures += 1 }
+    if cond {
+        print("PASS  \(desc)")
+    } else {
+        print("FAIL  \(desc)  \(detail)")
+        failures += 1
+    }
 }
 
 let chrome = rank("chrome")
@@ -68,11 +86,15 @@ check("'chrome' does not include Chess", !chrome.contains("Chess"), "got \(chrom
 let ch = rank("ch")
 check("'ch' includes Google Chrome", ch.contains("Google Chrome"), "got \(ch)")
 check("'ch' includes Chess", ch.contains("Chess"))
-check("'ch' ranks Chess (prefix) above Chrome", ch.firstIndex(of: "Chess")! < ch.firstIndex(of: "Google Chrome")!, "got \(ch)")
+check(
+    "'ch' ranks Chess (prefix) above Chrome",
+    ch.firstIndex(of: "Chess")! < ch.firstIndex(of: "Google Chrome")!, "got \(ch)")
 
 check("'saf' top is Safari", rank("saf").first == "Safari", "got \(rank("saf"))")
 check("'tm' includes Time Machine", rank("tm").contains("Time Machine"), "got \(rank("tm"))")
-check("'code' includes Visual Studio Code", rank("code").contains("Visual Studio Code"), "got \(rank("code"))")
+check(
+    "'code' includes Visual Studio Code", rank("code").contains("Visual Studio Code"),
+    "got \(rank("code"))")
 check("'terminal' exact top", rank("terminal").first == "Terminal")
 check("'xyz' matches nothing", rank("xyz").isEmpty, "got \(rank("xyz"))")
 
