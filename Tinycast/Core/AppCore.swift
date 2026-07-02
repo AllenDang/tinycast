@@ -46,7 +46,7 @@ final class AppCore: ObservableObject {
     private let auxWindows = AuxWindowController()
 
     private init() {
-        clipboardManager = ClipboardManager(store: clipboardStore)
+        clipboardManager = ClipboardManager(store: clipboardStore, settings: settings)
     }
 
     func start() {
@@ -56,7 +56,7 @@ final class AppCore: ObservableObject {
         // when the system is in Light mode.
         NSApp.appearance = NSAppearance(named: .darkAqua)
 
-        clipboardStore.maxItems = settings.clipboardMaxItems
+        clipboardStore.maxAge = settings.clipboardRetention.maxAge
         clipboardStore.load()
         clipboardManager.start()
 

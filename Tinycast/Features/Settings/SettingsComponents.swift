@@ -18,9 +18,11 @@ struct SettingsPane<Content: View>: View {
                 SettingsHeader(title: title, subtitle: subtitle)
                 content
             }
-            // Uniform inset on every side — the visible padding matches horizontally and vertically.
-            // (The titlebar clearance is handled by the ScrollView's safe area, not by extra padding.)
-            .padding(Theme.Spacing.xxl)
+            // The top safe-area inset (the transparent titlebar band) already clears the title, so
+            // only a small top padding is added — matching the sidebar's rhythm instead of stacking
+            // a full inset on the titlebar height.
+            .padding([.horizontal, .bottom], Theme.Spacing.xxl)
+            .padding(.top, Theme.Spacing.md)
             .frame(maxWidth: .infinity, alignment: .leading)
             .hideNativeScrollers()
         }

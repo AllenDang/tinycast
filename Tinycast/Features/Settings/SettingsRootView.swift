@@ -44,8 +44,6 @@ struct SettingsRootView: View {
         HStack(spacing: 0) {
             sidebar
 
-            Divider()
-
             // A plain conditional swap — not a `TabView`. macOS's TabView is backed by `NSTabView`,
             // which re-hosts each tab's view on selection; that re-hosting is the visible flicker and
             // it also tears down the hotkey `Recorder`'s window membership mid-interaction (so the
@@ -92,10 +90,17 @@ struct SettingsRootView: View {
         .frame(width: Theme.Size.settingsSidebar)
         .frame(maxHeight: .infinity)
         // Bleed the sidebar material to every edge (up under the traffic lights, down to the bottom
-        // corners) so it reads as one continuous surface behind the safe-area content.
+        // corners) so it reads as one continuous surface behind the safe-area content. The trailing
+        // hairline lives in the same edge-to-edge background — a plain `Divider` in the HStack would
+        // stop at the safe area, leaving the titlebar band without a seam.
         .background(
-            VisualEffectView(material: .sidebar, blending: .behindWindow)
-                .ignoresSafeArea()
+            ZStack(alignment: .trailing) {
+                VisualEffectView(material: .sidebar, blending: .behindWindow)
+                Rectangle()
+                    .fill(Color(nsColor: .separatorColor))
+                    .frame(width: 1)
+            }
+            .ignoresSafeArea()
         )
     }
 }

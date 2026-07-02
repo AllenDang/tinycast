@@ -21,15 +21,6 @@ struct GeneralSettingsView: View {
                 ) {
                     KeyboardShortcuts.Recorder("", name: .togglePalette)
                 }
-                SettingsDivider()
-                SettingsRow(
-                    title: "Clipboard History",
-                    subtitle: "Open the clipboard history browser.",
-                    systemImage: "doc.on.clipboard",
-                    tint: .orange
-                ) {
-                    KeyboardShortcuts.Recorder("", name: .toggleClipboard)
-                }
             }
 
             SettingsCard(header: "General") {

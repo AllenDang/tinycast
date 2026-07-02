@@ -10,8 +10,8 @@ struct AppHotkeysSettingsView: View {
     }
 
     var body: some View {
-        // One uniform inset (`xxl`) on every side, and the same value for the gaps between the
-        // header, the search field and the list — so vertical rhythm matches the horizontal inset.
+        // Same insets as `SettingsPane`: the titlebar's safe-area inset provides the top clearance,
+        // so only a small top padding is added; `xxl` everywhere else.
         VStack(alignment: .leading, spacing: Theme.Spacing.xxl) {
             SettingsHeader(
                 title: "App Hotkeys",
@@ -22,7 +22,8 @@ struct AppHotkeysSettingsView: View {
 
             appList
         }
-        .padding(Theme.Spacing.xxl)
+        .padding([.horizontal, .bottom], Theme.Spacing.xxl)
+        .padding(.top, Theme.Spacing.md)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
     }
 

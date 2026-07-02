@@ -26,11 +26,30 @@ struct ClipboardItem: Identifiable, Codable, Hashable, Sendable {
     }
 }
 
+/// How long clipboard history is kept before entries are pruned. Raw value is the age in days,
+/// which is also what gets persisted to UserDefaults.
+enum ClipboardRetention: Int, CaseIterable, Identifiable, Sendable {
+    case day = 1, week = 7, month = 30, threeMonths = 90
+
+    var id: Int { rawValue }
+
+    var title: String {
+        switch self {
+        case .day: return "1 Day"
+        case .week: return "1 Week"
+        case .month: return "1 Month"
+        case .threeMonths: return "3 Months"
+        }
+    }
+
+    var maxAge: TimeInterval { TimeInterval(rawValue) * 86_400 }
+}
+
 /// File-backed clipboard history: small JSON index + image blobs on disk.
 @MainActor
 final class ClipboardStore: ObservableObject {
     @Published private(set) var items: [ClipboardItem] = []
-    var maxItems: Int = 500
+    var maxAge: TimeInterval = ClipboardRetention.month.maxAge
 
     private let imagesDir: URL
     private let indexURL: URL
@@ -55,6 +74,16 @@ final class ClipboardStore: ObservableObject {
             let decoded = try? JSONDecoder().decode([ClipboardItem].self, from: data)
         else { return }
         items = decoded
+        // Age passes while the app isn't running; insert-time pruning alone can't catch that.
+        enforceLimits()
+    }
+
+    /// Prunes stale items and persists immediately if anything was dropped. Called on load and
+    /// when the retention setting changes.
+    func enforceLimits() {
+        let before = items.count
+        prune()
+        if items.count != before { persist(debounced: false) }
     }
 
     func addText(_ text: String) {
@@ -101,9 +130,11 @@ final class ClipboardStore: ObservableObject {
     }
 
     private func prune() {
-        guard items.count > maxItems else { return }
-        items[maxItems...].forEach(deleteBlob)
-        items = Array(items.prefix(maxItems))
+        // Items are newest-first, so everything from the first too-old index onward is stale.
+        let cutoff = Date().addingTimeInterval(-maxAge)
+        guard let limit = items.firstIndex(where: { $0.createdAt < cutoff }) else { return }
+        items[limit...].forEach(deleteBlob)
+        items = Array(items.prefix(limit))
     }
 
     private func deleteBlob(_ item: ClipboardItem) {
