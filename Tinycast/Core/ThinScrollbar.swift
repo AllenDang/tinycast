@@ -1,14 +1,13 @@
 import AppKit
 import SwiftUI
 
-/// A thin, auto-hiding scrollbar drawn entirely in SwiftUI, for `ScrollView`s inside the reused
-/// palette panel.
+/// A thin, auto-hiding overlay scrollbar drawn entirely in SwiftUI, tuned to feel like Raycast's: a
+/// hairline thumb that appears while scrolling and fades out, plus a hover-reveal along the trailing
+/// edge that fades in a subtle rail and fattens the thumb so it can be grabbed and dragged.
 ///
-/// The native `NSScroller` overlay "flashes" as an appear affordance every time the panel re-shows —
-/// AppKit drives that through private scroller machinery (`NSScrollerImpPair`), so it can't be
-/// suppressed without undocumented overrides. Instead we hide the native scroller and bind our own
-/// bar's visibility to real scroll **phases**: it literally cannot appear unless the user is actually
-/// scrolling, so there's no flash on open, on any OS version, with no runtime tricks.
+/// It's a pure floating overlay — no layout changes — and never reintroduces the native `NSScroller`
+/// (whose overlay flashes on every panel re-show). Three independent interaction signals drive it;
+/// `visible` and `expanded` are *derived* from them so hover, scroll and drag never clobber each other.
 struct ThinScrollbar: ViewModifier {
     private struct Metrics: Equatable {
         var offset: CGFloat = 0
@@ -17,19 +16,33 @@ struct ThinScrollbar: ViewModifier {
         var scrollable: Bool { content > viewport + 1 }
     }
 
-    @State private var metrics = Metrics()
-    @State private var visible = false
-    @State private var fade: Task<Void, Never>?
-    @State private var scrollPos = ScrollPosition(idType: Never.self)
-    /// Content offset captured when a thumb drag begins; non-nil only while dragging.
+    // Interaction signals — kept separate so each source of "show the bar" is independent.
+    @State private var isScrolling = false
+    @State private var isHoveringTrack = false
+    /// Content offset captured when a thumb drag begins; non-nil only while dragging (`isDragging`).
     @State private var dragAnchor: CGFloat?
 
-    // Tuned to read like the macOS overlay knob: a thin, inset, semi-transparent capsule.
-    private let width: CGFloat = 6
+    @State private var metrics = Metrics()
+    @State private var scrollPos = ScrollPosition(idType: Never.self)
+    /// Instantaneous "pointer is in the trailing hover zone" mirror, for edge-transition detection.
+    @State private var inZone = false
+    @State private var scrollStop: Task<Void, Never>?
+    @State private var hoverExit: Task<Void, Never>?
+
+    // Knob/rail geometry: thin at rest, fatter on hover/drag — like the macOS overlay knob.
+    private let thinWidth: CGFloat = 6
+    private let expandedWidth: CGFloat = 10
     private let inset: CGFloat = 3
     private let minThumb: CGFloat = 28
+    private let hoverZone: CGFloat = 16  // trailing strip that reveals the rail; wider than the thumb
 
-    private var dragging: Bool { dragAnchor != nil }
+    // Animation curves shared across the interaction transitions.
+    private let fadeCurve: Animation = .easeOut(duration: 0.18)
+    private let morphCurve: Animation = .spring(response: 0.28, dampingFraction: 0.85)
+
+    private var isDragging: Bool { dragAnchor != nil }
+    private var visible: Bool { isScrolling || isHoveringTrack || isDragging }
+    private var expanded: Bool { isHoveringTrack || isDragging }
 
     func body(content: Content) -> some View {
         content
@@ -46,29 +59,43 @@ struct ThinScrollbar: ViewModifier {
             } action: { _, new in
                 metrics = new
             }
-            // Visibility follows the *interaction* only — so opening/laying out the list never shows it.
-            // A thumb drag scrolls programmatically (no user phase), so its own handlers own visibility.
+            // Scrolling reveals the thumb (not the rail) and re-hides a beat after it stops.
+            // A thumb drag scrolls programmatically (no user phase), so its handlers own visibility.
             .onScrollPhaseChange { _, phase in
-                guard !dragging else { return }
-                phase == .idle ? scheduleHide() : reveal()
+                guard !isDragging else { return }
+                phase == .idle ? scheduleScrollStop() : beganScrolling()
             }
-            .overlay(alignment: .topTrailing) { thumb }
+            .overlay(alignment: .topTrailing) { bar }
+            // Hover for the whole trailing strip, via a click-transparent tracking view laid over
+            // everything. Because it sits *above* the thumb (yet passes clicks/drags through), moving
+            // onto the thumb still reads as "in zone" — so the rail no longer flickers the way a
+            // content-level SwiftUI hover did when the thumb overlay stole the hover.
+            .overlay { PointerEdgeTracker(edgeWidth: hoverZone, onZoneChange: updateZone) }
     }
 
-    @ViewBuilder private var thumb: some View {
+    @ViewBuilder private var bar: some View {
         if metrics.scrollable {
-            Capsule()
-                .fill(Color.primary.opacity(dragging ? 0.45 : 0.28))
-                .frame(width: width, height: thumbHeight)
-                .padding(.trailing, inset)
-                .offset(y: thumbOffset)
-                .opacity(visible ? 1 : 0)
-                .animation(.easeOut(duration: 0.2), value: visible)
-                .contentShape(.rect)  // hit area is just this thin capsule strip, not the row width
-                // Approaching the knob reveals it (like the native overlay), so it can be grabbed even
-                // after it has faded out.
-                .onHover { hovering in hovering ? reveal() : scheduleHideUnlessDragging() }
-                .gesture(dragGesture)
+            ZStack(alignment: .top) {
+                // Rail: a faint full-height track, present only while hovering/dragging.
+                Capsule()
+                    .fill(Color.primary.opacity(0.10))
+                    .frame(width: expandedWidth, height: track)
+                    .offset(y: inset)
+                    .opacity(expanded ? 1 : 0)
+
+                // Thumb: proportional knob, thin at rest and fatter when expanded. The outer frame keeps
+                // the grab area the full strip width even while the visible capsule is hairline-thin.
+                Capsule()
+                    .fill(Color.primary.opacity(isDragging ? 0.5 : (expanded ? 0.42 : 0.30)))
+                    .frame(width: expanded ? expandedWidth : thinWidth, height: thumbHeight)
+                    .frame(width: expandedWidth)
+                    .offset(y: thumbOffset)
+                    .opacity(visible ? 1 : 0)
+                    .contentShape(.rect)  // hit area is just this thin strip, not the row width
+                    .gesture(dragGesture)
+            }
+            .frame(width: expandedWidth)
+            .padding(.trailing, inset)
         }
     }
 
@@ -79,15 +106,18 @@ struct ThinScrollbar: ViewModifier {
                 let travel = track - thumbHeight
                 guard maxScroll > 0, travel > 0 else { return }
                 let anchor = dragAnchor ?? metrics.offset
-                dragAnchor = anchor
-                reveal()
+                // Expand once, on the first change; the offset updates below stay un-animated so the
+                // knob tracks the pointer instantly.
+                if dragAnchor == nil { withAnimation(morphCurve) { dragAnchor = anchor } }
                 // Map thumb travel (points along the track) back to content offset.
                 let target = anchor + value.translation.height / travel * maxScroll
                 scrollPos.scrollTo(y: min(maxScroll, max(0, target)))
             }
             .onEnded { _ in
-                dragAnchor = nil
-                scheduleHide()
+                withAnimation(morphCurve) { dragAnchor = nil }
+                // Linger like a normal scroll, then fade unless still hovering/scrolling.
+                isScrolling = true
+                scheduleScrollStop()
             }
     }
 
@@ -106,26 +136,45 @@ struct ThinScrollbar: ViewModifier {
         return inset + fraction * (track - thumbHeight)
     }
 
-    private func reveal() {
-        fade?.cancel()
-        visible = true
+    // MARK: - Scroll signal
+
+    private func beganScrolling() {
+        scrollStop?.cancel()
+        withAnimation(fadeCurve) { isScrolling = true }
     }
 
-    /// Fade out a beat after scrolling stops, like the native overlay scroller.
-    private func scheduleHide() {
-        fade?.cancel()
-        fade = Task { @MainActor in
+    /// Fade the thumb out a beat after scrolling stops, like the native overlay scroller.
+    private func scheduleScrollStop() {
+        scrollStop?.cancel()
+        scrollStop = Task { @MainActor in
             try? await Task.sleep(for: .milliseconds(800))
             guard !Task.isCancelled else { return }
-            visible = false
+            withAnimation(fadeCurve) { isScrolling = false }
         }
     }
 
-    /// Hover-out shouldn't hide the knob mid-drag (the pointer routinely leaves the thin strip while
-    /// dragging); the drag's own `onEnded` schedules the hide instead.
-    private func scheduleHideUnlessDragging() {
-        guard !dragging else { return }
-        scheduleHide()
+    // MARK: - Hover signal
+
+    /// Called on every pointer move; acts only on the in-zone ⇄ out-of-zone *transition*.
+    private func updateZone(_ nowInZone: Bool) {
+        guard nowInZone != inZone else { return }
+        inZone = nowInZone
+        if nowInZone {
+            hoverExit?.cancel()
+            withAnimation(morphCurve) { isHoveringTrack = true }
+        } else {
+            scheduleHoverExit()
+        }
+    }
+
+    /// Leaving the zone collapses the rail after a short delay, so brief exits don't flicker it.
+    private func scheduleHoverExit() {
+        hoverExit?.cancel()
+        hoverExit = Task { @MainActor in
+            try? await Task.sleep(for: .milliseconds(200))
+            guard !Task.isCancelled else { return }
+            withAnimation(morphCurve) { isHoveringTrack = false }
+        }
     }
 }
 
@@ -170,7 +219,9 @@ private struct NativeScrollerHider: NSViewRepresentable {
         override init(frame: NSRect) { super.init(frame: frame) }
 
         deinit {
-            if let styleChangeObserver { NotificationCenter.default.removeObserver(styleChangeObserver) }
+            if let styleChangeObserver {
+                NotificationCenter.default.removeObserver(styleChangeObserver)
+            }
         }
 
         override func viewDidMoveToWindow() {
@@ -213,14 +264,85 @@ private struct NativeScrollerHider: NSViewRepresentable {
             }
             // Idempotent: bail once the scroll view is already in the target state so re-runs (update,
             // repeated notifications) are cheap and don't churn layout.
-            guard scrollView.scrollerStyle != .overlay
-                || scrollView.hasVerticalScroller
-                || scrollView.hasHorizontalScroller else { return }
+            guard
+                scrollView.scrollerStyle != .overlay
+                    || scrollView.hasVerticalScroller
+                    || scrollView.hasHorizontalScroller
+            else { return }
             scrollView.scrollerStyle = .overlay  // float over content — reserves no layout width
             scrollView.hasVerticalScroller = false
             scrollView.hasHorizontalScroller = false
             // Reclaim the trailing gutter a legacy scroller was reserving, on this same layout pass.
             scrollView.tile()
+        }
+    }
+}
+
+/// A click-transparent AppKit tracking view that reports whether the pointer is within `edgeWidth`
+/// points of the trailing edge. It overrides `hitTest` to return `nil`, so it never intercepts clicks
+/// or the thumb drag (events fall through to the views beneath), yet its `NSTrackingArea` still delivers
+/// pointer moves. That combination is what makes the hover flicker-free: laid over the whole scroll
+/// view — above the thumb — it keeps reading "in zone" even while the cursor is on the thumb, which a
+/// content-level SwiftUI hover cannot do (the thumb overlay steals the hover and the rail oscillates).
+private struct PointerEdgeTracker: NSViewRepresentable {
+    let edgeWidth: CGFloat
+    let onZoneChange: @MainActor (Bool) -> Void
+
+    func makeNSView(context: Context) -> NSView {
+        TrackerView(edgeWidth: edgeWidth, onZoneChange: onZoneChange)
+    }
+
+    func updateNSView(_ nsView: NSView, context: Context) {
+        guard let view = nsView as? TrackerView else { return }
+        view.edgeWidth = edgeWidth
+        view.onZoneChange = onZoneChange
+    }
+
+    private final class TrackerView: NSView {
+        var edgeWidth: CGFloat
+        var onZoneChange: @MainActor (Bool) -> Void
+        private var lastInZone = false
+
+        init(edgeWidth: CGFloat, onZoneChange: @escaping @MainActor (Bool) -> Void) {
+            self.edgeWidth = edgeWidth
+            self.onZoneChange = onZoneChange
+            super.init(frame: .zero)
+        }
+
+        @available(*, unavailable)
+        required init?(coder: NSCoder) { fatalError() }
+
+        // Transparent to the click/drag hit-test — pointer-down events fall through to the thumb and rows.
+        override func hitTest(_ point: NSPoint) -> NSView? { nil }
+
+        override func updateTrackingAreas() {
+            super.updateTrackingAreas()
+            trackingAreas.forEach(removeTrackingArea)
+            // `.inVisibleRect` keeps the area pinned to the (resizing) bounds; the rect arg is ignored.
+            addTrackingArea(
+                NSTrackingArea(
+                    rect: .zero,
+                    options: [
+                        .mouseMoved, .mouseEnteredAndExited, .activeInKeyWindow, .inVisibleRect,
+                    ],
+                    owner: self
+                ))
+        }
+
+        override func mouseMoved(with event: NSEvent) { report(event) }
+        override func mouseEntered(with event: NSEvent) { report(event) }
+        override func mouseExited(with event: NSEvent) { update(inZone: false) }
+
+        private func report(_ event: NSEvent) {
+            let x = convert(event.locationInWindow, from: nil).x
+            update(inZone: x >= bounds.width - edgeWidth)
+        }
+
+        /// Fire the callback only on a zone transition, so a stream of `mouseMoved`s stays cheap.
+        private func update(inZone: Bool) {
+            guard inZone != lastInZone else { return }
+            lastInZone = inZone
+            onZoneChange(inZone)
         }
     }
 }
