@@ -19,7 +19,11 @@ import SwiftUI
 ///   bubbled up past the scroll view and died instead of scrolling.
 struct ThinScrollbar: ViewModifier {
     private struct Metrics: Equatable {
+        /// Raw `contentOffset.y` — equals the clip view's origin, so with `safeAreaInset` bars it is
+        /// `-insetTop` at rest and tops out at `content − viewport − insetTop`. Normalize with
+        /// `insetTop` before mapping to a track fraction, or the thumb never reaches the rail's end.
         var offset: CGFloat = 0
+        var insetTop: CGFloat = 0
         var content: CGFloat = 0
         var viewport: CGFloat = 0
         var scrollable: Bool { content > viewport + 1 }
@@ -59,6 +63,7 @@ struct ThinScrollbar: ViewModifier {
             .onScrollGeometryChange(for: Metrics.self) { geo in
                 Metrics(
                     offset: geo.contentOffset.y,
+                    insetTop: geo.contentInsets.top,
                     content: geo.contentSize.height,
                     viewport: geo.containerSize.height
                 )
@@ -128,7 +133,7 @@ struct ThinScrollbar: ViewModifier {
     private var thumbOffset: CGFloat {
         let maxScroll = max(0, metrics.content - metrics.viewport)
         guard maxScroll > 0 else { return inset }
-        let fraction = min(1, max(0, metrics.offset / maxScroll))
+        let fraction = min(1, max(0, (metrics.offset + metrics.insetTop) / maxScroll))
         return inset + fraction * (track - thumbHeight)
     }
 
