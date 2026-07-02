@@ -95,3 +95,7 @@ it, so macOS has nothing it can vouch for. What you'll see depends on how the ap
 2. Press it anywhere → the palette floats in. Type to filter apps, **↩** to launch.
 3. **Tab** switches between Apps and Clipboard; **↑/↓** move, **Esc** dismisses.
 4. **Settings → App Hotkeys**: search an app and record a shortcut to toggle it.
+
+## License
+
+[GPL-3.0](LICENSE)
