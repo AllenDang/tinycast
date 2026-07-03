@@ -22,7 +22,7 @@ jobs:
   build:
     runs-on: macos-26
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Select Xcode 26
         run: |
@@ -58,7 +58,7 @@ jobs:
           BUILD_NUMBER: ${{ github.run_number }}
         run: Packaging/build-dmg.sh
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: ${{ steps.meta.outputs.dmg_name }}-${{ steps.meta.outputs.full_version }}
           path: build/${{ steps.meta.outputs.dmg_name }}.dmg
