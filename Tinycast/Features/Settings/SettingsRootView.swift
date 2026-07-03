@@ -5,7 +5,7 @@ extension Notification.Name {
 }
 
 private enum SettingsTab: Int, CaseIterable, Identifiable {
-    case general, clipboard, permissions, appHotkeys
+    case general, clipboard, permissions, appShortcuts
     var id: Int { rawValue }
 
     var title: String {
@@ -13,7 +13,7 @@ private enum SettingsTab: Int, CaseIterable, Identifiable {
         case .general: return "General"
         case .clipboard: return "Clipboard"
         case .permissions: return "Permissions"
-        case .appHotkeys: return "App Hotkeys"
+        case .appShortcuts: return "App Shortcuts"
         }
     }
 
@@ -22,7 +22,7 @@ private enum SettingsTab: Int, CaseIterable, Identifiable {
         case .general: return "switch.2"
         case .clipboard: return "doc.on.clipboard"
         case .permissions: return "lock.shield"
-        case .appHotkeys: return "keyboard"
+        case .appShortcuts: return "keyboard"
         }
     }
 
@@ -32,7 +32,7 @@ private enum SettingsTab: Int, CaseIterable, Identifiable {
         case .general: return .gray
         case .clipboard: return .orange
         case .permissions: return .blue
-        case .appHotkeys: return .indigo
+        case .appShortcuts: return .indigo
         }
     }
 }
@@ -44,8 +44,6 @@ struct SettingsRootView: View {
         HStack(spacing: 0) {
             sidebar
 
-            Divider()
-
             // A plain conditional swap — not a `TabView`. macOS's TabView is backed by `NSTabView`,
             // which re-hosts each tab's view on selection; that re-hosting is the visible flicker and
             // it also tears down the hotkey `Recorder`'s window membership mid-interaction (so the
@@ -56,7 +54,7 @@ struct SettingsRootView: View {
                 case .general: GeneralSettingsView()
                 case .clipboard: ClipboardSettingsView()
                 case .permissions: PermissionsSettingsView()
-                case .appHotkeys: AppHotkeysSettingsView()
+                case .appShortcuts: AppShortcutsSettingsView()
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -92,10 +90,17 @@ struct SettingsRootView: View {
         .frame(width: Theme.Size.settingsSidebar)
         .frame(maxHeight: .infinity)
         // Bleed the sidebar material to every edge (up under the traffic lights, down to the bottom
-        // corners) so it reads as one continuous surface behind the safe-area content.
+        // corners) so it reads as one continuous surface behind the safe-area content. The trailing
+        // hairline lives in the same edge-to-edge background — a plain `Divider` in the HStack would
+        // stop at the safe area, leaving the titlebar band without a seam.
         .background(
-            VisualEffectView(material: .sidebar, blending: .behindWindow)
-                .ignoresSafeArea()
+            ZStack(alignment: .trailing) {
+                VisualEffectView(material: .sidebar, blending: .behindWindow)
+                Rectangle()
+                    .fill(Color(nsColor: .separatorColor))
+                    .frame(width: 1)
+            }
+            .ignoresSafeArea()
         )
     }
 }

@@ -46,7 +46,7 @@ final class AppCore: ObservableObject {
     private let auxWindows = AuxWindowController()
 
     private init() {
-        clipboardManager = ClipboardManager(store: clipboardStore)
+        clipboardManager = ClipboardManager(store: clipboardStore, settings: settings)
     }
 
     func start() {
@@ -56,7 +56,7 @@ final class AppCore: ObservableObject {
         // when the system is in Light mode.
         NSApp.appearance = NSAppearance(named: .darkAqua)
 
-        clipboardStore.maxItems = settings.clipboardMaxItems
+        clipboardStore.maxAge = settings.clipboardRetention.maxAge
         clipboardStore.load()
         clipboardManager.start()
 
@@ -95,7 +95,7 @@ final class AppCore: ObservableObject {
     }
 
     /// Settings runs in its own window (the SwiftUI `Settings` scene is unreliable for accessory
-    /// apps), raised to the front via the same controller as About/Changelog.
+    /// apps), raised to the front via the same controller as About.
     func showSettings() {
         auxWindows.show(
             id: "settings", title: "Settings", size: CGSize(width: 640, height: 432),
@@ -109,13 +109,6 @@ final class AppCore: ObservableObject {
         auxWindows.show(id: "about", title: "About Tinycast", size: CGSize(width: 320, height: 320))
         {
             AboutView()
-        }
-    }
-
-    func showChangelog() {
-        auxWindows.show(id: "changelog", title: "Changelog", size: CGSize(width: 460, height: 480))
-        {
-            ChangelogView()
         }
     }
 

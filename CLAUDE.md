@@ -54,7 +54,7 @@ one wiring point. All palette/paste/launch actions are methods on `AppCore` that
 **Two entry points, mostly AppKit windows.** `TinycastApp` (`@main`) declares only a `MenuBarExtra`
 scene; everything visible is driven imperatively from AppKit. The command palette is a borderless
 floating `NSPanel` (`Core/PalettePanel.swift`) hosting SwiftUI via `NSHostingView`, managed by
-`PaletteWindowController`. Settings/About/Changelog are plain `NSWindow`s via `AuxWindowController`
+`PaletteWindowController`. Settings/About are plain `NSWindow`s via `AuxWindowController`
 (in `Features/About/AboutView.swift`) — the SwiftUI `Settings`/`Window` scenes are unreliable for
 accessory apps, so this is deliberate. The app forces `.darkAqua` appearance globally; the Liquid Glass
 material is tuned for a dark surface only.
@@ -82,16 +82,21 @@ dirs, dedups by bundle ID (first dir wins). `FuzzyMatch.score` is a tiered score
 substring/word-start → subsequence with consecutive/word-boundary bonuses); rankings are memoized one
 query deep. Icons go through a count-capped `NSCache` (`IconCache`).
 
-**Hotkeys** use the KeyboardShortcuts package (the only dependency). `HotKeyManager` registers global
-toggles for palette and clipboard, plus per-app shortcuts keyed `appHotkey.<bundleID>`; the set of bound
-bundle IDs is persisted in `UserDefaults` and re-registered on launch.
+**Hotkeys are in-house (zero dependencies).** `Core/HotKey/` holds `KeyShortcut` (Sendable model,
+Carbon keycode+modifiers, layout-aware glyphs via `UCKeyTranslate`) and `HotKeyCenter` (the Carbon
+`RegisterEventHotKey` layer, pausable). `HotKeyManager` owns both: persistence, conflict lookup, and
+dispatch. Shortcuts persist as JSON strings under `KeyboardShortcuts_<name>` UserDefaults keys — a
+legacy format from the removed KeyboardShortcuts package, kept so old bindings survive; the set of
+bound bundle IDs lives in `boundAppBundleIDs` and is re-registered on launch. The settings recorder
+(`Features/Settings/ShortcutRecorder.swift`) is deliberately not a focusable control: the active
+recorder is `HotKeyManager.recordingAction` state, and keys are captured by local NSEvent monitors
+while all Carbon registrations are paused.
 
 ## Layout
 
 - `Tinycast/Core/` — managers, stores, windows, AppKit glue (no view bodies beyond hosting).
 - `Tinycast/Features/` — SwiftUI views: `RootPaletteView`, `Launcher/`, `Clipboard/`, `Settings/`, `About/`.
 - `Tinycast/App/` — `@main` app + delegate.
-- `Tinycast/Resources/CHANGELOG.md` — bundled and shown in-app by `ChangelogView`; update it when shipping.
 - `Packaging/` — `make-app.sh` (bundle assembly + signing), `build-dmg.sh`, `dev-cert.sh`.
 
 ## Concurrency

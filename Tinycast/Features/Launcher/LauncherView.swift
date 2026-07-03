@@ -1,4 +1,3 @@
-import KeyboardShortcuts
 import SwiftUI
 
 struct LauncherList: View {
@@ -116,10 +115,9 @@ private struct AppRow: View {
     /// Raycast-style keycaps for this app's per-app hotkey, or `nil` if none is bound.
     private var shortcutCaps: [String]? {
         guard let bundleID = app.bundleID,
-            let shortcut = KeyboardShortcuts.getShortcut(for: .app(bundleID))
+            let shortcut = hotKeys.shortcut(for: .app(bundleID: bundleID))
         else { return nil }
-        let caps = KeyCap.split(shortcut)
-        return caps.isEmpty ? nil : caps
+        return shortcut.keycaps
     }
 
     var body: some View {
@@ -179,25 +177,6 @@ private struct KeyCap: View {
                             .strokeBorder(Color.primary.opacity(0.10), lineWidth: 1)
                     )
             )
-    }
-
-    /// Splits a shortcut's native string (e.g. "⌥T", "⌘⇧K") into individual keycaps: each modifier
-    /// symbol becomes its own cap, and the remaining key (which may be multi-character like "F1")
-    /// becomes the last cap.
-    static func split(_ shortcut: KeyboardShortcuts.Shortcut) -> [String] {
-        let modifierSymbols: Set<Character> = ["⌘", "⌥", "⌃", "⇧"]
-        var caps: [String] = []
-        var key = ""
-        for character in shortcut.description {
-            if modifierSymbols.contains(character) {
-                caps.append(String(character))
-            } else {
-                key.append(character)
-            }
-        }
-        let trimmedKey = key.trimmingCharacters(in: .whitespaces)
-        if !trimmedKey.isEmpty { caps.append(trimmedKey) }
-        return caps
     }
 }
 

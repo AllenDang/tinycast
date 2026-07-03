@@ -246,10 +246,6 @@ struct RootPaletteView: View {
 
     private var appMenu: some View {
         PopoverMenu {
-            PopoverMenuRow(title: "Changelog", systemImage: "doc.text") {
-                closeMenus()
-                core.showChangelog()
-            }
             PopoverMenuRow(title: "About Tinycast", systemImage: "info.circle") {
                 closeMenus()
                 core.showAbout()

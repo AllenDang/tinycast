@@ -1,4 +1,3 @@
-import KeyboardShortcuts
 import SwiftUI
 
 struct GeneralSettingsView: View {
@@ -19,16 +18,7 @@ struct GeneralSettingsView: View {
                     systemImage: "magnifyingglass",
                     tint: .blue
                 ) {
-                    KeyboardShortcuts.Recorder("", name: .togglePalette)
-                }
-                SettingsDivider()
-                SettingsRow(
-                    title: "Clipboard History",
-                    subtitle: "Open the clipboard history browser.",
-                    systemImage: "doc.on.clipboard",
-                    tint: .orange
-                ) {
-                    KeyboardShortcuts.Recorder("", name: .toggleClipboard)
+                    ShortcutRecorder(action: .togglePalette)
                 }
             }
 
@@ -48,7 +38,7 @@ struct GeneralSettingsView: View {
                 SettingsRow(
                     title: "Show in menu bar",
                     subtitle:
-                        "Keep the Tinycast icon in the menu bar. Hotkeys still work when hidden.",
+                        "Keep the Tinycast icon in the menu bar. Shortcuts still work when hidden.",
                     systemImage: "menubar.arrow.up.rectangle",
                     tint: .gray
                 ) {

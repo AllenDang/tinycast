@@ -1,7 +1,6 @@
-import KeyboardShortcuts
 import SwiftUI
 
-struct AppHotkeysSettingsView: View {
+struct AppShortcutsSettingsView: View {
     @EnvironmentObject private var appIndex: AppIndex
     @State private var query = ""
 
@@ -10,11 +9,11 @@ struct AppHotkeysSettingsView: View {
     }
 
     var body: some View {
-        // One uniform inset (`xxl`) on every side, and the same value for the gaps between the
-        // header, the search field and the list — so vertical rhythm matches the horizontal inset.
+        // Same insets as `SettingsPane`: the titlebar's safe-area inset provides the top clearance,
+        // so only a small top padding is added; `xxl` everywhere else.
         VStack(alignment: .leading, spacing: Theme.Spacing.xxl) {
             SettingsHeader(
-                title: "App Hotkeys",
+                title: "App Shortcuts",
                 subtitle: "Assign a global shortcut to launch a specific app."
             )
 
@@ -22,7 +21,8 @@ struct AppHotkeysSettingsView: View {
 
             appList
         }
-        .padding(Theme.Spacing.xxl)
+        .padding([.horizontal, .bottom], Theme.Spacing.xxl)
+        .padding(.top, Theme.Spacing.md)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
     }
 
@@ -57,9 +57,9 @@ struct AppHotkeysSettingsView: View {
     private var appList: some View {
         // Run the matcher once per render, not once per row.
         let apps = filtered
-        // A SwiftUI `List` swallows the click that the recorder (an NSSearchField) needs to become
-        // first responder, so shortcuts never record. A ScrollView + LazyVStack keeps the rows lazy
-        // while letting each recorder take focus on click.
+        // ScrollView + LazyVStack keeps the rows lazy without `List`'s row-selection chrome
+        // getting between the pointer and the per-row controls. Kept as the native scroller here
+        // (unlike the palette's overlay list) — this is a plain windowed settings list.
         return ScrollView {
             LazyVStack(spacing: 1) {
                 if apps.isEmpty {
@@ -70,15 +70,13 @@ struct AppHotkeysSettingsView: View {
                         .padding(.vertical, Theme.Spacing.xxl * 2)
                 } else {
                     ForEach(apps) { app in
-                        AppHotkeyRow(app: app)
+                        AppShortcutRow(app: app)
                     }
                 }
             }
             .padding(.horizontal, Theme.Spacing.sm)
             .padding(.vertical, Theme.Spacing.sm)
-            .hideNativeScrollers()
         }
-        .thinScrollbar()
         .background(
             RoundedRectangle(cornerRadius: Theme.Radius.card, style: .continuous)
                 .fill(Theme.Colors.cardFill)
@@ -90,7 +88,7 @@ struct AppHotkeysSettingsView: View {
     }
 }
 
-private struct AppHotkeyRow: View {
+private struct AppShortcutRow: View {
     let app: AppEntry
     // Hover lives on the row itself so a mouse sweep repaints only the rows entering/leaving.
     @State private var hovered = false
@@ -103,10 +101,7 @@ private struct AppHotkeyRow: View {
             Text(app.name).lineLimit(1)
             Spacer(minLength: Theme.Spacing.xl)
             if let bundleID = app.bundleID {
-                KeyboardShortcuts.Recorder(for: .app(bundleID)) { shortcut in
-                    AppCore.shared.hotKeys.setBinding(
-                        bundleID: bundleID, hasShortcut: shortcut != nil)
-                }
+                ShortcutRecorder(action: .app(bundleID: bundleID))
             } else {
                 Text("—").foregroundStyle(.tertiary)
             }

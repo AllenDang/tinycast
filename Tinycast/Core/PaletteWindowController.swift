@@ -44,6 +44,15 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
         hide(restoreFocus: false)
     }
 
+    /// Re-bump focusToken once the panel has *actually* become key. Activating an accessory app
+    /// from a global hotkey is asynchronous — `NSApp.activate` + `makeKeyAndOrderFront` in `show()`
+    /// can return before AppKit finishes handing the window key status, so setting @FocusState right
+    /// after those calls can lose the race and never take. This notification is the one point we
+    /// know for certain the window is key, so refocusing here always sticks.
+    func windowDidBecomeKey(_ notification: Notification) {
+        core.palette.focusToken = UUID()
+    }
+
     // MARK: - Private
 
     private func ensurePanel() -> PalettePanel {

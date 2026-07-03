@@ -6,11 +6,13 @@ final class ClipboardManager {
     static let internalType = NSPasteboard.PasteboardType("com.tinycast.internal")
 
     private let store: ClipboardStore
+    private let settings: AppSettings
     private var timer: Timer?
     private var lastChangeCount = 0
 
-    init(store: ClipboardStore) {
+    init(store: ClipboardStore, settings: AppSettings) {
         self.store = store
+        self.settings = settings
     }
 
     func start() {
@@ -28,6 +30,12 @@ final class ClipboardManager {
         lastChangeCount = pb.changeCount
 
         if pb.types?.contains(Self.internalType) == true { return }
+
+        // The pasteboard doesn't carry its source, so attribute the change to the frontmost app —
+        // the copy that bumped changeCount happened within the last poll interval (0.5s).
+        if let bundleID = NSWorkspace.shared.frontmostApplication?.bundleIdentifier,
+            settings.clipboardDisabledApps.contains(bundleID)
+        { return }
 
         if let text = pb.string(forType: .string),
             !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty

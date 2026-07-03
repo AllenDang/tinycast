@@ -8,129 +8,75 @@ struct AboutView: View {
         return "Version \(short) (\(build))"
     }
 
+    private static let repoURL = URL(string: "https://github.com/abue-ammar/tinycast")!
+    private static let developerURL = URL(string: "https://github.com/abue-ammar")!
+
     var body: some View {
-        VStack(spacing: 12) {
+        VStack(spacing: Theme.Spacing.xl) {
             Image(nsImage: NSApp.applicationIconImage)
                 .resizable()
-                .frame(width: 96, height: 96)
-            Text("Tinycast")
-                .font(.title2.bold())
-            Text(version)
-                .font(.callout)
-                .foregroundStyle(.secondary)
+                .frame(width: 72, height: 72)
+
+            VStack(spacing: Theme.Spacing.xs) {
+                Text("Tinycast")
+                    .font(.title2.bold())
+                Text(version)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
             Text("A tiny, native macOS launcher.")
                 .font(.callout)
                 .foregroundStyle(.secondary)
-            Button("Changelog") { AppCore.shared.showChangelog() }
-                .padding(.top, 4)
+
+            HStack(spacing: Theme.Spacing.sm) {
+                AboutLinkButton(
+                    title: "GitHub", systemImage: "chevron.left.forwardslash.chevron.right",
+                    url: Self.repoURL)
+                AboutLinkButton(
+                    title: "abue-ammar", systemImage: "person.crop.circle", url: Self.developerURL)
+            }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .padding(24)
+        .padding(Theme.Spacing.xxl)
     }
 }
 
-struct ChangelogView: View {
-    // Read + parse the bundled markdown once; the file is static, so a `let` avoids re-parsing it
-    // on every body evaluation.
-    private let blocks: [MarkdownBlock] = {
-        guard let url = Bundle.module.url(forResource: "CHANGELOG", withExtension: "md"),
-            let text = try? String(contentsOf: url, encoding: .utf8)
-        else { return [.paragraph(AttributedString("No changelog available."))] }
-        return MarkdownBlock.parse(text)
-    }()
+/// A small pill-shaped external link, styled like the rest of the app's cards/chips.
+private struct AboutLinkButton: View {
+    let title: String
+    let systemImage: String
+    let url: URL
+
+    @State private var hovered = false
 
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 8) {
-                ForEach(Array(blocks.enumerated()), id: \.offset) { index, block in
-                    block.view(isFirst: index == 0)
-                }
+        Link(destination: url) {
+            HStack(spacing: Theme.Spacing.xs) {
+                Image(systemName: systemImage)
+                Text(title)
             }
-            .textSelection(.enabled)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(24)
-            .hideNativeScrollers()
+            .font(.caption)
+            .foregroundStyle(.secondary)
+            .padding(.horizontal, Theme.Spacing.lg)
+            .padding(.vertical, Theme.Spacing.sm)
+            .background(
+                RoundedRectangle(cornerRadius: Theme.Radius.menu, style: .continuous)
+                    .fill(hovered ? Theme.Colors.rowHover : Theme.Colors.cardFill)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: Theme.Radius.menu, style: .continuous)
+                    .strokeBorder(Theme.Colors.cardStroke, lineWidth: 1)
+            )
         }
-        .thinScrollbar()
+        .buttonStyle(.plain)
+        .onHover { hovered = $0 }
     }
 }
 
-/// A minimal, dependency-free block-level markdown renderer for the changelog. SwiftUI's
-/// `Text(AttributedString)` only styles *inline* markdown (bold/italic/code/links) — it ignores
-/// block syntax, so `#` headings and `-` bullets would otherwise render as literal characters.
-/// This parser splits the document into blocks and renders each with the right SwiftUI styling,
-/// while still using `AttributedString` for inline formatting within each line.
-enum MarkdownBlock {
-    case heading(level: Int, text: AttributedString)
-    case bullet(AttributedString)
-    case paragraph(AttributedString)
-
-    static func parse(_ raw: String) -> [MarkdownBlock] {
-        var blocks: [MarkdownBlock] = []
-        for line in raw.components(separatedBy: .newlines) {
-            let trimmed = line.trimmingCharacters(in: .whitespaces)
-            if trimmed.isEmpty { continue }
-            if let level = headingLevel(trimmed) {
-                blocks.append(
-                    .heading(level: level, text: inline(String(trimmed.dropFirst(level + 1)))))
-            } else if trimmed.hasPrefix("- ") || trimmed.hasPrefix("* ") {
-                blocks.append(.bullet(inline(String(trimmed.dropFirst(2)))))
-            } else {
-                blocks.append(.paragraph(inline(trimmed)))
-            }
-        }
-        return blocks
-    }
-
-    /// Number of leading `#`s if the line is an ATX heading (`#` … `######` followed by a space).
-    private static func headingLevel(_ line: String) -> Int? {
-        let hashes = line.prefix { $0 == "#" }.count
-        guard (1...6).contains(hashes) else { return nil }
-        let after = line.index(line.startIndex, offsetBy: hashes)
-        guard after < line.endIndex, line[after] == " " else { return nil }
-        return hashes
-    }
-
-    /// Inline-only markdown (bold/italic/code/links) → styled `AttributedString`.
-    private static func inline(_ s: String) -> AttributedString {
-        (try? AttributedString(
-            markdown: s,
-            options: .init(interpretedSyntax: .inlineOnlyPreservingWhitespace)
-        )) ?? AttributedString(s)
-    }
-
-    @ViewBuilder func view(isFirst: Bool) -> some View {
-        switch self {
-        case .heading(let level, let text):
-            Text(text)
-                .font(Self.headingFont(level))
-                // The first block sits flush against the container's top padding, so its heading
-                // gets no extra top inset — keeping the padding uniform on all four sides.
-                .padding(.top, isFirst ? 0 : (level <= 2 ? 8 : 2))
-        case .bullet(let text):
-            HStack(alignment: .firstTextBaseline, spacing: 8) {
-                Text("•").foregroundStyle(.secondary)
-                Text(text)
-            }
-            .padding(.leading, 4)
-        case .paragraph(let text):
-            Text(text)
-        }
-    }
-
-    private static func headingFont(_ level: Int) -> Font {
-        switch level {
-        case 1: return .title.bold()
-        case 2: return .title2.bold()
-        case 3: return .title3.bold()
-        default: return .headline
-        }
-    }
-}
-
-/// Hosts auxiliary SwiftUI windows (About, Changelog, Settings) for the accessory app. Each window
-/// is torn down on close so its SwiftUI tree — and any timers it drives — deallocates instead of
-/// lingering for the app's lifetime. Reopening rebuilds instantly (the views read live state).
+/// Hosts auxiliary SwiftUI windows (About, Settings) for the accessory app. Each window is torn
+/// down on close so its SwiftUI tree — and any timers it drives — deallocates instead of lingering
+/// for the app's lifetime. Reopening rebuilds instantly (the views read live state).
 @MainActor
 final class AuxWindowController: NSObject, NSWindowDelegate {
     private var windows: [String: NSWindow] = [:]

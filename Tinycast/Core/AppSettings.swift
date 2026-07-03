@@ -11,11 +11,17 @@ enum SettingsKey {
 final class AppSettings: ObservableObject {
     private let defaults = UserDefaults.standard
     private enum Key {
-        static let clipboardMaxItems = "clipboardMaxItems"
+        static let clipboardRetention = "clipboardRetentionDays"
+        static let clipboardDisabledApps = "clipboardDisabledApps"
     }
 
-    @Published var clipboardMaxItems: Int {
-        didSet { defaults.set(clipboardMaxItems, forKey: Key.clipboardMaxItems) }
+    @Published var clipboardRetention: ClipboardRetention {
+        didSet { defaults.set(clipboardRetention.rawValue, forKey: Key.clipboardRetention) }
+    }
+
+    /// Bundle IDs whose clipboard changes are never recorded. Ordered so the Settings list is stable.
+    @Published var clipboardDisabledApps: [String] {
+        didSet { defaults.set(clipboardDisabledApps, forKey: Key.clipboardDisabledApps) }
     }
 
     @Published var launchAtLogin: Bool {
@@ -23,7 +29,14 @@ final class AppSettings: ObservableObject {
     }
 
     init() {
-        clipboardMaxItems = defaults.object(forKey: Key.clipboardMaxItems) as? Int ?? 500
+        // integer(forKey:) returns 0 when unset, which no case matches — falls through to 1 Month.
+        clipboardRetention =
+            ClipboardRetention(rawValue: defaults.integer(forKey: Key.clipboardRetention)) ?? .month
+        // Password managers are excluded out of the box; the defaults apply only until the user
+        // first edits the list.
+        clipboardDisabledApps =
+            defaults.stringArray(forKey: Key.clipboardDisabledApps)
+            ?? ["com.apple.keychainaccess", "com.apple.Passwords"]
         launchAtLogin = LaunchAtLogin.isEnabled
     }
 }
