@@ -1,4 +1,3 @@
-import KeyboardShortcuts
 import SwiftUI
 
 struct GeneralSettingsView: View {
@@ -19,7 +18,7 @@ struct GeneralSettingsView: View {
                     systemImage: "magnifyingglass",
                     tint: .blue
                 ) {
-                    KeyboardShortcuts.Recorder("", name: .togglePalette)
+                    ShortcutRecorder(action: .togglePalette)
                 }
             }
 

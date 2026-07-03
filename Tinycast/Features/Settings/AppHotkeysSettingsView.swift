@@ -1,4 +1,3 @@
-import KeyboardShortcuts
 import SwiftUI
 
 struct AppHotkeysSettingsView: View {
@@ -58,9 +57,8 @@ struct AppHotkeysSettingsView: View {
     private var appList: some View {
         // Run the matcher once per render, not once per row.
         let apps = filtered
-        // A SwiftUI `List` swallows the click that the recorder (an NSSearchField) needs to become
-        // first responder, so shortcuts never record. A ScrollView + LazyVStack keeps the rows lazy
-        // while letting each recorder take focus on click.
+        // ScrollView + LazyVStack keeps the rows lazy without `List`'s row-selection chrome
+        // getting between the pointer and the per-row controls.
         return ScrollView {
             LazyVStack(spacing: 1) {
                 if apps.isEmpty {
@@ -104,10 +102,7 @@ private struct AppHotkeyRow: View {
             Text(app.name).lineLimit(1)
             Spacer(minLength: Theme.Spacing.xl)
             if let bundleID = app.bundleID {
-                KeyboardShortcuts.Recorder(for: .app(bundleID)) { shortcut in
-                    AppCore.shared.hotKeys.setBinding(
-                        bundleID: bundleID, hasShortcut: shortcut != nil)
-                }
+                ShortcutRecorder(action: .app(bundleID: bundleID))
             } else {
                 Text("—").foregroundStyle(.tertiary)
             }

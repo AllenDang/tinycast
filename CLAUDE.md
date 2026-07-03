@@ -82,9 +82,15 @@ dirs, dedups by bundle ID (first dir wins). `FuzzyMatch.score` is a tiered score
 substring/word-start → subsequence with consecutive/word-boundary bonuses); rankings are memoized one
 query deep. Icons go through a count-capped `NSCache` (`IconCache`).
 
-**Hotkeys** use the KeyboardShortcuts package (the only dependency). `HotKeyManager` registers global
-toggles for palette and clipboard, plus per-app shortcuts keyed `appHotkey.<bundleID>`; the set of bound
-bundle IDs is persisted in `UserDefaults` and re-registered on launch.
+**Hotkeys are in-house (zero dependencies).** `Core/HotKey/` holds `KeyShortcut` (Sendable model,
+Carbon keycode+modifiers, layout-aware glyphs via `UCKeyTranslate`) and `HotKeyCenter` (the Carbon
+`RegisterEventHotKey` layer, pausable). `HotKeyManager` owns both: persistence, conflict lookup, and
+dispatch. Shortcuts persist as JSON strings under `KeyboardShortcuts_<name>` UserDefaults keys — a
+legacy format from the removed KeyboardShortcuts package, kept so old bindings survive; the set of
+bound bundle IDs lives in `boundAppBundleIDs` and is re-registered on launch. The settings recorder
+(`Features/Settings/ShortcutRecorder.swift`) is deliberately not a focusable control: the active
+recorder is `HotKeyManager.recordingAction` state, and keys are captured by local NSEvent monitors
+while all Carbon registrations are paused.
 
 ## Layout
 

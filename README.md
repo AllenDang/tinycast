@@ -7,8 +7,7 @@ A tiny, fully native macOS launcher — the core of Raycast, without the bloat.
 - **Per-app hotkeys** — bind a shortcut to an app; press it to toggle (focus/hide).
 - **Clipboard history** — text + images, searchable, pasted back into the app you were using.
 
-Native SwiftUI + Liquid Glass. Runs as a menu-bar accessory (no Dock icon). One small
-dependency: [KeyboardShortcuts](https://github.com/sindresorhus/KeyboardShortcuts).
+Native SwiftUI + Liquid Glass. Runs as a menu-bar accessory (no Dock icon). Zero dependencies.
 
 ## Requirements
 

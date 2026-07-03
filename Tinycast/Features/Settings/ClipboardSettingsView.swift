@@ -1,4 +1,3 @@
-import KeyboardShortcuts
 import SwiftUI
 import UniformTypeIdentifiers
 
@@ -19,7 +18,7 @@ struct ClipboardSettingsView: View {
                     systemImage: "doc.on.clipboard",
                     tint: .orange
                 ) {
-                    KeyboardShortcuts.Recorder("", name: .toggleClipboard)
+                    ShortcutRecorder(action: .toggleClipboard)
                 }
             }
 

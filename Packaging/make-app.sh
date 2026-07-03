@@ -27,7 +27,7 @@ mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 
 cp "$BIN_DIR/$APP_NAME" "$APP/Contents/MacOS/$APP_NAME"
 
-# Bundle any SwiftPM resource bundles (e.g. KeyboardShortcuts).
+# Bundle any SwiftPM resource bundles (e.g. Tinycast's own resources bundle).
 shopt -s nullglob
 for bundle in "$BIN_DIR"/*.bundle; do
     cp -R "$bundle" "$APP/Contents/Resources/"
