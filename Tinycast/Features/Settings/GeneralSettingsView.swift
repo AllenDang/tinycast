@@ -38,7 +38,7 @@ struct GeneralSettingsView: View {
                 SettingsRow(
                     title: "Show in menu bar",
                     subtitle:
-                        "Keep the Tinycast icon in the menu bar. Hotkeys still work when hidden.",
+                        "Keep the Tinycast icon in the menu bar. Shortcuts still work when hidden.",
                     systemImage: "menubar.arrow.up.rectangle",
                     tint: .gray
                 ) {

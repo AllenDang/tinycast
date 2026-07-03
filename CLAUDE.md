@@ -54,7 +54,7 @@ one wiring point. All palette/paste/launch actions are methods on `AppCore` that
 **Two entry points, mostly AppKit windows.** `TinycastApp` (`@main`) declares only a `MenuBarExtra`
 scene; everything visible is driven imperatively from AppKit. The command palette is a borderless
 floating `NSPanel` (`Core/PalettePanel.swift`) hosting SwiftUI via `NSHostingView`, managed by
-`PaletteWindowController`. Settings/About/Changelog are plain `NSWindow`s via `AuxWindowController`
+`PaletteWindowController`. Settings/About are plain `NSWindow`s via `AuxWindowController`
 (in `Features/About/AboutView.swift`) — the SwiftUI `Settings`/`Window` scenes are unreliable for
 accessory apps, so this is deliberate. The app forces `.darkAqua` appearance globally; the Liquid Glass
 material is tuned for a dark surface only.
@@ -97,7 +97,6 @@ while all Carbon registrations are paused.
 - `Tinycast/Core/` — managers, stores, windows, AppKit glue (no view bodies beyond hosting).
 - `Tinycast/Features/` — SwiftUI views: `RootPaletteView`, `Launcher/`, `Clipboard/`, `Settings/`, `About/`.
 - `Tinycast/App/` — `@main` app + delegate.
-- `Tinycast/Resources/CHANGELOG.md` — bundled and shown in-app by `ChangelogView`; update it when shipping.
 - `Packaging/` — `make-app.sh` (bundle assembly + signing), `build-dmg.sh`, `dev-cert.sh`.
 
 ## Concurrency

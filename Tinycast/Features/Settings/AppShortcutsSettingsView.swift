@@ -1,6 +1,6 @@
 import SwiftUI
 
-struct AppHotkeysSettingsView: View {
+struct AppShortcutsSettingsView: View {
     @EnvironmentObject private var appIndex: AppIndex
     @State private var query = ""
 
@@ -13,7 +13,7 @@ struct AppHotkeysSettingsView: View {
         // so only a small top padding is added; `xxl` everywhere else.
         VStack(alignment: .leading, spacing: Theme.Spacing.xxl) {
             SettingsHeader(
-                title: "App Hotkeys",
+                title: "App Shortcuts",
                 subtitle: "Assign a global shortcut to launch a specific app."
             )
 
@@ -58,7 +58,8 @@ struct AppHotkeysSettingsView: View {
         // Run the matcher once per render, not once per row.
         let apps = filtered
         // ScrollView + LazyVStack keeps the rows lazy without `List`'s row-selection chrome
-        // getting between the pointer and the per-row controls.
+        // getting between the pointer and the per-row controls. Kept as the native scroller here
+        // (unlike the palette's overlay list) — this is a plain windowed settings list.
         return ScrollView {
             LazyVStack(spacing: 1) {
                 if apps.isEmpty {
@@ -69,15 +70,13 @@ struct AppHotkeysSettingsView: View {
                         .padding(.vertical, Theme.Spacing.xxl * 2)
                 } else {
                     ForEach(apps) { app in
-                        AppHotkeyRow(app: app)
+                        AppShortcutRow(app: app)
                     }
                 }
             }
             .padding(.horizontal, Theme.Spacing.sm)
             .padding(.vertical, Theme.Spacing.sm)
-            .hideNativeScrollers()
         }
-        .thinScrollbar()
         .background(
             RoundedRectangle(cornerRadius: Theme.Radius.card, style: .continuous)
                 .fill(Theme.Colors.cardFill)
@@ -89,7 +88,7 @@ struct AppHotkeysSettingsView: View {
     }
 }
 
-private struct AppHotkeyRow: View {
+private struct AppShortcutRow: View {
     let app: AppEntry
     // Hover lives on the row itself so a mouse sweep repaints only the rows entering/leaving.
     @State private var hovered = false
