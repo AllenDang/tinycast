@@ -10,12 +10,12 @@ struct TinycastApp: App {
 
     var body: some Scene {
         MenuBarExtra(
-            "Tinycast", systemImage: "command.square", isInserted: $showInMenuBar
+            "Tinycast", systemImage: "macwindow", isInserted: $showInMenuBar
         ) {
             Button("Open Tinycast") { AppCore.shared.showPalette(mode: .launcher) }
             Button("Clipboard History") { AppCore.shared.showPalette(mode: .clipboard) }
             Divider()
-            Button("Settings") { AppCore.shared.showSettings() }
+            Button("Settings...") { AppCore.shared.showSettings() }
                 .keyboardShortcut(",")
             Divider()
             Button("Quit Tinycast") { NSApp.terminate(nil) }
