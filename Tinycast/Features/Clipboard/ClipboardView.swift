@@ -305,7 +305,7 @@ struct ClipboardPreview: View {
         case .text:
             ScrollView {
                 Text(item.text ?? "")
-                    .font(.body)
+                    .font(.system(.subheadline, design: .monospaced))
                     .textSelection(.enabled)
                     .frame(maxWidth: .infinity, alignment: .topLeading)
             }
