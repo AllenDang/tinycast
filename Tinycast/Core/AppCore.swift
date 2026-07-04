@@ -99,7 +99,7 @@ final class AppCore: ObservableObject {
     /// apps), raised to the front via the same controller as About.
     func showSettings() {
         auxWindows.show(
-            id: "settings", title: "Settings", size: CGSize(width: 640, height: 432),
+            id: "settings", title: "Settings", size: CGSize(width: 720, height: 560),
             seamlessTitleBar: true
         ) {
             SettingsRootView()

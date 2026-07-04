@@ -18,15 +18,15 @@ struct SettingsPane<Content: View>: View {
                 SettingsHeader(title: title, subtitle: subtitle)
                 content
             }
-            // The top safe-area inset (the transparent titlebar band) already clears the title, so
-            // only a small top padding is added — matching the sidebar's rhythm instead of stacking
-            // a full inset on the titlebar height.
-            .padding([.horizontal, .bottom], Theme.Spacing.xxl)
-            .padding(.top, Theme.Spacing.md)
+            // Content ignores the transparent-titlebar safe area and uses one fixed `xxl` inset on
+            // every side instead — the titlebar band alone is taller than the rhythm we want, and
+            // the traffic lights sit over the sidebar, so nothing collides.
+            .padding(Theme.Spacing.xxl)
             .frame(maxWidth: .infinity, alignment: .leading)
             .hideNativeScrollers()
         }
         .thinScrollbar()
+        .ignoresSafeArea(edges: .top)
     }
 }
 

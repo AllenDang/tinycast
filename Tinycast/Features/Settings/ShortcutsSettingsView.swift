@@ -14,8 +14,8 @@ struct ShortcutsSettingsView: View {
     }
 
     var body: some View {
-        // Same insets as `SettingsPane`: the titlebar's safe-area inset provides the top clearance,
-        // so only a small top padding is added; `xxl` everywhere else.
+        // Same insets as `SettingsPane`: ignore the transparent-titlebar safe area and use one
+        // fixed `xxl` inset on every side.
         VStack(alignment: .leading, spacing: Theme.Spacing.xxl) {
             SettingsHeader(
                 title: "Shortcuts",
@@ -26,9 +26,9 @@ struct ShortcutsSettingsView: View {
 
             sectionList
         }
-        .padding([.horizontal, .bottom], Theme.Spacing.xxl)
-        .padding(.top, Theme.Spacing.md)
+        .padding(Theme.Spacing.xxl)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .ignoresSafeArea(edges: .top)
     }
 
     private var searchField: some View {
@@ -64,28 +64,26 @@ struct ShortcutsSettingsView: View {
         let entries = filtered
         let apps = entries.filter { $0.kind == .application }
         let panes = entries.filter { $0.kind == .systemSettings }
-        return ScrollView {
-            VStack(alignment: .leading, spacing: Theme.Spacing.xl) {
-                if entries.isEmpty {
-                    Text("No apps match “\(query)”.")
-                        .font(.callout)
-                        .foregroundStyle(.secondary)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, Theme.Spacing.xxl * 2)
-                } else {
-                    if !apps.isEmpty {
-                        CategorySection(title: "Applications", kind: .application, entries: apps)
-                    }
-                    if !panes.isEmpty {
-                        CategorySection(
-                            title: "System Settings", kind: .systemSettings, entries: panes)
-                    }
+        // Each category is its own independently scrollable card; they split the remaining
+        // height between them. When a search empties one category, the other takes the space.
+        return VStack(alignment: .leading, spacing: Theme.Spacing.xl) {
+            if entries.isEmpty {
+                Text("No apps match “\(query)”.")
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, Theme.Spacing.xxl * 2)
+            } else {
+                if !apps.isEmpty {
+                    CategorySection(title: "Applications", kind: .application, entries: apps)
+                }
+                if !panes.isEmpty {
+                    CategorySection(
+                        title: "System Settings", kind: .systemSettings, entries: panes)
                 }
             }
-            .padding(.bottom, Theme.Spacing.md)
-            .hideNativeScrollers()
         }
-        .thinScrollbar()
+        .frame(maxHeight: .infinity, alignment: .top)
     }
 }
 
@@ -112,13 +110,17 @@ private struct CategorySection: View {
             }
             .padding(.horizontal, Theme.Spacing.xs)
 
-            LazyVStack(spacing: 1) {
-                ForEach(entries) { entry in
-                    ShortcutRow(entry: entry)
+            // Native scroller kept (unlike the palette's overlay list) — this is a plain
+            // windowed settings list.
+            ScrollView {
+                LazyVStack(spacing: 1) {
+                    ForEach(entries) { entry in
+                        ShortcutRow(entry: entry)
+                    }
                 }
+                .padding(.horizontal, Theme.Spacing.sm)
+                .padding(.vertical, Theme.Spacing.sm)
             }
-            .padding(.horizontal, Theme.Spacing.sm)
-            .padding(.vertical, Theme.Spacing.sm)
             .background(
                 RoundedRectangle(cornerRadius: Theme.Radius.card, style: .continuous)
                     .fill(Theme.Colors.cardFill)
