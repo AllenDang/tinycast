@@ -145,6 +145,7 @@ enum HotKeyAction: Hashable, Sendable {
     case togglePalette
     case toggleClipboard
     case app(bundleID: String)
+    case settingsPane(bundleID: String)
 
     /// UserDefaults key holding the shortcut JSON. The `KeyboardShortcuts_` prefix is a fossil
     /// of the package this replaced — kept verbatim so existing bindings need no migration.
@@ -153,6 +154,7 @@ enum HotKeyAction: Hashable, Sendable {
         case .togglePalette: "KeyboardShortcuts_togglePalette"
         case .toggleClipboard: "KeyboardShortcuts_toggleClipboard"
         case .app(let bundleID): "KeyboardShortcuts_appHotkey." + bundleID
+        case .settingsPane(let bundleID): "KeyboardShortcuts_paneHotkey." + bundleID
         }
     }
 }

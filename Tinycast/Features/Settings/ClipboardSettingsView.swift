@@ -154,6 +154,7 @@ private struct AppPickerPopover: View {
 
     private var candidates: [AppEntry] {
         (query.isEmpty ? appIndex.apps : appIndex.matches(query))
+            .filter { $0.kind == .application }
             .filter { $0.bundleID.map { !excluded.contains($0) } ?? false }
     }
 

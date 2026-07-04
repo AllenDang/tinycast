@@ -1,10 +1,29 @@
 import AppKit
 
 struct AppEntry: Identifiable, Hashable, Sendable {
+    enum Kind: String, Sendable {
+        case application
+        case systemSettings
+    }
+
     let id: String  // file path — always unique
     let name: String  // clean display name, never includes ".app"
     let url: URL
     let bundleID: String?
+    let kind: Kind
+
+    var kindLabel: String {
+        kind == .application ? "Application" : "System Setting"
+    }
+
+    /// The global-hotkey action that opens this entry, or `nil` when it has no bundle ID
+    /// (nothing stable to key the binding on).
+    var hotKeyAction: HotKeyAction? {
+        guard let bundleID else { return nil }
+        return kind == .application
+            ? .app(bundleID: bundleID)
+            : .settingsPane(bundleID: bundleID)
+    }
 
     @MainActor var icon: NSImage {
         IconCache.icon(forFile: url.path)
@@ -109,12 +128,19 @@ final class AppIndex: ObservableObject {
                     (bundle?.object(forInfoDictionaryKey: "CFBundleDisplayName") as? String)
                     ?? (bundle?.object(forInfoDictionaryKey: "CFBundleName") as? String)
                     ?? url.deletingPathExtension().lastPathComponent
-                result.append(AppEntry(id: url.path, name: name, url: url, bundleID: bundleID))
+                result.append(
+                    AppEntry(
+                        id: url.path, name: name, url: url, bundleID: bundleID,
+                        kind: .application))
             }
         }
-        return result.sorted {
+        // Apps (sorted by name) first, then Settings panes (sorted by name). The launcher's
+        // sectioned list relies on this invariant: with an empty query the results are contiguous
+        // runs of favorites/apps/panes, so the flat selection index maps 1:1 onto sectioned rows.
+        let apps = result.sorted {
             $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending
         }
+        return apps + SettingsPaneScanner.scan()
     }
 
     /// Ranked matches. Empty query returns the full alphabetical list.
