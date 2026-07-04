@@ -69,6 +69,16 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
             .environmentObject(core.hotKeys)
         let panel = PalettePanel(rootView: root)
         panel.delegate = self
+        // Backspace in an already-empty search backs out of a sub-screen (clipboard / calculator
+        // history) to a fresh root launcher, Raycast-style. `prepare` clears query/selection and
+        // bumps focusToken so the field re-focuses.
+        panel.onBareBackspace = { [weak self] in
+            guard let vm = self?.core.palette, vm.mode != .launcher, vm.query.isEmpty else {
+                return false
+            }
+            vm.prepare(mode: .launcher)
+            return true
+        }
         self.panel = panel
         return panel
     }

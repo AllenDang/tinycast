@@ -23,8 +23,8 @@ enum PaletteMode: String, CaseIterable, Identifiable {
     }
     var placeholder: String {
         switch self {
-        case .launcher: return "Search apps…"
-        case .clipboard: return "Search clipboard…"
+        case .launcher: return "Search for apps and commands…"
+        case .clipboard: return "Type to filter entries…"
         case .calculatorHistory: return "Search calculations…"
         }
     }

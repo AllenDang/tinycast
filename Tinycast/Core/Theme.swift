@@ -39,8 +39,10 @@ enum Theme {
     /// System text styles (not hardcoded point sizes) so the UI honors Dynamic Type and matches
     /// the metrics of first-party macOS apps.
     enum Typography {
-        static let searchField = Font.title
-        static let headerIcon = Font.title
+        // Raycast-matched header: ~17pt regular search text with a slightly smaller glyph — the
+        // stock `.title` (22pt) read noticeably bigger/bolder than Raycast's field.
+        static let searchField = Font.system(size: 20, weight: .regular)
+        static let headerIcon = Font.system(size: 18, weight: .regular)
         static let rowTitle = Font.body
         static let rowTrailing = Font.callout
         static let sectionHeader = Font.subheadline.weight(.semibold)

@@ -150,6 +150,8 @@ struct RootPaletteView: View {
             core.showSettings()
             return .handled
         }
+        // Bare backspace (back out of a sub-screen when the search is empty) is intercepted by
+        // PalettePanel.sendEvent — the field editor consumes it before onKeyPress could fire.
         .onKeyPress(keys: [.delete, .deleteForward], phases: .down) { press in
             guard press.modifiers.contains(.command) else { return .ignored }
             switch vm.mode {
@@ -166,10 +168,23 @@ struct RootPaletteView: View {
 
     private var header: some View {
         HStack(alignment: .firstTextBaseline, spacing: Theme.Spacing.md) {
-            Image(systemName: vm.mode.systemImage)
-                .font(Theme.Typography.headerIcon)
-                .symbolRenderingMode(.hierarchical)
-                .foregroundStyle(.secondary)
+            // Clipboard and Calculator History are sub-screens of the root search, so their header
+            // icon is a back chevron (Raycast style) instead of a mode glyph.
+            if vm.mode != .launcher {
+                Button(action: exitToLauncher) {
+                    Image(systemName: "chevron.left")
+                        .font(Theme.Typography.headerIcon)
+                        .symbolRenderingMode(.hierarchical)
+                        .foregroundStyle(.secondary)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+            } else {
+                Image(systemName: vm.mode.systemImage)
+                    .font(Theme.Typography.headerIcon)
+                    .symbolRenderingMode(.hierarchical)
+                    .foregroundStyle(.secondary)
+            }
             TextField(vm.mode.placeholder, text: $vm.query)
                 .textFieldStyle(.plain)
                 .font(Theme.Typography.searchField)
@@ -411,6 +426,12 @@ struct RootPaletteView: View {
     /// the launcher rather than joining the cycle.
     private func toggleMode() {
         vm.mode = vm.mode == .launcher ? .clipboard : .launcher
+    }
+
+    /// Back out of Calculator History to a fresh root search — `prepare` is the same reset used
+    /// when the palette is shown (clears query/selection, bumps focusToken to refocus the field).
+    private func exitToLauncher() {
+        vm.prepare(mode: .launcher)
     }
 
     private func activateSelection() {
