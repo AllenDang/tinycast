@@ -167,7 +167,7 @@ struct RootPaletteView: View {
     }
 
     private var header: some View {
-        HStack(alignment: .firstTextBaseline, spacing: Theme.Spacing.md) {
+        HStack(alignment: .center, spacing: Theme.Spacing.md) {
             // Clipboard and Calculator History are sub-screens of the root search, so their header
             // icon is a back chevron (Raycast style) instead of a mode glyph.
             if vm.mode != .launcher {
