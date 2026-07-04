@@ -8,32 +8,46 @@ struct LauncherList: View {
     /// Changes only when the list should scroll to follow the selection (keyboard nav / reset), so
     /// mouse selection never yanks the scroll position.
     let scrollToken: UUID
+    /// Inline calculator answer for the current query; occupies flat selection index 0 when
+    /// present (calc requires a non-empty query, so it never coexists with the sectioned view).
+    var calc: CalcResult?
+    var calcSelected = false
+    var onActivateCalc: () -> Void = {}
+    var onCalcActions: () -> Void = {}
     let onActions: (AppEntry) -> Void
     @EnvironmentObject private var core: AppCore
     @EnvironmentObject private var runningApps: RunningAppsMonitor
 
+    private static let calcRowID = "calc-card"
+
     private enum Row: Identifiable {
         case header(String)
+        case calc(CalcResult)
         case app(AppEntry)
         var id: String {
             switch self {
             case .header(let title): return "header-" + title
+            case .calc: return LauncherList.calcRowID
             case .app(let app): return app.id
             }
         }
     }
 
     private var rows: [Row] {
-        guard showSections else { return results.map(Row.app) }
-        var rows: [Row] = []
+        var calcRows: [Row] = []
+        if let calc { calcRows = [.header("Calculator"), .calc(calc)] }
+        guard showSections else { return calcRows + results.map(Row.app) }
+        var rows: [Row] = calcRows
         let favorites = results.prefix(favoriteCount)
         let rest = results.dropFirst(favoriteCount)
-        // `rest` is apps-then-panes by the AppIndex sort invariant, so filtering by kind keeps
-        // row order identical to `results` order and the flat selection index stays valid.
+        // `rest` is apps-then-panes-then-commands by the AppIndex sort invariant, so filtering by
+        // kind keeps row order identical to `results` order and the flat selection index stays valid.
         let apps = rest.filter { $0.kind == .application }
         let panes = rest.filter { $0.kind == .systemSettings }
+        let commands = rest.filter { $0.kind == .command }
         for (title, group) in [
-            ("Favorites", Array(favorites)), ("Applications", apps), ("System Settings", panes),
+            ("Favorites", Array(favorites)), ("Applications", apps),
+            ("System Settings", panes), ("Commands", commands),
         ]
         where !group.isEmpty {
             rows.append(.header(title))
@@ -44,7 +58,7 @@ struct LauncherList: View {
 
     var body: some View {
         Group {
-            if results.isEmpty {
+            if results.isEmpty && calc == nil {
                 EmptyResults(text: "No apps found")
             } else {
                 ScrollViewReader { proxy in
@@ -54,6 +68,12 @@ struct LauncherList: View {
                                 switch row {
                                 case .header(let title):
                                     SectionHeader(title: title)
+                                case .calc(let result):
+                                    CalculatorCard(result: result, selected: calcSelected)
+                                        .contentShape(Rectangle())
+                                        .onTapGesture(perform: onActivateCalc)
+                                        .onRightClick(perform: onCalcActions)
+                                        .padding(.bottom, Theme.Spacing.xs)
                                 case .app(let app):
                                     AppRow(
                                         app: app,
@@ -74,7 +94,11 @@ struct LauncherList: View {
                     }
                     .thinScrollbar()
                     .onChange(of: scrollToken) {
-                        if let selectedID { proxy.scrollTo(selectedID, anchor: .center) }
+                        if calcSelected {
+                            proxy.scrollTo(Self.calcRowID, anchor: .center)
+                        } else if let selectedID {
+                            proxy.scrollTo(selectedID, anchor: .center)
+                        }
                     }
                 }
             }
@@ -191,10 +215,18 @@ struct AppActionsMenu: View {
     @EnvironmentObject private var core: AppCore
     @EnvironmentObject private var favorites: FavoritesStore
 
+    private var openTitle: String {
+        switch app.kind {
+        case .application: return "Open Application"
+        case .systemSettings: return "Open"
+        case .command: return "Run Command"
+        }
+    }
+
     var body: some View {
         PopoverMenu(header: app.name) {
             PopoverMenuRow(
-                title: app.kind == .application ? "Open Application" : "Open",
+                title: openTitle,
                 systemImage: "list.bullet.rectangle", shortcut: "↵"
             ) {
                 core.launch(app)
@@ -211,9 +243,11 @@ struct AppActionsMenu: View {
                     dismiss()
                 }
             }
-            PopoverMenuRow(title: "Show in Finder", systemImage: "folder") {
-                core.showInFinder(app)
-                dismiss()
+            if app.kind != .command {
+                PopoverMenuRow(title: "Show in Finder", systemImage: "folder") {
+                    core.showInFinder(app)
+                    dismiss()
+                }
             }
         }
     }

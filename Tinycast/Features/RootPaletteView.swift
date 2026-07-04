@@ -7,6 +7,7 @@ struct RootPaletteView: View {
     @EnvironmentObject private var store: ClipboardStore
     @EnvironmentObject private var favorites: FavoritesStore
     @EnvironmentObject private var visibility: VisibilityStore
+    @EnvironmentObject private var calcHistory: CalculatorHistoryStore
     @FocusState private var searchFocused: Bool
     @State private var showActions = false
     @State private var showAppMenu = false
@@ -28,7 +29,22 @@ struct RootPaletteView: View {
         return split.favorites + split.rest
     }
     private var clipResults: [ClipboardItem] { store.search(vm.query) }
-    private var resultCount: Int { vm.mode == .launcher ? appResults.count : clipResults.count }
+    private var histResults: [CalcHistoryEntry] { calcHistory.search(vm.query) }
+
+    /// Inline calculator answer for the current query (launcher mode only). When present it
+    /// occupies flat selection index 0 and every app-row access shifts by `calcCount`.
+    private var calcResult: CalcResult? {
+        vm.mode == .launcher ? CalcMemo.evaluate(vm.query) : nil
+    }
+    private var calcCount: Int { calcResult == nil ? 0 : 1 }
+
+    private var resultCount: Int {
+        switch vm.mode {
+        case .launcher: return appResults.count + calcCount
+        case .clipboard: return clipResults.count
+        case .calculatorHistory: return histResults.count
+        }
+    }
     /// Selection clamped into the current results — the single source of truth for highlight,
     /// preview and activation so the list and preview can never disagree.
     private var selection: Int { resultCount == 0 ? 0 : min(max(vm.selection, 0), resultCount - 1) }
@@ -38,19 +54,26 @@ struct RootPaletteView: View {
         // properties above. Avoids running the matcher/search several times for a single render.
         let apps = vm.mode == .launcher ? appResults : []
         let clips = vm.mode == .clipboard ? clipResults : []
-        let count = vm.mode == .launcher ? apps.count : clips.count
+        let hist = vm.mode == .calculatorHistory ? histResults : []
+        // Every count/selection below derives from this one calc/offset pair — the flat selection
+        // index must always match the visible row order, calc card included.
+        let calc = calcResult
+        let offset = calc == nil ? 0 : 1
+        let count = apps.count + offset + clips.count + hist.count  // only the active mode is non-empty
         let sel = count == 0 ? 0 : min(max(vm.selection, 0), count - 1)
+        let calcSelected = calc != nil && sel == 0
         let showSections = vm.mode == .launcher && isQueryEmpty
         let favoriteCount =
             showSections ? apps.prefix(while: { favorites.isFavorite($0) }).count : 0
-        let selectedApp = apps.indices.contains(sel) ? apps[sel] : nil
+        let selectedApp = apps.indices.contains(sel - offset) ? apps[sel - offset] : nil
         let selectedClip = clips.indices.contains(sel) ? clips[sel] : nil
+        let selectedHist = hist.indices.contains(sel) ? hist[sel] : nil
 
         // The results layer fills the whole panel; the search header and action bar float on top
         // as translucent Liquid Glass bars (via safeAreaInset). The list scrolls *behind* them and
         // stays faintly visible through the glass — the Raycast look, with no hard dividers.
         return content(
-            apps: apps, clips: clips, selection: sel,
+            apps: apps, clips: clips, hist: hist, calc: calc, selection: sel,
             favoriteCount: favoriteCount, showSections: showSections
         )
         .safeAreaInset(edge: .top, spacing: 0) { header }
@@ -73,9 +96,12 @@ struct RootPaletteView: View {
         }
         .overlay(alignment: .bottomTrailing) {
             if showActions {
-                actionsMenu(app: selectedApp, clip: selectedClip)
-                    .padding(Self.menuInset)
-                    .transition(Self.menuTransition(.bottomTrailing))
+                actionsMenu(
+                    app: selectedApp, clip: selectedClip, hist: selectedHist,
+                    calc: calcSelected ? calc : nil
+                )
+                .padding(Self.menuInset)
+                .transition(Self.menuTransition(.bottomTrailing))
             }
         }
         .frame(width: Theme.Size.panelWidth, height: Theme.Size.panelHeight)
@@ -125,8 +151,15 @@ struct RootPaletteView: View {
             return .handled
         }
         .onKeyPress(keys: [.delete, .deleteForward], phases: .down) { press in
-            guard vm.mode == .clipboard, press.modifiers.contains(.command) else { return .ignored }
-            deleteSelectedClip()
+            guard press.modifiers.contains(.command) else { return .ignored }
+            switch vm.mode {
+            case .clipboard:
+                deleteSelectedClip()
+            case .calculatorHistory:
+                deleteSelectedHistoryEntry()
+            case .launcher:
+                return .ignored
+            }
             return .handled
         }
     }
@@ -153,20 +186,34 @@ struct RootPaletteView: View {
 
     @ViewBuilder
     private func content(
-        apps: [AppEntry], clips: [ClipboardItem], selection: Int,
-        favoriteCount: Int, showSections: Bool
+        apps: [AppEntry], clips: [ClipboardItem], hist: [CalcHistoryEntry], calc: CalcResult?,
+        selection: Int, favoriteCount: Int, showSections: Bool
     ) -> some View {
         switch vm.mode {
         case .launcher:
-            let selectedID = apps.indices.contains(selection) ? apps[selection].id : nil
+            let offset = calc == nil ? 0 : 1
+            let calcSelected = calc != nil && selection == 0
+            let appIndex = selection - offset
+            let selectedID = apps.indices.contains(appIndex) ? apps[appIndex].id : nil
             LauncherList(
                 results: apps,
-                selectedID: selectedID,
+                selectedID: calcSelected ? nil : selectedID,
                 favoriteCount: favoriteCount,
                 showSections: showSections,
                 scrollToken: scrollToken,
+                calc: calc,
+                calcSelected: calcSelected,
+                onActivateCalc: {
+                    vm.selection = 0
+                    activateSelection()
+                },
+                onCalcActions: {
+                    guard let calc, case .value = calc.payload else { return }
+                    vm.selection = 0
+                    withAnimation(Self.menuAnimation) { showActions = true }
+                },
                 onActions: { app in
-                    if let index = apps.firstIndex(of: app) { vm.selection = index }
+                    if let index = apps.firstIndex(of: app) { vm.selection = index + offset }
                     withAnimation(Self.menuAnimation) { showActions = true }
                 }
             )
@@ -196,15 +243,38 @@ struct RootPaletteView: View {
                     ClipboardPreview(item: selected)
                 }
             }
+        case .calculatorHistory:
+            if hist.isEmpty {
+                EmptyResults(
+                    text: isQueryEmpty ? "No calculations yet" : "No matching calculations")
+            } else {
+                let selected = hist.indices.contains(selection) ? hist[selection] : nil
+                CalculatorHistoryList(
+                    results: hist,
+                    selectedID: selected?.id,
+                    scrollToken: scrollToken,
+                    onSelect: { entry in vm.selection = hist.firstIndex(of: entry) ?? 0 },
+                    onActivate: activateSelection,
+                    onActions: { entry in
+                        if let index = hist.firstIndex(of: entry) { vm.selection = index }
+                        withAnimation(Self.menuAnimation) { showActions = true }
+                    }
+                )
+            }
         }
     }
 
     /// The bottom-right actions popover for the current mode's selection.
     @ViewBuilder
-    private func actionsMenu(app: AppEntry?, clip: ClipboardItem?) -> some View {
+    private func actionsMenu(
+        app: AppEntry?, clip: ClipboardItem?, hist: CalcHistoryEntry?, calc: CalcResult?
+    ) -> some View {
         switch vm.mode {
         case .launcher:
-            if let app {
+            if let calc {
+                CalcActionsMenu(result: calc) { closeMenus() }
+                    .environmentObject(core)
+            } else if let app {
                 AppActionsMenu(app: app) { closeMenus() }
                     .environmentObject(core)
                     .environmentObject(favorites)
@@ -214,6 +284,12 @@ struct RootPaletteView: View {
                 ClipboardActionsMenu(item: clip) { closeMenus() }
                     .environmentObject(core)
                     .environmentObject(store)
+            }
+        case .calculatorHistory:
+            if let hist {
+                CalcHistoryActionsMenu(entry: hist) { closeMenus() }
+                    .environmentObject(core)
+                    .environmentObject(calcHistory)
             }
         }
     }
@@ -263,10 +339,22 @@ struct RootPaletteView: View {
     /// Pill label for the current selection. Reads the memoized `appResults`, so the extra
     /// lookup during render is cheap.
     private var actionPillLabel: String {
-        guard vm.mode == .launcher else { return "Paste" }
-        let apps = appResults
-        let selected = apps.indices.contains(selection) ? apps[selection] : nil
-        return selected?.kind == .systemSettings ? "Open" : "Open Application"
+        switch vm.mode {
+        case .clipboard:
+            return "Paste"
+        case .calculatorHistory:
+            return "Copy Answer"
+        case .launcher:
+            if calcCount > 0 && selection == 0 { return "Copy Answer" }
+            let apps = appResults
+            let index = selection - calcCount
+            let selected = apps.indices.contains(index) ? apps[index] : nil
+            switch selected?.kind {
+            case .systemSettings: return "Open"
+            case .command: return "Run Command"
+            default: return "Open Application"
+            }
+        }
     }
 
     private var actionPill: some View {
@@ -306,6 +394,11 @@ struct RootPaletteView: View {
         store.remove(clipResults[selection])
     }
 
+    private func deleteSelectedHistoryEntry() {
+        guard histResults.indices.contains(selection) else { return }
+        calcHistory.remove(histResults[selection])
+    }
+
     // MARK: - Actions
 
     private func move(_ delta: Int) {
@@ -314,6 +407,8 @@ struct RootPaletteView: View {
         scrollToken = UUID()
     }
 
+    /// Tab flips launcher↔clipboard; Calculator History (entered via its command) exits back to
+    /// the launcher rather than joining the cycle.
     private func toggleMode() {
         vm.mode = vm.mode == .launcher ? .clipboard : .launcher
     }
@@ -321,11 +416,20 @@ struct RootPaletteView: View {
     private func activateSelection() {
         switch vm.mode {
         case .launcher:
-            guard appResults.indices.contains(selection) else { return }
-            core.launch(appResults[selection])
+            if let calcResult, selection == 0 {
+                // Error cards no-op — copyCalculatorResult only acts on value payloads.
+                core.copyCalculatorResult(calcResult)
+                return
+            }
+            let index = selection - calcCount
+            guard appResults.indices.contains(index) else { return }
+            core.launch(appResults[index])
         case .clipboard:
             guard clipResults.indices.contains(selection) else { return }
             core.paste(clipResults[selection])
+        case .calculatorHistory:
+            guard histResults.indices.contains(selection) else { return }
+            core.copyHistoryEntry(histResults[selection])
         }
     }
 }

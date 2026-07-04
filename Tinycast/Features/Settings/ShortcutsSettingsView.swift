@@ -64,6 +64,7 @@ struct ShortcutsSettingsView: View {
         let entries = filtered
         let apps = entries.filter { $0.kind == .application }
         let panes = entries.filter { $0.kind == .systemSettings }
+        let commands = entries.filter { $0.kind == .command }
         // Each category is its own independently scrollable card; they split the remaining
         // height between them. When a search empties one category, the other takes the space.
         return VStack(alignment: .leading, spacing: Theme.Spacing.xl) {
@@ -80,6 +81,9 @@ struct ShortcutsSettingsView: View {
                 if !panes.isEmpty {
                     CategorySection(
                         title: "System Settings", kind: .systemSettings, entries: panes)
+                }
+                if !commands.isEmpty {
+                    CategorySection(title: "Commands", kind: .command, entries: commands)
                 }
             }
         }

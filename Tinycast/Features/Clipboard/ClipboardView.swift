@@ -81,9 +81,9 @@ struct ClipboardList: View {
     }
 }
 
-/// Coarse date buckets for grouping clipboard entries into sections, mirroring Raycast's
-/// Today / Yesterday / This Week / … history grouping. Ordered newest-first by raw value.
-private enum DateBucket: Int {
+/// Coarse date buckets for grouping clipboard and calculator-history entries into sections,
+/// mirroring Raycast's Today / Yesterday / This Week / … grouping. Ordered newest-first by raw value.
+enum DateBucket: Int {
     case today, yesterday, thisWeek, thisMonth, earlier
 
     var title: String {

@@ -4,11 +4,30 @@ import SwiftUI
 enum PaletteMode: String, CaseIterable, Identifiable {
     case launcher
     case clipboard
+    case calculatorHistory
 
     var id: String { rawValue }
-    var title: String { self == .launcher ? "Apps" : "Clipboard" }
-    var systemImage: String { self == .launcher ? "magnifyingglass" : "doc.on.doc" }
-    var placeholder: String { self == .launcher ? "Search apps…" : "Search clipboard…" }
+    var title: String {
+        switch self {
+        case .launcher: return "Apps"
+        case .clipboard: return "Clipboard"
+        case .calculatorHistory: return "Calculator History"
+        }
+    }
+    var systemImage: String {
+        switch self {
+        case .launcher: return "magnifyingglass"
+        case .clipboard: return "doc.on.doc"
+        case .calculatorHistory: return "plus.forwardslash.minus"
+        }
+    }
+    var placeholder: String {
+        switch self {
+        case .launcher: return "Search apps…"
+        case .clipboard: return "Search clipboard…"
+        case .calculatorHistory: return "Search calculations…"
+        }
+    }
 }
 
 /// View-model shared between the panel's SwiftUI tree and the coordinator.
@@ -40,6 +59,7 @@ final class AppCore: ObservableObject {
     let settings = AppSettings()
     let favorites = FavoritesStore()
     let visibility = VisibilityStore()
+    let calcHistory = CalculatorHistoryStore()
     let runningApps = RunningAppsMonitor()
     let palette = PaletteViewModel()
 
@@ -118,6 +138,11 @@ final class AppCore: ObservableObject {
     // MARK: - Actions invoked from the palette UI
 
     func launch(_ app: AppEntry) {
+        // Commands dispatch before the palette hides: mode-switching commands keep it open.
+        if app.kind == .command {
+            runCommand(app)
+            return
+        }
         hidePalette(restoreFocus: false)
         switch app.kind {
         case .application:
@@ -125,7 +150,47 @@ final class AppCore: ObservableObject {
         case .systemSettings:
             guard let bundleID = app.bundleID else { return }
             AppLauncher.openSettingsPane(bundleID: bundleID)
+        case .command:
+            break  // handled above
         }
+    }
+
+    private func runCommand(_ entry: AppEntry) {
+        switch CommandRegistry.command(for: entry) {
+        case .calculatorHistory:
+            showPalette(mode: .calculatorHistory)
+        case .clipboardHistory:
+            showPalette(mode: .clipboard)
+        case .settings:
+            hidePalette(restoreFocus: false)
+            showSettings()
+        case .about:
+            hidePalette(restoreFocus: false)
+            showAbout()
+        case .quit:
+            NSApp.terminate(nil)
+        case nil:
+            break
+        }
+    }
+
+    /// Enter on the inline calculator card: copy the answer, remember the calculation, dismiss.
+    func copyCalculatorResult(_ result: CalcResult) {
+        guard case .value(let display, let copyText) = result.payload else { return }
+        calcHistory.record(expression: result.expression, result: display)
+        hidePalette(restoreFocus: false)
+        Paster.copyPlainText(copyText)
+    }
+
+    /// Enter on a Calculator History row: re-copy the stored answer (no re-record).
+    func copyHistoryEntry(_ entry: CalcHistoryEntry) {
+        hidePalette(restoreFocus: false)
+        Paster.copyPlainText(entry.result.replacingOccurrences(of: ",", with: ""))
+    }
+
+    func copyHistoryExpression(_ entry: CalcHistoryEntry) {
+        hidePalette(restoreFocus: false)
+        Paster.copyPlainText(entry.expression)
     }
 
     func showInFinder(_ app: AppEntry) {

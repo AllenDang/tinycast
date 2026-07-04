@@ -4,29 +4,40 @@ struct AppEntry: Identifiable, Hashable, Sendable {
     enum Kind: String, Sendable {
         case application
         case systemSettings
+        case command
     }
 
-    let id: String  // file path — always unique
+    let id: String  // file path (or "command:…" id) — always unique
     let name: String  // clean display name, never includes ".app"
     let url: URL
     let bundleID: String?
     let kind: Kind
 
     var kindLabel: String {
-        kind == .application ? "Application" : "System Setting"
+        switch kind {
+        case .application: return "Application"
+        case .systemSettings: return "System Setting"
+        case .command: return "Command"
+        }
     }
 
     /// The global-hotkey action that opens this entry, or `nil` when it has no bundle ID
-    /// (nothing stable to key the binding on).
+    /// (nothing stable to key the binding on). Commands have no bundle ID, so no hotkeys.
     var hotKeyAction: HotKeyAction? {
         guard let bundleID else { return nil }
-        return kind == .application
-            ? .app(bundleID: bundleID)
-            : .settingsPane(bundleID: bundleID)
+        switch kind {
+        case .application: return .app(bundleID: bundleID)
+        case .systemSettings: return .settingsPane(bundleID: bundleID)
+        case .command: return nil
+        }
     }
 
     @MainActor var icon: NSImage {
-        IconCache.icon(forFile: url.path)
+        if kind == .command {
+            return IconCache.symbolIcon(
+                named: CommandRegistry.command(for: self)?.sfSymbol ?? "questionmark")
+        }
+        return IconCache.icon(forFile: url.path)
     }
 }
 
@@ -54,6 +65,38 @@ enum IconCache {
         let key = path as NSString
         if let cached = cache.object(forKey: key) { return cached }
         let (icon, cost) = downsampled(NSWorkspace.shared.icon(forFile: path))
+        cache.setObject(icon, forKey: key, cost: cost)
+        return icon
+    }
+
+    /// Command "icons": an SF Symbol centered on a rounded tile, rendered once into the same small
+    /// bitmap shape as app icons so `AppRow`/`ShortcutRow` treat every entry identically.
+    @MainActor
+    static func symbolIcon(named name: String) -> NSImage {
+        let key = "symbol:" + name as NSString
+        if let cached = cache.object(forKey: key) { return cached }
+
+        let side = displayPixel
+        let image = NSImage(size: NSSize(width: side, height: side), flipped: false) { _ in
+            // Tile inset mirrors the margin macOS app icons carry inside their canvas.
+            let tile = NSRect(x: 0, y: 0, width: side, height: side).insetBy(dx: 4, dy: 4)
+            NSColor.white.withAlphaComponent(0.09).setFill()
+            NSBezierPath(roundedRect: tile, xRadius: 9, yRadius: 9).fill()
+
+            let config = NSImage.SymbolConfiguration(pointSize: 21, weight: .medium)
+                .applying(.init(paletteColors: [.white.withAlphaComponent(0.85)]))
+            guard
+                let symbol = NSImage(systemSymbolName: name, accessibilityDescription: nil)?
+                    .withSymbolConfiguration(config)
+            else { return true }
+            let size = symbol.size
+            symbol.draw(
+                in: NSRect(
+                    x: (side - size.width) / 2, y: (side - size.height) / 2,
+                    width: size.width, height: size.height))
+            return true
+        }
+        let (icon, cost) = downsampled(image)
         cache.setObject(icon, forKey: key, cost: cost)
         return icon
     }
@@ -134,13 +177,14 @@ final class AppIndex: ObservableObject {
                         kind: .application))
             }
         }
-        // Apps (sorted by name) first, then Settings panes (sorted by name). The launcher's
-        // sectioned list relies on this invariant: with an empty query the results are contiguous
-        // runs of favorites/apps/panes, so the flat selection index maps 1:1 onto sectioned rows.
+        // Apps (sorted by name), then Settings panes, then Commands (each sorted by name). The
+        // launcher's sectioned list relies on this invariant: with an empty query the results are
+        // contiguous runs of favorites/apps/panes/commands, so the flat selection index maps 1:1
+        // onto sectioned rows.
         let apps = result.sorted {
             $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending
         }
-        return apps + SettingsPaneScanner.scan()
+        return apps + SettingsPaneScanner.scan() + CommandRegistry.all
     }
 
     /// Ranked matches. Empty query returns the full alphabetical list.
