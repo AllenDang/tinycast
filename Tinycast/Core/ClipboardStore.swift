@@ -11,22 +11,31 @@ struct ClipboardItem: Identifiable, Hashable, Sendable {
     let text: String?
     let imageFileName: String?
     let createdAt: Date
+    /// Bundle ID of the app frontmost when the copy was captured (see `ClipboardManager.poll`).
+    let sourceBundleID: String?
 
-    init(text: String) {
-        self.init(id: UUID(), kind: .text, text: text, imageFileName: nil, createdAt: Date())
-    }
-
-    init(imageFileName: String) {
+    init(text: String, sourceBundleID: String?) {
         self.init(
-            id: UUID(), kind: .image, text: nil, imageFileName: imageFileName, createdAt: Date())
+            id: UUID(), kind: .text, text: text, imageFileName: nil, createdAt: Date(),
+            sourceBundleID: sourceBundleID)
     }
 
-    init(id: UUID, kind: Kind, text: String?, imageFileName: String?, createdAt: Date) {
+    init(imageFileName: String, sourceBundleID: String?) {
+        self.init(
+            id: UUID(), kind: .image, text: nil, imageFileName: imageFileName, createdAt: Date(),
+            sourceBundleID: sourceBundleID)
+    }
+
+    init(
+        id: UUID, kind: Kind, text: String?, imageFileName: String?, createdAt: Date,
+        sourceBundleID: String?
+    ) {
         self.id = id
         self.kind = kind
         self.text = text
         self.imageFileName = imageFileName
         self.createdAt = createdAt
+        self.sourceBundleID = sourceBundleID
     }
 }
 
@@ -78,7 +87,8 @@ final class ClipboardStore: ObservableObject {
           kind TEXT NOT NULL,
           text TEXT,
           image_file TEXT,
-          created_at REAL NOT NULL
+          created_at REAL NOT NULL,
+          source_app TEXT
         );
         CREATE INDEX IF NOT EXISTS items_created_at ON items(created_at);
         CREATE VIRTUAL TABLE IF NOT EXISTS items_fts USING fts5(
@@ -148,16 +158,16 @@ final class ClipboardStore: ObservableObject {
         prune()
     }
 
-    func addText(_ text: String) {
+    func addText(_ text: String, sourceBundleID: String?) {
         if items.first?.kind == .text, items.first?.text == text { return }
-        insert(ClipboardItem(text: text))
+        insert(ClipboardItem(text: text, sourceBundleID: sourceBundleID))
     }
 
-    func addImage(_ data: Data) {
+    func addImage(_ data: Data, sourceBundleID: String?) {
         let name = UUID().uuidString + ".png"
         let url = imagesDir.appendingPathComponent(name)
         guard (try? data.write(to: url, options: .atomic)) != nil else { return }
-        insert(ClipboardItem(imageFileName: name))
+        insert(ClipboardItem(imageFileName: name, sourceBundleID: sourceBundleID))
     }
 
     func remove(_ item: ClipboardItem) {
@@ -223,6 +233,11 @@ final class ClipboardStore: ObservableObject {
                 sqlite3_bind_null(stmt, 4)
             }
             sqlite3_bind_double(stmt, 5, item.createdAt.timeIntervalSince1970)
+            if let source = item.sourceBundleID {
+                sqlite3_bind_text(stmt, 6, source, -1, SQLITE_TRANSIENT)
+            } else {
+                sqlite3_bind_null(stmt, 6)
+            }
             sqlite3_step(stmt)
             sqlite3_reset(stmt)
             sqlite3_clear_bindings(stmt)
@@ -266,13 +281,19 @@ final class ClipboardStore: ObservableObject {
                 == SQLITE_OK,
             sqlite3_exec(db, Self.schema, nil, nil, nil) == SQLITE_OK
         else { return false }
+        // Migrates pre-source_app databases; fails harmlessly ("duplicate column") on current ones.
+        sqlite3_exec(db, "ALTER TABLE items ADD COLUMN source_app TEXT", nil, nil, nil)
         insertStmt = prepare(
-            "INSERT INTO items(id, kind, text, image_file, created_at) VALUES(?,?,?,?,?)")
+            "INSERT INTO items(id, kind, text, image_file, created_at, source_app) VALUES(?,?,?,?,?,?)"
+        )
         loadStmt = prepare(
-            "SELECT id, kind, text, image_file, created_at FROM items ORDER BY rowid DESC LIMIT ?")
+            """
+            SELECT id, kind, text, image_file, created_at, source_app FROM items
+            ORDER BY rowid DESC LIMIT ?
+            """)
         searchStmt = prepare(
             """
-            SELECT i.id, i.kind, i.text, i.image_file, i.created_at FROM items_fts f
+            SELECT i.id, i.kind, i.text, i.image_file, i.created_at, i.source_app FROM items_fts f
             JOIN items i ON i.rowid = f.rowid WHERE items_fts MATCH ? ORDER BY f.rowid DESC LIMIT 200
             """)
         deleteByIDStmt = prepare("DELETE FROM items WHERE id = ?")
@@ -309,7 +330,8 @@ final class ClipboardStore: ObservableObject {
         else { return nil }
         return ClipboardItem(
             id: id, kind: kind, text: columnString(stmt, 2), imageFileName: columnString(stmt, 3),
-            createdAt: Date(timeIntervalSince1970: sqlite3_column_double(stmt, 4)))
+            createdAt: Date(timeIntervalSince1970: sqlite3_column_double(stmt, 4)),
+            sourceBundleID: columnString(stmt, 5))
     }
 
     private static func columnString(_ stmt: OpaquePointer?, _ index: Int32) -> String? {

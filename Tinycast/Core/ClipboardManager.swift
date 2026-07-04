@@ -33,24 +33,23 @@ final class ClipboardManager {
 
         // The pasteboard doesn't carry its source, so attribute the change to the frontmost app —
         // the copy that bumped changeCount happened within the last poll interval (0.5s).
-        if let bundleID = NSWorkspace.shared.frontmostApplication?.bundleIdentifier,
-            settings.clipboardDisabledApps.contains(bundleID)
-        { return }
+        let sourceBundleID = NSWorkspace.shared.frontmostApplication?.bundleIdentifier
+        if let sourceBundleID, settings.clipboardDisabledApps.contains(sourceBundleID) { return }
 
         if let text = pb.string(forType: .string),
             !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
         {
-            store.addText(text)
+            store.addText(text, sourceBundleID: sourceBundleID)
             return
         }
 
         if let type = pb.availableType(from: [.png, .tiff]), let data = pb.data(forType: type) {
             if type == .png {
-                store.addImage(data)
+                store.addImage(data, sourceBundleID: sourceBundleID)
             } else if let png = NSBitmapImageRep(data: data)?.representation(
                 using: .png, properties: [:])
             {
-                store.addImage(png)
+                store.addImage(png, sourceBundleID: sourceBundleID)
             }
         }
     }

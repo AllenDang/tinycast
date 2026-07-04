@@ -1,3 +1,4 @@
+import AppKit
 import SwiftUI
 
 struct ClipboardList: View {
@@ -289,10 +290,10 @@ struct ClipboardPreview: View {
         if let item {
             VStack(alignment: .leading, spacing: 0) {
                 content(for: item)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-                footer(for: item)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, )
+                ClipboardInfoSection(item: item, imageURL: store.imageURL(for: item))
             }
-            .padding(16)
+            .padding(8)
         } else {
             Color.clear
         }
@@ -314,36 +315,150 @@ struct ClipboardPreview: View {
                 image
                     .resizable()
                     .aspectRatio(contentMode: .fit)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .clipShape(
+                        RoundedRectangle(cornerRadius: Theme.Radius.card, style: .continuous)
+                    )
+                    .overlay(
+                        RoundedRectangle(cornerRadius: Theme.Radius.card, style: .continuous)
+                            .strokeBorder(Theme.Colors.cardStroke, lineWidth: 1)
+                    )
             } placeholder: {
                 Image(systemName: "photo").font(.system(.largeTitle))
                     .symbolRenderingMode(.hierarchical).foregroundStyle(.tertiary)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
         }
     }
+}
 
-    private func footer(for item: ClipboardItem) -> some View {
-        HStack {
-            Text(metadata(for: item))
-            Spacer()
-            Text("\(item.createdAt, style: .relative) ago")
-        }
-        .font(.caption)
-        .foregroundStyle(.secondary)
-        .padding(.top, 8)
+/// Raycast-style "Information" block under the preview: label/value rows split by hairlines.
+/// Everything that touches disk or walks the full text (dimensions, file size, character/word
+/// counts) is gathered off the main actor per selection, so clicking through huge entries never
+/// hitches the palette.
+private struct ClipboardInfoSection: View {
+    let item: ClipboardItem
+    let imageURL: URL?
+
+    @State private var details = Details()
+
+    private struct Details: Equatable, Sendable {
+        var characters: Int?
+        var words: Int?
+        var pixelSize: CGSize?
+        var fileBytes: Int?
     }
 
-    private func metadata(for item: ClipboardItem) -> String {
+    private struct InfoRow: Identifiable {
+        let label: String
+        let value: String
+        var icon: NSImage?
+        var id: String { label }
+    }
+
+    /// "Today at 1:22:57 AM" — relative day name plus exact time. DateFormatter is expensive to
+    /// build, so it's shared; @MainActor because the view only reads it from body.
+    @MainActor private static let copiedFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.dateStyle = .medium
+        formatter.timeStyle = .medium
+        formatter.doesRelativeDateFormatting = true
+        return formatter
+    }()
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
+            Text("Information")
+                .font(Theme.Typography.sectionHeader)
+                .foregroundStyle(.secondary)
+            VStack(spacing: 0) {
+                let rows = self.rows
+                ForEach(rows) { row in
+                    if row.id != rows.first?.id { Divider() }
+                    HStack(spacing: Theme.Spacing.sm) {
+                        Text(row.label).foregroundStyle(.secondary)
+                        Spacer(minLength: Theme.Spacing.lg)
+                        if let icon = row.icon {
+                            Image(nsImage: icon)
+                                .resizable()
+                                .frame(width: 20, height: 20)
+                        }
+                        Text(row.value).lineLimit(1).truncationMode(.middle)
+                    }
+                    .font(.callout)
+                    .padding(.vertical, Theme.Spacing.sm)
+                }
+            }
+        }
+        .padding(.top, Theme.Spacing.xl)
+        .task(id: item.id) { await loadDetails() }
+    }
+
+    private var rows: [InfoRow] {
+        var rows: [InfoRow] = []
+        if let source {
+            rows.append(InfoRow(label: "Source", value: source.name, icon: source.icon))
+        }
         switch item.kind {
         case .text:
-            let count = (item.text ?? "").count
-            return "Text · \(count) character\(count == 1 ? "" : "s")"
-        case .image:
-            if let url = store.imageURL(for: item), let size = ImageThumbnail.pixelSize(of: url) {
-                return "Image · \(Int(size.width))×\(Int(size.height))"
+            rows.append(InfoRow(label: "Type", value: "Text"))
+            if let characters = details.characters {
+                rows.append(InfoRow(label: "Characters", value: characters.formatted()))
             }
-            return "Image"
+            if let words = details.words {
+                rows.append(InfoRow(label: "Words", value: words.formatted()))
+            }
+        case .image:
+            rows.append(InfoRow(label: "Type", value: "Image"))
+            if let size = details.pixelSize {
+                rows.append(
+                    InfoRow(label: "Dimensions", value: "\(Int(size.width))×\(Int(size.height))"))
+            }
+            if let bytes = details.fileBytes {
+                rows.append(
+                    InfoRow(
+                        label: "Size", value: Int64(bytes).formatted(.byteCount(style: .file))))
+            }
         }
+        rows.append(
+            InfoRow(label: "Copied", value: Self.copiedFormatter.string(from: item.createdAt)))
+        return rows
+    }
+
+    /// Source app name + icon, resolved from the recorded bundle ID. Launch Services lookup is a
+    /// quick main-thread call and the icon comes from the shared `IconCache`, so no extra caching.
+    private var source: (name: String, icon: NSImage)? {
+        guard let bundleID = item.sourceBundleID,
+            let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundleID)
+        else { return nil }
+        return (url.deletingPathExtension().lastPathComponent, IconCache.icon(forFile: url.path))
+    }
+
+    private func loadDetails() async {
+        let text = item.text
+        let url = imageURL
+        details = await Task.detached(priority: .userInitiated) {
+            var details = Details()
+            if let text {
+                details.characters = text.count
+                details.words = Self.wordCount(text)
+            }
+            if let url {
+                details.pixelSize = ImageThumbnail.pixelSize(of: url)
+                details.fileBytes = try? url.resourceValues(forKeys: [.fileSizeKey]).fileSize
+            }
+            return details
+        }.value
+    }
+
+    /// Single pass over scalars — `split(whereSeparator:)` would allocate a substring per word,
+    /// which matters when a multi-MB copy lands here.
+    private nonisolated static func wordCount(_ text: String) -> Int {
+        var count = 0
+        var inWord = false
+        for scalar in text.unicodeScalars {
+            let separator = CharacterSet.whitespacesAndNewlines.contains(scalar)
+            if !separator && !inWord { count += 1 }
+            inWord = !separator
+        }
+        return count
     }
 }
