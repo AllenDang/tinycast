@@ -28,13 +28,16 @@ struct LauncherList: View {
         var rows: [Row] = []
         let favorites = results.prefix(favoriteCount)
         let rest = results.dropFirst(favoriteCount)
-        if !favorites.isEmpty {
-            rows.append(.header("Favorites"))
-            rows.append(contentsOf: favorites.map(Row.app))
-        }
-        if !rest.isEmpty {
-            rows.append(.header("Applications"))
-            rows.append(contentsOf: rest.map(Row.app))
+        // `rest` is apps-then-panes by the AppIndex sort invariant, so filtering by kind keeps
+        // row order identical to `results` order and the flat selection index stays valid.
+        let apps = rest.filter { $0.kind == .application }
+        let panes = rest.filter { $0.kind == .systemSettings }
+        for (title, group) in [
+            ("Favorites", Array(favorites)), ("Applications", apps), ("System Settings", panes),
+        ]
+        where !group.isEmpty {
+            rows.append(.header(title))
+            rows.append(contentsOf: group.map(Row.app))
         }
         return rows
     }
@@ -112,10 +115,10 @@ private struct AppRow: View {
         return .clear
     }
 
-    /// Raycast-style keycaps for this app's per-app hotkey, or `nil` if none is bound.
+    /// Raycast-style keycaps for this entry's hotkey, or `nil` if none is bound.
     private var shortcutCaps: [String]? {
-        guard let bundleID = app.bundleID,
-            let shortcut = hotKeys.shortcut(for: .app(bundleID: bundleID))
+        guard let action = app.hotKeyAction,
+            let shortcut = hotKeys.shortcut(for: action)
         else { return nil }
         return shortcut.keycaps
     }
@@ -144,7 +147,7 @@ private struct AppRow: View {
                 }
             }
             Spacer()
-            Text("Application")
+            Text(app.kindLabel)
                 .font(Theme.Typography.rowTrailing)
                 .foregroundStyle(.secondary)
         }
@@ -191,7 +194,8 @@ struct AppActionsMenu: View {
     var body: some View {
         PopoverMenu(header: app.name) {
             PopoverMenuRow(
-                title: "Open Application", systemImage: "list.bullet.rectangle", shortcut: "↵"
+                title: app.kind == .application ? "Open Application" : "Open",
+                systemImage: "list.bullet.rectangle", shortcut: "↵"
             ) {
                 core.launch(app)
                 dismiss()

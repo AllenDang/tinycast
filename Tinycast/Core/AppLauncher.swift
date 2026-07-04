@@ -12,6 +12,13 @@ enum AppLauncher {
         NSWorkspace.shared.activateFileViewerSelecting([url])
     }
 
+    /// Opens System Settings at the pane backed by the given extension bundle ID.
+    @MainActor
+    static func openSettingsPane(bundleID: String) {
+        guard let url = URL(string: "x-apple.systempreferences:" + bundleID) else { return }
+        NSWorkspace.shared.open(url)
+    }
+
     /// Toggle behaviour: focus the app if it is not frontmost, hide it if it is,
     /// launch it if it isn't running.
     @MainActor

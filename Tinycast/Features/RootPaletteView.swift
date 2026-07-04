@@ -6,6 +6,7 @@ struct RootPaletteView: View {
     @EnvironmentObject private var appIndex: AppIndex
     @EnvironmentObject private var store: ClipboardStore
     @EnvironmentObject private var favorites: FavoritesStore
+    @EnvironmentObject private var visibility: VisibilityStore
     @FocusState private var searchFocused: Bool
     @State private var showActions = false
     @State private var showAppMenu = false
@@ -19,7 +20,9 @@ struct RootPaletteView: View {
     /// Ordered launcher results — the single source of truth for the list, selection and activation.
     /// Empty query pins favorites to the top; otherwise plain ranked matches.
     private var appResults: [AppEntry] {
-        let base = appIndex.matches(vm.query)
+        // Visibility filtering stays downstream of `matches` so its one-deep memo cache is
+        // never keyed on hidden state; hidden favorites drop out here too.
+        let base = appIndex.matches(vm.query).filter(visibility.isVisible)
         guard isQueryEmpty, !favorites.keys.isEmpty else { return base }
         let split = favorites.ordered(base)
         return split.favorites + split.rest
@@ -37,7 +40,7 @@ struct RootPaletteView: View {
         let clips = vm.mode == .clipboard ? clipResults : []
         let count = vm.mode == .launcher ? apps.count : clips.count
         let sel = count == 0 ? 0 : min(max(vm.selection, 0), count - 1)
-        let showSections = vm.mode == .launcher && isQueryEmpty && !favorites.keys.isEmpty
+        let showSections = vm.mode == .launcher && isQueryEmpty
         let favoriteCount =
             showSections ? apps.prefix(while: { favorites.isFavorite($0) }).count : 0
         let selectedApp = apps.indices.contains(sel) ? apps[sel] : nil
@@ -257,10 +260,19 @@ struct RootPaletteView: View {
         }
     }
 
+    /// Pill label for the current selection. Reads the memoized `appResults`, so the extra
+    /// lookup during render is cheap.
+    private var actionPillLabel: String {
+        guard vm.mode == .launcher else { return "Paste" }
+        let apps = appResults
+        let selected = apps.indices.contains(selection) ? apps[selection] : nil
+        return selected?.kind == .systemSettings ? "Open" : "Open Application"
+    }
+
     private var actionPill: some View {
         Button(action: activateSelection) {
             HStack(spacing: Theme.Spacing.sm) {
-                Text(vm.mode == .launcher ? "Open Application" : "Paste")
+                Text(actionPillLabel)
                 Image(systemName: "return")
             }
             .font(Theme.Typography.pill)

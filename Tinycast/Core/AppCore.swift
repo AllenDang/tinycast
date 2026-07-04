@@ -39,6 +39,7 @@ final class AppCore: ObservableObject {
     let hotKeys = HotKeyManager()
     let settings = AppSettings()
     let favorites = FavoritesStore()
+    let visibility = VisibilityStore()
     let runningApps = RunningAppsMonitor()
     let palette = PaletteViewModel()
 
@@ -98,10 +99,12 @@ final class AppCore: ObservableObject {
     /// apps), raised to the front via the same controller as About.
     func showSettings() {
         auxWindows.show(
-            id: "settings", title: "Settings", size: CGSize(width: 640, height: 432),
+            id: "settings", title: "Settings", size: CGSize(width: 720, height: 560),
             seamlessTitleBar: true
         ) {
-            SettingsRootView().environmentObject(self.appIndex)
+            SettingsRootView()
+                .environmentObject(self.appIndex)
+                .environmentObject(self.visibility)
         }
     }
 
@@ -116,7 +119,13 @@ final class AppCore: ObservableObject {
 
     func launch(_ app: AppEntry) {
         hidePalette(restoreFocus: false)
-        AppLauncher.launch(app.url)
+        switch app.kind {
+        case .application:
+            AppLauncher.launch(app.url)
+        case .systemSettings:
+            guard let bundleID = app.bundleID else { return }
+            AppLauncher.openSettingsPane(bundleID: bundleID)
+        }
     }
 
     func showInFinder(_ app: AppEntry) {

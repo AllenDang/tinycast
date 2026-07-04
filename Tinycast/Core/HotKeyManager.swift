@@ -18,17 +18,24 @@ final class HotKeyManager: ObservableObject {
 
     private let center = HotKeyCenter()
     private let boundKey = "boundAppBundleIDs"
+    private let boundPaneKey = "boundPaneBundleIDs"
 
     func start() {
         register(.togglePalette)
         register(.toggleClipboard)
         for bundleID in boundBundleIDs { register(.app(bundleID: bundleID)) }
+        for bundleID in boundPaneBundleIDs { register(.settingsPane(bundleID: bundleID)) }
     }
 
     /// Bundle IDs that currently have a per-app hotkey — the index that lets `start()` know
     /// which `appHotkey.*` records to load and lets the launcher rows show keycaps.
     var boundBundleIDs: [String] {
         UserDefaults.standard.stringArray(forKey: boundKey) ?? []
+    }
+
+    /// Settings-pane bundle IDs with a hotkey — same role as `boundBundleIDs`, own namespace.
+    var boundPaneBundleIDs: [String] {
+        UserDefaults.standard.stringArray(forKey: boundPaneKey) ?? []
     }
 
     func shortcut(for action: HotKeyAction) -> KeyShortcut? {
@@ -55,10 +62,17 @@ final class HotKeyManager: ObservableObject {
             UserDefaults.standard.removeObject(forKey: action.defaultsKey)
             center.unregister(id: action.defaultsKey)
         }
-        if case .app(let bundleID) = action {
+        switch action {
+        case .app(let bundleID):
             var set = Set(boundBundleIDs)
             if shortcut == nil { set.remove(bundleID) } else { set.insert(bundleID) }
             UserDefaults.standard.set(Array(set), forKey: boundKey)
+        case .settingsPane(let bundleID):
+            var set = Set(boundPaneBundleIDs)
+            if shortcut == nil { set.remove(bundleID) } else { set.insert(bundleID) }
+            UserDefaults.standard.set(Array(set), forKey: boundPaneKey)
+        case .togglePalette, .toggleClipboard:
+            break
         }
     }
 
@@ -67,6 +81,7 @@ final class HotKeyManager: ObservableObject {
     func conflictOwner(of shortcut: KeyShortcut, excluding action: HotKeyAction) -> String? {
         var candidates: [HotKeyAction] = [.togglePalette, .toggleClipboard]
         candidates += boundBundleIDs.map { .app(bundleID: $0) }
+        candidates += boundPaneBundleIDs.map { .settingsPane(bundleID: $0) }
         for candidate in candidates
         where candidate != action && self.shortcut(for: candidate) == shortcut {
             return displayName(of: candidate)
@@ -82,7 +97,12 @@ final class HotKeyManager: ObservableObject {
             return "Clipboard History"
         case .app(let bundleID):
             let apps = AppCore.shared.appIndex.apps
-            return apps.first { $0.bundleID == bundleID }?.name ?? bundleID
+            return apps.first { $0.kind == .application && $0.bundleID == bundleID }?.name
+                ?? bundleID
+        case .settingsPane(let bundleID):
+            let apps = AppCore.shared.appIndex.apps
+            return apps.first { $0.kind == .systemSettings && $0.bundleID == bundleID }?.name
+                ?? bundleID
         }
     }
 
@@ -98,6 +118,7 @@ final class HotKeyManager: ObservableObject {
         case .togglePalette: onTogglePalette?()
         case .toggleClipboard: onToggleClipboard?()
         case .app(let bundleID): AppLauncher.toggle(bundleID: bundleID)
+        case .settingsPane(let bundleID): AppLauncher.openSettingsPane(bundleID: bundleID)
         }
     }
 }
