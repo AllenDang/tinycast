@@ -31,10 +31,11 @@ struct RootPaletteView: View {
     private var clipResults: [ClipboardItem] { store.search(vm.query) }
     private var histResults: [CalcHistoryEntry] { calcHistory.search(vm.query) }
 
-    /// Inline calculator answer for the current query (launcher mode only). When present it
-    /// occupies flat selection index 0 and every app-row access shifts by `calcCount`.
+    /// Inline calculator answer for the current query — live in the launcher *and* in the
+    /// Calculator History search (Raycast lets you do math right from history). When present it
+    /// occupies flat selection index 0 and every row access below shifts by `calcCount`.
     private var calcResult: CalcResult? {
-        vm.mode == .launcher ? CalcMemo.evaluate(vm.query) : nil
+        vm.mode != .clipboard ? CalcMemo.evaluate(vm.query) : nil
     }
     private var calcCount: Int { calcResult == nil ? 0 : 1 }
 
@@ -42,7 +43,7 @@ struct RootPaletteView: View {
         switch vm.mode {
         case .launcher: return appResults.count + calcCount
         case .clipboard: return clipResults.count
-        case .calculatorHistory: return histResults.count
+        case .calculatorHistory: return histResults.count + calcCount
         }
     }
     /// Selection clamped into the current results — the single source of truth for highlight,
@@ -67,7 +68,7 @@ struct RootPaletteView: View {
             showSections ? apps.prefix(while: { favorites.isFavorite($0) }).count : 0
         let selectedApp = apps.indices.contains(sel - offset) ? apps[sel - offset] : nil
         let selectedClip = clips.indices.contains(sel) ? clips[sel] : nil
-        let selectedHist = hist.indices.contains(sel) ? hist[sel] : nil
+        let selectedHist = hist.indices.contains(sel - offset) ? hist[sel - offset] : nil
 
         // The results layer fills the whole panel; the search header and action bar float on top
         // as translucent Liquid Glass bars (via safeAreaInset). The list scrolls *behind* them and
@@ -259,19 +260,35 @@ struct RootPaletteView: View {
                 }
             }
         case .calculatorHistory:
-            if hist.isEmpty {
+            if hist.isEmpty && calc == nil {
                 EmptyResults(
                     text: isQueryEmpty ? "No calculations yet" : "No matching calculations")
             } else {
-                let selected = hist.indices.contains(selection) ? hist[selection] : nil
+                let offset = calc == nil ? 0 : 1
+                let calcSelected = calc != nil && selection == 0
+                let histIndex = selection - offset
+                let selected = hist.indices.contains(histIndex) ? hist[histIndex] : nil
                 CalculatorHistoryList(
                     results: hist,
-                    selectedID: selected?.id,
+                    selectedID: calcSelected ? nil : selected?.id,
                     scrollToken: scrollToken,
-                    onSelect: { entry in vm.selection = hist.firstIndex(of: entry) ?? 0 },
+                    calc: calc,
+                    calcSelected: calcSelected,
+                    onActivateCalc: {
+                        vm.selection = 0
+                        activateSelection()
+                    },
+                    onCalcActions: {
+                        guard let calc, case .value = calc.payload else { return }
+                        vm.selection = 0
+                        withAnimation(Self.menuAnimation) { showActions = true }
+                    },
+                    onSelect: { entry in
+                        if let index = hist.firstIndex(of: entry) { vm.selection = index + offset }
+                    },
                     onActivate: activateSelection,
                     onActions: { entry in
-                        if let index = hist.firstIndex(of: entry) { vm.selection = index }
+                        if let index = hist.firstIndex(of: entry) { vm.selection = index + offset }
                         withAnimation(Self.menuAnimation) { showActions = true }
                     }
                 )
@@ -301,7 +318,10 @@ struct RootPaletteView: View {
                     .environmentObject(store)
             }
         case .calculatorHistory:
-            if let hist {
+            if let calc {
+                CalcActionsMenu(result: calc) { closeMenus() }
+                    .environmentObject(core)
+            } else if let hist {
                 CalcHistoryActionsMenu(entry: hist) { closeMenus() }
                     .environmentObject(core)
                     .environmentObject(calcHistory)
@@ -410,8 +430,9 @@ struct RootPaletteView: View {
     }
 
     private func deleteSelectedHistoryEntry() {
-        guard histResults.indices.contains(selection) else { return }
-        calcHistory.remove(histResults[selection])
+        let index = selection - calcCount  // the inline calc card can't be deleted
+        guard histResults.indices.contains(index) else { return }
+        calcHistory.remove(histResults[index])
     }
 
     // MARK: - Actions
@@ -449,8 +470,15 @@ struct RootPaletteView: View {
             guard clipResults.indices.contains(selection) else { return }
             core.paste(clipResults[selection])
         case .calculatorHistory:
-            guard histResults.indices.contains(selection) else { return }
-            core.copyHistoryEntry(histResults[selection])
+            if let calcResult, selection == 0 {
+                // A fresh calculation typed into the history search: copy + record like the
+                // launcher card (error cards no-op).
+                core.copyCalculatorResult(calcResult)
+                return
+            }
+            let index = selection - calcCount
+            guard histResults.indices.contains(index) else { return }
+            core.copyHistoryEntry(histResults[index])
         }
     }
 }

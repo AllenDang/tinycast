@@ -25,7 +25,7 @@ enum PaletteMode: String, CaseIterable, Identifiable {
         switch self {
         case .launcher: return "Search for apps and commands…"
         case .clipboard: return "Type to filter entries…"
-        case .calculatorHistory: return "Search calculations…"
+        case .calculatorHistory: return "Do math, convert units, or search your past calculations…"
         }
     }
 }

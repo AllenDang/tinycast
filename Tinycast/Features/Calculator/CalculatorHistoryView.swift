@@ -9,25 +9,36 @@ struct CalculatorHistoryList: View {
     /// Changes only when the list should scroll to follow the selection (keyboard nav / reset), so
     /// mouse selection never yanks the scroll position.
     let scrollToken: UUID
+    /// Live answer for a calculation typed into the history search — same card and flat-index-0
+    /// contract as the launcher (`LauncherList.calc`).
+    var calc: CalcResult?
+    var calcSelected = false
+    var onActivateCalc: () -> Void = {}
+    var onCalcActions: () -> Void = {}
     let onSelect: (CalcHistoryEntry) -> Void
     let onActivate: () -> Void
     let onActions: (CalcHistoryEntry) -> Void
 
+    private static let calcRowID = "calc-card"
+
     private enum Row: Identifiable {
         case header(String)
+        case calc(CalcResult)
         case entry(CalcHistoryEntry)
         var id: String {
             switch self {
             case .header(let title): return "header-" + title
+            case .calc: return CalculatorHistoryList.calcRowID
             case .entry(let entry): return entry.id.uuidString
             }
         }
     }
 
     /// Entries are newest-first, so grouping is a walk that emits a date header whenever the
-    /// bucket changes — same shape as the clipboard list.
+    /// bucket changes — same shape as the clipboard list. A live calculation pins above them.
     private var rows: [Row] {
         var rows: [Row] = []
+        if let calc { rows = [.header("Calculator"), .calc(calc)] }
         var currentBucket: DateBucket?
         for entry in results {
             let bucket = DateBucket(for: entry.createdAt)
@@ -48,6 +59,12 @@ struct CalculatorHistoryList: View {
                         switch row {
                         case .header(let title):
                             SectionHeader(title: title)
+                        case .calc(let result):
+                            CalculatorCard(result: result, selected: calcSelected)
+                                .contentShape(Rectangle())
+                                .onTapGesture(perform: onActivateCalc)
+                                .onRightClick(perform: onCalcActions)
+                                .padding(.bottom, Theme.Spacing.xs)
                         case .entry(let entry):
                             CalcHistoryRow(entry: entry, selected: entry.id == selectedID)
                                 .contentShape(Rectangle())
@@ -69,7 +86,11 @@ struct CalculatorHistoryList: View {
             }
             .thinScrollbar()
             .onChange(of: scrollToken) {
-                if let selectedID { proxy.scrollTo(selectedID.uuidString, anchor: .center) }
+                if calcSelected {
+                    proxy.scrollTo(Self.calcRowID, anchor: .center)
+                } else if let selectedID {
+                    proxy.scrollTo(selectedID.uuidString, anchor: .center)
+                }
             }
         }
     }
