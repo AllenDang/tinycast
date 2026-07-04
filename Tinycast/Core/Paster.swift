@@ -22,6 +22,17 @@ enum Paster {
         write(item, store: store)
     }
 
+    /// Put a plain string on the system pasteboard *without* the internal marker: the clipboard
+    /// poller captures it, so a copied calculator answer shows up in clipboard history like any
+    /// other copy (Raycast behavior).
+    @MainActor
+    static func copyPlainText(_ text: String) {
+        let pb = NSPasteboard.general
+        pb.clearContents()
+        pb.declareTypes([.string], owner: nil)
+        pb.setString(text, forType: .string)
+    }
+
     /// Paste into `app` *without* activating it, by delivering the ⌘V straight to that process.
     /// This leaves Tinycast frontmost, so the palette can stay open with no focus flicker.
     @MainActor

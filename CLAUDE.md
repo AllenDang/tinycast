@@ -43,6 +43,13 @@ swift Tools/fuzz-test.swift
 `Tools/fuzz-test.swift` contains a **copy** of `FuzzyMatch` from `Tinycast/Core/AppIndex.swift`. If you
 change the scoring in one, mirror it in the other or the test is meaningless.
 
+The calculator engine harness compiles the **real** engine sources — no copy to keep in sync, which
+is why `Tinycast/Core/Calculator/` must stay Foundation-only (no AppKit/SwiftUI imports):
+
+```sh
+swiftc Tinycast/Core/Calculator/*.swift Tools/calc-test.swift -o /tmp/calc-test && /tmp/calc-test
+```
+
 ## Architecture
 
 **Single-owner core.** `AppCore.shared` (`Core/AppCore.swift`) is a `@MainActor` singleton that owns
