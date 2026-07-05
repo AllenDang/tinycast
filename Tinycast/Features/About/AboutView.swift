@@ -18,7 +18,7 @@ struct AboutView: View {
                 .frame(width: 72, height: 72)
 
             VStack(spacing: Theme.Spacing.xs) {
-                Text("Tinycast")
+                Text(Bundle.main.appDisplayName)
                     .font(.title2.bold())
                 Text(version)
                     .font(.caption)

@@ -8,10 +8,7 @@ let package = Package(
         .executableTarget(
             name: "Tinycast",
             path: "Tinycast",
-            exclude: ["Info.plist", "Tinycast.entitlements", "Assets.xcassets"],
-            swiftSettings: [
-                .swiftLanguageMode(.v5)
-            ]
+            exclude: ["Info.plist", "Tinycast.entitlements", "Assets.xcassets"]
         )
     ]
 )

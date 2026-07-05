@@ -133,10 +133,10 @@ final class ClipboardStore: ObservableObject {
         }
     }
 
-    deinit {
-        [insertStmt, loadStmt, searchStmt, deleteByIDStmt, staleImagesStmt, deleteStaleStmt]
-            .forEach { sqlite3_finalize($0) }
-        sqlite3_close_v2(db)
+    // Isolated so teardown may touch the main-actor statement/db pointers; the store is only ever
+    // released on the main actor (AppCore owns it), so the deinit runs there with no hop.
+    isolated deinit {
+        closeDatabase()
     }
 
     func load() {

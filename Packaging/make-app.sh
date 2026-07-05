@@ -4,11 +4,15 @@
 set -euo pipefail
 
 CONFIG="${1:-release}"
-APP_NAME="Tinycast"
-BUNDLE_ID="com.tinycast.app"
+# EXECUTABLE_NAME is the SwiftPM product (always "Tinycast") — it's the file under
+# Contents/MacOS and CFBundleExecutable. The *display* identity (bundle folder name,
+# CFBundleName/DisplayName) and bundle ID are channel-driven via env so alpha/beta/stable
+# ship as distinct, side-by-side apps.
+EXECUTABLE_NAME="Tinycast"
+BUNDLE_ID="${BUNDLE_ID:-com.tinycast.app}"
 VERSION="${VERSION:-0.1.0}"
 BUILD_NUMBER="${BUILD_NUMBER:-1}"
-DISPLAY_NAME="${DISPLAY_NAME:-$APP_NAME}"
+DISPLAY_NAME="${DISPLAY_NAME:-Tinycast}"
 MIN_OS="26.0"
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
@@ -19,13 +23,14 @@ echo "▸ Building Tinycast ($CONFIG)…"
 swift build -c "$CONFIG"
 
 BIN_DIR="$(swift build -c "$CONFIG" --show-bin-path)"
-APP="$ROOT/build/$APP_NAME.app"
+# Bundle folder is named after the display name so channels don't collide in /Applications.
+APP="$ROOT/build/$DISPLAY_NAME.app"
 
-echo "▸ Assembling $APP_NAME.app…"
+echo "▸ Assembling $DISPLAY_NAME.app…"
 rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 
-cp "$BIN_DIR/$APP_NAME" "$APP/Contents/MacOS/$APP_NAME"
+cp "$BIN_DIR/$EXECUTABLE_NAME" "$APP/Contents/MacOS/$EXECUTABLE_NAME"
 
 # Bundle any SwiftPM resource bundles (e.g. Tinycast's own resources bundle).
 shopt -s nullglob
@@ -46,11 +51,11 @@ cat > "$APP/Contents/Info.plist" <<PLIST
 <plist version="1.0">
 <dict>
 	<key>CFBundleName</key>
-	<string>$APP_NAME</string>
+	<string>$DISPLAY_NAME</string>
 	<key>CFBundleDisplayName</key>
 	<string>$DISPLAY_NAME</string>
 	<key>CFBundleExecutable</key>
-	<string>$APP_NAME</string>
+	<string>$EXECUTABLE_NAME</string>
 	<key>CFBundleIdentifier</key>
 	<string>$BUNDLE_ID</string>
 	<key>CFBundlePackageType</key>
@@ -63,10 +68,12 @@ cat > "$APP/Contents/Info.plist" <<PLIST
 	<string>$MIN_OS</string>
 	<key>LSUIElement</key>
 	<true/>
+	<key>NSAutoFillRequiresTextContentTypeForOneTimeCodeOnMac</key>
+	<true/>
 	<key>NSHighResolutionCapable</key>
 	<true/>
 	<key>NSHumanReadableCopyright</key>
-	<string>Tinycast</string>
+	<string>$DISPLAY_NAME</string>
 $ICON_KEY
 </dict>
 </plist>

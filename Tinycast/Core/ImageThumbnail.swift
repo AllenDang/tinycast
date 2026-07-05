@@ -7,11 +7,17 @@ import ImageIO
 /// draw a 32pt row thumbnail wastes RAM and CPU, so we ask ImageIO for a thumbnail at the exact pixel
 /// size we need and cache the results in an `NSCache` (which the system evicts under memory pressure).
 enum ImageThumbnail {
+    /// `NSCache` is documented thread-safe ("you can add, remove, and query items in the cache from
+    /// different threads without having to lock the cache yourself") but is not annotated `Sendable`,
+    /// so shared-across-threads use — a decode on a detached task populating what the main actor
+    /// reads — needs the guarantee asserted once, here.
+    private final class ImageCache: NSCache<NSString, NSImage>, @unchecked Sendable {}
+
     /// Small row thumbnails (≤ `rowThreshold` px on the longest edge). These are cheap to keep, so the
     /// cache survives palette dismissals — reopening the clipboard list then draws instantly with no
     /// decode flash. Bounded by *bytes* so it can't drift.
-    private static let rowCache: NSCache<NSString, NSImage> = {
-        let cache = NSCache<NSString, NSImage>()
+    private static let rowCache: ImageCache = {
+        let cache = ImageCache()
         cache.totalCostLimit = 8 * 1024 * 1024
         return cache
     }()
@@ -20,8 +26,8 @@ enum ImageThumbnail {
     /// multi-MB bitmap, so this is bounded by *bytes* — not object count, which was the leak: 80 huge
     /// bitmaps were all "allowed" — and is purged the moment the palette closes (see `purgePreviews`).
     /// Byte-bounding is what keeps browsing memory flat no matter how many items the user clicks.
-    private static let previewCache: NSCache<NSString, NSImage> = {
-        let cache = NSCache<NSString, NSImage>()
+    private static let previewCache: ImageCache = {
+        let cache = ImageCache()
         cache.totalCostLimit = 48 * 1024 * 1024
         return cache
     }()

@@ -5,7 +5,7 @@ import AppKit
 @MainActor
 final class RunningAppsMonitor: ObservableObject {
     @Published private(set) var runningBundleIDs: Set<String> = []
-    private var observers: [NSObjectProtocol] = []
+    private var observers: [NotificationToken] = []
 
     init() {
         refresh()
@@ -18,12 +18,8 @@ final class RunningAppsMonitor: ObservableObject {
                 [weak self] _ in
                 MainActor.assumeIsolated { self?.refresh() }
             }
-            observers.append(token)
+            observers.append(NotificationToken(token, center: center))
         }
-    }
-
-    deinit {
-        observers.forEach(NSWorkspace.shared.notificationCenter.removeObserver)
     }
 
     private func refresh() {
