@@ -290,10 +290,10 @@ struct ClipboardPreview: View {
         if let item {
             VStack(alignment: .leading, spacing: 0) {
                 content(for: item)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity, )
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
                 ClipboardInfoSection(item: item, imageURL: store.imageURL(for: item))
             }
-            .padding(8)
+            .padding(.horizontal, 12)
         } else {
             Color.clear
         }
