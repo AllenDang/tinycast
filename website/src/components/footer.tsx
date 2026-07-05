@@ -1,7 +1,10 @@
 import { site } from "../data/site";
+import { useLatestVersion } from "../lib/use-version";
 import { icons, Logo } from "./ui/icon";
 
 export function Footer() {
+  const version = useLatestVersion();
+
   return (
     <footer className="border-t border-white/[0.06]">
       <div className="container-page flex flex-col items-center gap-6 py-14 text-center">
@@ -12,7 +15,7 @@ export function Footer() {
 
         {/* Meta strip — mono, pipe-separated, signalling technical metadata. */}
         <p className="flex flex-wrap items-center justify-center gap-x-2.5 gap-y-1 font-geistmono text-[12px] text-smoke">
-          <span>{site.version}</span>
+          <span>{version}</span>
           <span className="text-white/15">|</span>
           <span>{site.platform}</span>
           <span className="text-white/15">|</span>

@@ -1,8 +1,9 @@
 import { site } from "../data/site";
+import { useLatestVersion } from "../lib/use-version";
 import { Button } from "./ui/button";
 import { icons } from "./ui/icon";
 import { Kbd } from "./ui/kbd";
-import { PaletteMock } from "./palette-mock";
+import { AppShot } from "./app-shot";
 
 // The one place the system breaks its own austerity: a soft violet/cyan
 // atmospheric wash borrowed from the app icon, then the page goes quiet.
@@ -33,6 +34,8 @@ function Atmosphere() {
 }
 
 export function Hero() {
+  const version = useLatestVersion();
+
   return (
     <section id="top" className="relative overflow-hidden pb-8 pt-40 md:pt-48">
       <Atmosphere />
@@ -76,7 +79,7 @@ export function Hero() {
           className="rise mt-6 flex flex-wrap items-center justify-center gap-x-2.5 gap-y-1 font-geistmono text-[12px] text-smoke"
           style={{ animationDelay: "300ms" }}
         >
-          <span>{site.version}</span>
+          <span>{version}</span>
           <span className="text-white/15">|</span>
           <span>{site.platform}</span>
           <span className="text-white/15">|</span>
@@ -87,7 +90,7 @@ export function Hero() {
           className="rise mt-16 flex w-full flex-col items-center"
           style={{ animationDelay: "380ms" }}
         >
-          <PaletteMock />
+          <AppShot />
           <p className="mt-5 flex items-center gap-2 text-[13px] text-smoke">
             Press <Kbd>⌥</Kbd> <Kbd>Space</Kbd> to summon it from anywhere
           </p>
