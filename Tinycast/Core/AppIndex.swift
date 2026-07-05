@@ -47,6 +47,7 @@ struct AppEntry: Identifiable, Hashable, Sendable {
 /// it at ≤24pt — caching those raw is what spiked Settings' App-Hotkeys list to hundreds of MB. So we
 /// downsample each icon once to a small fixed bitmap and byte-bound the cache (system-evicted under
 /// pressure, like `ImageThumbnail`).
+@MainActor
 enum IconCache {
     // Icons display at ≤24pt, so 48pt (2× for Retina) is plenty crisp. Keeping each icon this small is
     // also what stops the launcher from ballooning: a `LazyVStack` scrolled to the bottom materializes
@@ -60,7 +61,6 @@ enum IconCache {
         return cache
     }()
 
-    @MainActor
     static func icon(forFile path: String) -> NSImage {
         let key = path as NSString
         if let cached = cache.object(forKey: key) { return cached }
@@ -71,7 +71,6 @@ enum IconCache {
 
     /// Command "icons": an SF Symbol centered on a rounded tile, rendered once into the same small
     /// bitmap shape as app icons so `AppRow`/`ShortcutRow` treat every entry identically.
-    @MainActor
     static func symbolIcon(named name: String) -> NSImage {
         let key = "symbol:" + name as NSString
         if let cached = cache.object(forKey: key) { return cached }
@@ -103,7 +102,6 @@ enum IconCache {
 
     /// Rasterize the multi-rep workspace icon into one `displayPixel`-square bitmap so the cache holds
     /// ~64–256KB per app instead of multi-MB. Returns the image and its decoded byte cost.
-    @MainActor
     private static func downsampled(_ source: NSImage) -> (NSImage, Int) {
         let scale = NSScreen.main?.backingScaleFactor ?? 2
         let pixels = Int(displayPixel * scale)

@@ -19,7 +19,7 @@ struct CalculatorHistoryList: View {
     let onActivate: () -> Void
     let onActions: (CalcHistoryEntry) -> Void
 
-    private static let calcRowID = "calc-card"
+    private nonisolated static let calcRowID = "calc-card"
 
     private enum Row: Identifiable {
         case header(String)

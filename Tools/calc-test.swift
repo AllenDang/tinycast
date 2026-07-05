@@ -6,6 +6,7 @@
 import Foundation
 
 @main
+@MainActor
 struct CalcTests {
     static var failures = 0
     static var passes = 0

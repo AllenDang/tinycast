@@ -2,13 +2,26 @@ import Carbon.HIToolbox
 
 /// C entry point for the Carbon event handler. It can't capture context, so the owning
 /// `HotKeyCenter` rides along in `userData`. Carbon dispatches hot-key events on the main
-/// event target (the main thread), which is what makes `assumeIsolated` sound here.
+/// event target (the main thread), which is what makes `assumeIsolated` sound here. The raw
+/// `EventRef` is decoded to a plain `EventHotKeyID` value before crossing into actor code, so
+/// the pointer never leaves this shim.
 private func hotKeyCarbonEventHandler(
     _: EventHandlerCallRef?, event: EventRef?, userData: UnsafeMutableRawPointer?
 ) -> OSStatus {
     guard let event, let userData else { return OSStatus(eventNotHandledErr) }
+    var hotKeyID = EventHotKeyID()
+    let error = GetEventParameter(
+        event,
+        UInt32(kEventParamDirectObject),
+        UInt32(typeEventHotKeyID),
+        nil,
+        MemoryLayout<EventHotKeyID>.size,
+        nil,
+        &hotKeyID
+    )
+    guard error == noErr else { return error }
     let center = Unmanaged<HotKeyCenter>.fromOpaque(userData).takeUnretainedValue()
-    return MainActor.assumeIsolated { center.handle(event) }
+    return MainActor.assumeIsolated { center.handle(hotKeyID) }
 }
 
 /// The Carbon layer and nothing else: turns `KeyShortcut`s into system-wide
@@ -104,18 +117,7 @@ final class HotKeyCenter {
         )
     }
 
-    fileprivate func handle(_ event: EventRef) -> OSStatus {
-        var hotKeyID = EventHotKeyID()
-        let error = GetEventParameter(
-            event,
-            UInt32(kEventParamDirectObject),
-            UInt32(typeEventHotKeyID),
-            nil,
-            MemoryLayout<EventHotKeyID>.size,
-            nil,
-            &hotKeyID
-        )
-        guard error == noErr else { return error }
+    fileprivate func handle(_ hotKeyID: EventHotKeyID) -> OSStatus {
         guard
             hotKeyID.signature == signature,
             let key = idToKey[hotKeyID.id],

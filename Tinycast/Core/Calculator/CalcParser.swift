@@ -128,9 +128,12 @@ enum CalcParser {
     static func isFunction(_ name: String) -> Bool { functions[name] != nil }
     static func isConstant(_ name: String) -> Bool { constants[name] != nil }
 
-    fileprivate static let functions: [String: (Double) -> Double] = [
-        "sqrt": sqrt, "log": log10, "ln": log, "sin": sin, "cos": cos, "tan": tan,
-        "abs": abs, "floor": floor, "ceil": ceil, "round": { $0.rounded() },
+    // Capture-free closures (not bare C function references) so every entry is inferred
+    // `@Sendable` under both language modes — the harness still compiles this file in Swift 5.
+    fileprivate static let functions: [String: @Sendable (Double) -> Double] = [
+        "sqrt": { sqrt($0) }, "log": { log10($0) }, "ln": { log($0) }, "sin": { sin($0) },
+        "cos": { cos($0) }, "tan": { tan($0) }, "abs": { abs($0) }, "floor": { floor($0) },
+        "ceil": { ceil($0) }, "round": { $0.rounded() },
     ]
 
     fileprivate static let constants: [String: Double] = ["pi": .pi, "π": .pi, "e": M_E]

@@ -108,7 +108,11 @@ while all Carbon registrations are paused.
 
 ## Concurrency
 
-Strict concurrency is on (`SWIFT_STRICT_CONCURRENCY: complete`). Almost everything is `@MainActor`;
-cross-actor model types are `Sendable`. Heavy/IO work (app scan, clipboard JSON encode) is deliberately
-pushed off-main via `Task.detached` / `nonisolated`. Keep that boundary when adding code. Note
-`Package.swift` pins `.swiftLanguageMode(.v5)` even though the tools version is 6.0.
+The target builds in **Swift 6 language mode** (tools version 6.0, no language-mode override), so
+data-race safety violations are hard errors. Almost everything is `@MainActor`; cross-actor model
+types are `Sendable`. Heavy/IO work (app scan, image decode) is deliberately pushed off-main via
+`Task.detached` / `nonisolated`. Keep that boundary when adding code. House idioms for the sharp
+edges: block-observer lifetimes go through the RAII `NotificationToken` (`Core/NotificationToken.swift`)
+instead of removal in a `deinit`; `ClipboardStore` uses `isolated deinit` for its SQLite teardown;
+raw Carbon/C pointers get decoded to plain values before crossing into actor code (see
+`hotKeyCarbonEventHandler`).

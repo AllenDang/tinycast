@@ -23,6 +23,7 @@
 		649961AA51BA4D87626C27D5 /* CalcFormatter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09093BF10EA97BDCA45A241F /* CalcFormatter.swift */; };
 		68FCC30764DD44ED72EFB6BA /* TinycastApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B629EC3B716FEE881BB0075 /* TinycastApp.swift */; };
 		693E88D22D00CF6FD9CD7413 /* VisibilityStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 825AC18CE5DAFBEDA0CF3209 /* VisibilityStore.swift */; };
+		6962B8A2850A45401275F677 /* NotificationToken.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7FC5F0D4ECE8F3888DEB7642 /* NotificationToken.swift */; };
 		6D3DBE00FCB757C67669CFBA /* CommandRegistry.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5D57B0AE44D21035163BD422 /* CommandRegistry.swift */; };
 		6F08764D6CC09E9B3FD1E05A /* RootPaletteView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0F50886DC766B9923C3875A5 /* RootPaletteView.swift */; };
 		72406E09AD9A33B56EA4923D /* CalcParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = 423CFE8AB90484D0309F24C0 /* CalcParser.swift */; };
@@ -83,6 +84,7 @@
 		68BD5E61831CB92150C62E1F /* CalculatorHistoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalculatorHistoryView.swift; sourceTree = "<group>"; };
 		6BB7C545EFD9589A77AD7BE2 /* LauncherView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LauncherView.swift; sourceTree = "<group>"; };
 		7BC2DEA0A052116A92F9A539 /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
+		7FC5F0D4ECE8F3888DEB7642 /* NotificationToken.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationToken.swift; sourceTree = "<group>"; };
 		825AC18CE5DAFBEDA0CF3209 /* VisibilityStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VisibilityStore.swift; sourceTree = "<group>"; };
 		849FF3D93960B75F341D867C /* ClipboardSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClipboardSettingsView.swift; sourceTree = "<group>"; };
 		93E9ACD504E016DFF6FE6C1B /* RightClick.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RightClick.swift; sourceTree = "<group>"; };
@@ -133,6 +135,7 @@
 				D37B6D29E8E23C6136EBFB38 /* HotKeyManager.swift */,
 				99945F0952ADADBBEB9B8388 /* ImageThumbnail.swift */,
 				0D045D032498C2294A99890E /* LaunchAtLogin.swift */,
+				7FC5F0D4ECE8F3888DEB7642 /* NotificationToken.swift */,
 				555E9C7EA62BDB40891A5751 /* PalettePanel.swift */,
 				A5447AEAD87BFE0E2D979B39 /* PaletteWindowController.swift */,
 				6185011A02366B30B48B5B6C /* Paster.swift */,
@@ -356,6 +359,7 @@
 				F5F3381FF70997223F8888B0 /* KeyShortcut.swift in Sources */,
 				A0DB31CA35D9A980CA984EDE /* LaunchAtLogin.swift in Sources */,
 				DCC36924E538C11136CEC060 /* LauncherView.swift in Sources */,
+				6962B8A2850A45401275F677 /* NotificationToken.swift in Sources */,
 				9A3972BE11AE353EFBB839A0 /* PalettePanel.swift in Sources */,
 				F25D58ED6EF3308D38D01732 /* PaletteWindowController.swift in Sources */,
 				F2B68DBA258D85DD5C6DC1CC /* Paster.swift in Sources */,
@@ -479,7 +483,7 @@
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_STRICT_CONCURRENCY = complete;
-				SWIFT_VERSION = 5.0;
+				SWIFT_VERSION = 6.0;
 			};
 			name = Debug;
 		};
@@ -542,7 +546,7 @@
 				SWIFT_COMPILATION_MODE = wholemodule;
 				SWIFT_OPTIMIZATION_LEVEL = "-O";
 				SWIFT_STRICT_CONCURRENCY = complete;
-				SWIFT_VERSION = 5.0;
+				SWIFT_VERSION = 6.0;
 			};
 			name = Release;
 		};

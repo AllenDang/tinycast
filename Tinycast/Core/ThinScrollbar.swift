@@ -226,17 +226,11 @@ private struct NativeScrollerHider: NSViewRepresentable {
 
     private final class HiderView: NSView {
         private var retriesLeft = 10
-        private var styleChangeObserver: NSObjectProtocol?
+        private var styleChangeObserver: NotificationToken?
 
         @available(*, unavailable)
         required init?(coder: NSCoder) { fatalError() }
         override init(frame: NSRect) { super.init(frame: frame) }
-
-        deinit {
-            if let styleChangeObserver {
-                NotificationCenter.default.removeObserver(styleChangeObserver)
-            }
-        }
 
         override func viewDidMoveToWindow() {
             super.viewDidMoveToWindow()
@@ -251,7 +245,7 @@ private struct NativeScrollerHider: NSViewRepresentable {
 
         private func startObservingStyleChanges() {
             guard styleChangeObserver == nil else { return }
-            styleChangeObserver = NotificationCenter.default.addObserver(
+            let token = NotificationCenter.default.addObserver(
                 forName: NSScroller.preferredScrollerStyleDidChangeNotification,
                 object: nil, queue: .main
             ) { [weak self] _ in
@@ -259,12 +253,11 @@ private struct NativeScrollerHider: NSViewRepresentable {
                 // ours on the next tick, after its own handler has run.
                 DispatchQueue.main.async { self?.applyOverlayStyle() }
             }
+            styleChangeObserver = NotificationToken(token, center: .default)
         }
 
         private func stopObservingStyleChanges() {
-            guard let styleChangeObserver else { return }
-            NotificationCenter.default.removeObserver(styleChangeObserver)
-            self.styleChangeObserver = nil
+            styleChangeObserver = nil
         }
 
         func applyOverlayStyle() {

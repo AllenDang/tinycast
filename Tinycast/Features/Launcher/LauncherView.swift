@@ -18,7 +18,7 @@ struct LauncherList: View {
     @EnvironmentObject private var core: AppCore
     @EnvironmentObject private var runningApps: RunningAppsMonitor
 
-    private static let calcRowID = "calc-card"
+    private nonisolated static let calcRowID = "calc-card"
 
     private enum Row: Identifiable {
         case header(String)
