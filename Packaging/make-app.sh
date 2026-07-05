@@ -63,6 +63,8 @@ cat > "$APP/Contents/Info.plist" <<PLIST
 	<string>$MIN_OS</string>
 	<key>LSUIElement</key>
 	<true/>
+	<key>NSAutoFillRequiresTextContentTypeForOneTimeCodeOnMac</key>
+	<true/>
 	<key>NSHighResolutionCapable</key>
 	<true/>
 	<key>NSHumanReadableCopyright</key>
