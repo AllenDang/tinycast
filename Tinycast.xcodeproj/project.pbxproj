@@ -40,6 +40,7 @@
 		A2EA931B8B8078A1D1162B53 /* VisualEffectView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EB20A38DA4C5603DF7430B3C /* VisualEffectView.swift */; };
 		A41C0DCB2DEBCCA46F6C4B10 /* FavoritesStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9FB750D045194AE34D39D792 /* FavoritesStore.swift */; };
 		B1B3F5715BE7A092F0CEFA09 /* ClipboardManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A76E4099082D59FA686C3485 /* ClipboardManager.swift */; };
+		BA76E53A12248B3A9C42B4F9 /* Bundle+AppName.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3FA43AD7C6FB00F555C52C2 /* Bundle+AppName.swift */; };
 		C0642512B709EF0517ABF4CB /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9C37CCD024267EB21876C7E9 /* AppDelegate.swift */; };
 		C7DD1345A6BFB1D9EB22FCEE /* RunningApps.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B432D84D8F9C10521342199 /* RunningApps.swift */; };
 		CFB516312C4694DDFD99DBCA /* SettingsRootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 68952539C0BD045BA175CBB6 /* SettingsRootView.swift */; };
@@ -103,6 +104,7 @@
 		C64C87569634E26E1BE99A91 /* CalculatorCardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalculatorCardView.swift; sourceTree = "<group>"; };
 		C722D73D270A3A6CED4023F7 /* SettingsPaneScanner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsPaneScanner.swift; sourceTree = "<group>"; };
 		D37B6D29E8E23C6136EBFB38 /* HotKeyManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HotKeyManager.swift; sourceTree = "<group>"; };
+		D3FA43AD7C6FB00F555C52C2 /* Bundle+AppName.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Bundle+AppName.swift"; sourceTree = "<group>"; };
 		D4777FBB3A4FBB2F95FDC250 /* SettingsComponents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsComponents.swift; sourceTree = "<group>"; };
 		EB20A38DA4C5603DF7430B3C /* VisualEffectView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VisualEffectView.swift; sourceTree = "<group>"; };
 		F31E3ACB6D2C26ECA485C3DB /* Permissions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Permissions.swift; sourceTree = "<group>"; };
@@ -127,6 +129,7 @@
 				BA7CE23482F7DF563A268806 /* AppIndex.swift */,
 				5A2EF9C70F8BC9571089D5EB /* AppLauncher.swift */,
 				B275099E59BD2531A838F7D8 /* AppSettings.swift */,
+				D3FA43AD7C6FB00F555C52C2 /* Bundle+AppName.swift */,
 				F793A92DD4DC73CF1D87F3FD /* CalculatorHistoryStore.swift */,
 				A76E4099082D59FA686C3485 /* ClipboardManager.swift */,
 				BDC43CFF6777C11BB880F398 /* ClipboardStore.swift */,
@@ -339,6 +342,7 @@
 				D322804853973E1C19F2A408 /* AppIndex.swift in Sources */,
 				DA2EBB18F026BD055E0270CD /* AppLauncher.swift in Sources */,
 				FEA05585E8AA58506D378CAF /* AppSettings.swift in Sources */,
+				BA76E53A12248B3A9C42B4F9 /* Bundle+AppName.swift in Sources */,
 				14A5A5ACD35A572EE906769F /* CalcEngine.swift in Sources */,
 				649961AA51BA4D87626C27D5 /* CalcFormatter.swift in Sources */,
 				72406E09AD9A33B56EA4923D /* CalcParser.swift in Sources */,

@@ -1,5 +1,8 @@
 name: Release
 
+# Shown in the Actions list instead of a bare "Release" — carries the version + channel.
+run-name: "Tinycast ${{ inputs.version }} · ${{ inputs.channel }} #${{ github.run_number }}"
+
 # Manually triggered from the Actions tab. Pick a channel and a base version;
 # alpha/beta builds get an auto-incrementing suffix so re-running never collides.
 on:
@@ -40,28 +43,36 @@ jobs:
         run: |
           CHANNEL="${{ github.event.inputs.channel }}"
           BASE_VERSION="${{ github.event.inputs.version }}"
+          # Each channel is a distinct, side-by-side app: its own display name + bundle id,
+          # and its own Homebrew cask in the abue-ammar/homebrew-tinycast tap.
           case "$CHANNEL" in
-            alpha)  SUFFIX="-alpha.${GITHUB_RUN_NUMBER}"; DISPLAY="Tinycast Alpha"; DMG="Tinycast-Alpha"; PRERELEASE=true ;;
-            beta)   SUFFIX="-beta.${GITHUB_RUN_NUMBER}";  DISPLAY="Tinycast Beta";  DMG="Tinycast-Beta";  PRERELEASE=true ;;
-            stable) SUFFIX="";                            DISPLAY="Tinycast";       DMG="Tinycast";       PRERELEASE=false ;;
+            alpha)  SUFFIX="-alpha.${GITHUB_RUN_NUMBER}"; DISPLAY="Tinycast Alpha"; BUNDLE="com.tinycast.app.alpha"; CASK="tinycast@alpha"; PRERELEASE=true ;;
+            beta)   SUFFIX="-beta.${GITHUB_RUN_NUMBER}";  DISPLAY="Tinycast Beta";  BUNDLE="com.tinycast.app.beta";  CASK="tinycast@beta";  PRERELEASE=true ;;
+            stable) SUFFIX="";                            DISPLAY="Tinycast";       BUNDLE="com.tinycast.app";       CASK="tinycast";       PRERELEASE=false ;;
           esac
-          echo "full_version=${BASE_VERSION}${SUFFIX}" >> "$GITHUB_OUTPUT"
-          echo "display_name=$DISPLAY" >> "$GITHUB_OUTPUT"
-          echo "dmg_name=$DMG" >> "$GITHUB_OUTPUT"
-          echo "prerelease=$PRERELEASE" >> "$GITHUB_OUTPUT"
+          FULL="${BASE_VERSION}${SUFFIX}"
+          {
+            echo "full_version=${FULL}"
+            echo "display_name=${DISPLAY}"
+            echo "bundle_id=${BUNDLE}"
+            echo "cask_name=${CASK}"
+            echo "dmg_file=Tinycast-${FULL}.dmg"
+            echo "prerelease=${PRERELEASE}"
+          } >> "$GITHUB_OUTPUT"
 
       - name: Build DMG
         env:
           VERSION: ${{ steps.meta.outputs.full_version }}
           DISPLAY_NAME: ${{ steps.meta.outputs.display_name }}
-          DMG_NAME: ${{ steps.meta.outputs.dmg_name }}
+          BUNDLE_ID: ${{ steps.meta.outputs.bundle_id }}
           BUILD_NUMBER: ${{ github.run_number }}
+          DMG_BASE: Tinycast
         run: Packaging/build-dmg.sh
 
       - uses: actions/upload-artifact@v7
         with:
-          name: ${{ steps.meta.outputs.dmg_name }}-${{ steps.meta.outputs.full_version }}
-          path: build/${{ steps.meta.outputs.dmg_name }}.dmg
+          name: Tinycast-${{ steps.meta.outputs.full_version }}
+          path: build/${{ steps.meta.outputs.dmg_file }}
 
       - name: Publish GitHub Release
         env:
@@ -73,7 +84,47 @@ jobs:
             PRERELEASE_FLAG="--prerelease"
           fi
           gh release create "$TAG" \
-            "build/${{ steps.meta.outputs.dmg_name }}.dmg" \
-            --title "Tinycast ${{ steps.meta.outputs.full_version }}" \
-            --notes "Channel: ${{ github.event.inputs.channel }}. Built from ${{ github.sha }}. Unsigned/ad-hoc build — see README for the Gatekeeper workaround (\`xattr -cr\`)." \
+            "build/${{ steps.meta.outputs.dmg_file }}" \
+            --title "${{ steps.meta.outputs.display_name }} ${{ steps.meta.outputs.full_version }}" \
+            --notes "**Channel:** ${{ github.event.inputs.channel }}
+          **Version:** ${{ steps.meta.outputs.full_version }}
+          **Bundle ID:** \`${{ steps.meta.outputs.bundle_id }}\`
+          Built from ${{ github.sha }}.
+
+          This build is **not signed with an Apple Developer ID and not notarized** (this project has no paid Apple account). macOS will refuse to open it until you clear the quarantine flag:
+          \`\`\`sh
+          xattr -dr com.apple.quarantine \"/Applications/${{ steps.meta.outputs.display_name }}.app\"
+          \`\`\`
+          Or install via Homebrew: \`brew install --cask abue-ammar/tinycast/${{ steps.meta.outputs.cask_name }}\`" \
             $PRERELEASE_FLAG
+
+      - name: Update Homebrew cask
+        env:
+          TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+          CASK: ${{ steps.meta.outputs.cask_name }}
+          VERSION: ${{ steps.meta.outputs.full_version }}
+          DMG_FILE: ${{ steps.meta.outputs.dmg_file }}
+        run: |
+          if [ -z "${TAP_TOKEN}" ]; then
+            echo "::warning::HOMEBREW_TAP_TOKEN secret not set — skipping cask bump. Add it to enable auto-updates of the tap."
+            exit 0
+          fi
+          SHA="$(shasum -a 256 "build/${DMG_FILE}" | awk '{print $1}')"
+          git clone --depth 1 "https://x-access-token:${TAP_TOKEN}@github.com/abue-ammar/homebrew-tinycast.git" tap
+          CASK_FILE="tap/Casks/${CASK}.rb"
+          if [ ! -f "$CASK_FILE" ]; then
+            echo "::error::$CASK_FILE not found in tap."
+            exit 1
+          fi
+          sed -i '' -E "s|^  version \".*\"|  version \"${VERSION}\"|" "$CASK_FILE"
+          sed -i '' -E "s|^  sha256 \".*\"|  sha256 \"${SHA}\"|" "$CASK_FILE"
+          cd tap
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add "Casks/${CASK}.rb"
+          if git diff --cached --quiet; then
+            echo "No cask changes to commit."
+          else
+            git commit -m "${CASK} ${VERSION}"
+            git push
+          fi

@@ -8,17 +8,20 @@ struct TinycastApp: App {
     // actually changes — no scene ⇄ binding feedback loop. The Settings toggle writes the same key.
     @AppStorage(SettingsKey.showInMenuBar) private var showInMenuBar = true
 
+    // Channel-aware: "Tinycast", "Tinycast Alpha", or "Tinycast Beta".
+    private let appName = Bundle.main.appDisplayName
+
     var body: some Scene {
         MenuBarExtra(
-            "Tinycast", systemImage: "macwindow", isInserted: $showInMenuBar
+            appName, systemImage: "macwindow", isInserted: $showInMenuBar
         ) {
-            Button("Open Tinycast") { AppCore.shared.showPalette(mode: .launcher) }
+            Button("Open \(appName)") { AppCore.shared.showPalette(mode: .launcher) }
             Button("Clipboard History") { AppCore.shared.showPalette(mode: .clipboard) }
             Divider()
             Button("Settings...") { AppCore.shared.showSettings() }
                 .keyboardShortcut(",")
             Divider()
-            Button("Quit Tinycast") { NSApp.terminate(nil) }
+            Button("Quit \(appName)") { NSApp.terminate(nil) }
                 .keyboardShortcut("q")
         }
     }
