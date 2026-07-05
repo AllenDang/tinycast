@@ -4,8 +4,9 @@ import { icons, Logo } from "./ui/icon";
 
 export function Nav() {
   return (
-    <header className="fixed inset-x-0 top-4 z-50 flex justify-center px-4">
-      <nav className="flex w-full max-w-6xl items-center justify-between gap-4 rounded-xl border border-[#363739] bg-void-black/60 px-3 py-2 backdrop-blur-2xl">
+    <header className="fixed inset-x-0 top-4 z-50">
+      <div className="container-page">
+        <nav className="flex w-full items-center justify-between gap-4 rounded-xl border border-[#363739] bg-void-black/60 px-3 py-2 backdrop-blur-2xl">
         <a
           href="#top"
           className="flex items-center gap-2 pl-1 text-[14px] font-medium text-white"
@@ -34,7 +35,8 @@ export function Nav() {
           {icons.apple({ size: 15 })}
           Download
         </Button>
-      </nav>
+        </nav>
+      </div>
     </header>
   );
 }
