@@ -1,34 +1,27 @@
-# React + TypeScript + Vite
+# Tinycast website
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+Marketing site for [Tinycast](../), built with React + Vite + Tailwind CSS.
 
-Currently, two official plugins are available:
+## Develop
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
-
-## React Compiler
-
-The React Compiler is enabled on this template. See [this documentation](https://react.dev/learn/react-compiler) for more information.
-
-Note: This will impact Vite dev & build performances.
-
-## Expanding the Oxlint configuration
-
-If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
-
-```json
-{
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
-  "options": {
-    "typeAware": true
-  },
-  "rules": {
-    "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
-}
+```sh
+npm install
+npm run dev      # local dev server with HMR
 ```
 
-See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+## Scripts
+
+- `npm run dev` — start the dev server
+- `npm run build` — type-check and build to `dist/`
+- `npm run preview` — serve the production build locally
+- `npm run lint` — run oxlint
+- `npm run format` — format with Prettier
+
+## Deploy
+
+Pushes to `main` that touch `website/**` are built and published to GitHub Pages
+by [`.github/workflows/website.yml`](../.github/workflows/website.yml) —
+live at <https://abue-ammar.github.io/tinycast/>.
+
+The site is served from the `/tinycast/` subpath, set via `base` in
+[`vite.config.ts`](vite.config.ts).

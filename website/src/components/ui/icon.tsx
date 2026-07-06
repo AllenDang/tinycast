@@ -16,7 +16,14 @@ export function Logo({
       {...props}
     >
       <defs>
-        <linearGradient id="tc-mark" x1="0" y1="0" x2="40" y2="46" gradientUnits="userSpaceOnUse">
+        <linearGradient
+          id="tc-mark"
+          x1="0"
+          y1="0"
+          x2="40"
+          y2="46"
+          gradientUnits="userSpaceOnUse"
+        >
           <stop stopColor="#a875ff" />
           <stop offset="0.6" stopColor="#863bff" />
           <stop offset="1" stopColor="#7e14ff" />

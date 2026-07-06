@@ -9,7 +9,10 @@ import { AppShot } from "./app-shot";
 // atmospheric wash borrowed from the app icon, then the page goes quiet.
 function Atmosphere() {
   return (
-    <div className="pointer-events-none absolute inset-0 -z-10 overflow-hidden" aria-hidden="true">
+    <div
+      className="pointer-events-none absolute inset-0 -z-10 overflow-hidden"
+      aria-hidden="true"
+    >
       <div
         className="absolute left-1/2 top-[-10%] h-[520px] w-[820px] -translate-x-1/2 rounded-full blur-[110px]"
         style={{
@@ -19,7 +22,10 @@ function Atmosphere() {
       />
       <div
         className="absolute left-[18%] top-[24%] h-[280px] w-[420px] -translate-x-1/2 rounded-full blur-[100px]"
-        style={{ background: "radial-gradient(closest-side, rgba(71,191,255,0.16), transparent)" }}
+        style={{
+          background:
+            "radial-gradient(closest-side, rgba(71,191,255,0.16), transparent)",
+        }}
       />
       {/* Hairline grid fade for the 'engineered surface' feel. */}
       <div
@@ -40,7 +46,10 @@ export function Hero() {
     <section id="top" className="relative overflow-hidden pb-8 pt-40 md:pt-48">
       <Atmosphere />
       <div className="container-page flex flex-col items-center text-center">
-        <p className="rise font-geistmono text-[11px] uppercase tracking-[0.16em] text-ash" style={{ animationDelay: "0ms" }}>
+        <p
+          className="rise font-geistmono text-[11px] uppercase tracking-[0.16em] text-ash"
+          style={{ animationDelay: "0ms" }}
+        >
           Native macOS launcher
         </p>
 
@@ -57,8 +66,8 @@ export function Hero() {
           style={{ animationDelay: "160ms" }}
         >
           {site.name} is a tiny, fully native launcher — fuzzy app search, a
-          calculator, clipboard history, and global hotkeys. Around a megabyte on
-          disk. No Electron, no account, no telemetry.
+          calculator, clipboard history, and global hotkeys. Around a megabyte
+          on disk. No Electron, no account, no telemetry.
         </p>
 
         <div
@@ -69,7 +78,12 @@ export function Hero() {
             {icons.apple({ size: 16 })}
             Download for Mac
           </Button>
-          <Button href={site.repo} variant="ghost" target="_blank" rel="noreferrer">
+          <Button
+            href={site.repo}
+            variant="ghost"
+            target="_blank"
+            rel="noreferrer"
+          >
             {icons.github({ size: 16 })}
             View source
           </Button>

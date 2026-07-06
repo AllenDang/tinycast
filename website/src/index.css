@@ -30,17 +30,11 @@
 
   /* Typography */
   --font-inter:
-    "Inter", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
-    "Segoe UI", Roboto, sans-serif;
+    "Inter Variable", ui-sans-serif, system-ui, -apple-system,
+    BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   --font-geistmono:
-    "GeistMono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
-    monospace;
-  --font-sf-pro-text:
-    "SF Pro Text", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
-    "Segoe UI", Roboto, sans-serif;
-  --font-sf-pro:
-    "SF Pro", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
-    "Segoe UI", Roboto, sans-serif;
+    "Geist Mono Variable", ui-monospace, SFMono-Regular, Menlo, Monaco,
+    Consolas, monospace;
 
   /* Typography — Scale */
   --text-eyebrow: 11px;
@@ -64,8 +58,7 @@
   --leading-display: 1.1;
 
   /* Spacing & radius are left to Tailwind's built-in scales — the design's
-     8px grid maps cleanly onto them, and redefining --spacing-*/--radius-*
-     here would shadow (and break) utilities like mt-16 and rounded-full. */
+     8px grid maps cleanly onto them */
 
   /* Shadows */
   --shadow-subtle:
@@ -156,7 +149,9 @@
     border-radius: 4px;
   }
 
-  h1, h2, h3 {
+  h1,
+  h2,
+  h3 {
     color: var(--color-pure-white);
     text-wrap: balance;
   }
@@ -171,18 +166,34 @@
 
 /* Load-in and ambient motion — all gated on prefers-reduced-motion below. */
 @keyframes rise {
-  from { opacity: 0; transform: translateY(16px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 @keyframes caret {
-  0%, 45% { opacity: 1; }
-  55%, 100% { opacity: 0; }
+  0%,
+  45% {
+    opacity: 1;
+  }
+  55%,
+  100% {
+    opacity: 0;
+  }
 }
 
 @keyframes drift {
-  from { transform: translate(-50%, 0) rotate(0deg); }
-  to { transform: translate(-50%, -3%) rotate(4deg); }
+  from {
+    transform: translate(-50%, 0) rotate(0deg);
+  }
+  to {
+    transform: translate(-50%, -3%) rotate(4deg);
+  }
 }
 
 .rise {
@@ -195,11 +206,17 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  html { scroll-behavior: auto; }
-  *, *::before, *::after {
+  html {
+    scroll-behavior: auto;
+  }
+  *,
+  *::before,
+  *::after {
     animation-duration: 0.001ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.001ms !important;
   }
-  .rise { opacity: 1; }
+  .rise {
+    opacity: 1;
+  }
 }

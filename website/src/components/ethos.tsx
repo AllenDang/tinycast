@@ -30,14 +30,14 @@ export function Ethos() {
       title="Built like a Mac app should be."
       intro="SwiftUI and AppKit, zero dependencies, no Electron runtime hiding underneath. It's fast because there's barely anything to it."
     >
-      {/* Stat strip — SF Pro numerals, the one place numbers get loud. */}
+      {/* Stat strip — the one place numbers get loud. */}
       <div
         className="mb-14 grid grid-cols-2 gap-px overflow-hidden rounded-2xl bg-white/[0.06] md:grid-cols-4"
         style={{ boxShadow: "var(--shadow-key)" }}
       >
         {stats.map((stat) => (
           <div key={stat.label} className="bg-ink px-6 py-8 text-center">
-            <div className="font-sf-pro-text text-[38px] font-medium leading-none text-white">
+            <div className="font-inter text-[38px] font-medium leading-none text-white">
               {stat.value}
               {stat.unit && (
                 <span className="ml-1 text-[18px] text-ash">{stat.unit}</span>

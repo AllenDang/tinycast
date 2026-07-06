@@ -21,7 +21,9 @@ function CopyCommand({ command }: { command: string }) {
 
   return (
     <div className="flex items-center gap-3 rounded-lg bg-obsidian px-4 py-3 shadow-[var(--shadow-subtle-3)]">
-      <span className="select-none text-smoke">{icons.terminal({ size: 16 })}</span>
+      <span className="select-none text-smoke">
+        {icons.terminal({ size: 16 })}
+      </span>
       <code className="flex-1 overflow-x-auto whitespace-nowrap font-geistmono text-[13px] text-white">
         {command}
       </code>
@@ -57,9 +59,7 @@ export function Install() {
               type="button"
               onClick={() => setActive(i)}
               className={`rounded-md px-4 py-1.5 text-[13px] font-medium transition-colors ${
-                i === active
-                  ? "bg-mist text-iron"
-                  : "text-ash hover:text-white"
+                i === active ? "bg-mist text-iron" : "text-ash hover:text-white"
               }`}
             >
               {c.label}
@@ -77,10 +77,13 @@ export function Install() {
 
         {/* The one manual step, stated plainly rather than hidden. */}
         <div className="mt-8 rounded-2xl border border-[#363739] p-6">
-          <h3 className="text-[16px] font-medium">One-time: clear the quarantine flag</h3>
+          <h3 className="text-[16px] font-medium">
+            One-time: clear the quarantine flag
+          </h3>
           <p className="mt-2 text-[14px] leading-relaxed text-ash">
-            Tinycast isn't notarized — there's no paid Developer ID behind it — so
-            macOS quarantines it on first launch. Run this once to let it open:
+            Tinycast isn't notarized — there's no paid Developer ID behind it —
+            so macOS quarantines it on first launch. Run this once to let it
+            open:
           </p>
           <div className="mt-4">
             <CopyCommand command={quarantineCommand} />
@@ -88,7 +91,12 @@ export function Install() {
         </div>
 
         <div className="mt-8 flex flex-wrap justify-center gap-3">
-          <Button href={`${site.repo}/releases`} variant="ghost" target="_blank" rel="noreferrer">
+          <Button
+            href={`${site.repo}/releases`}
+            variant="ghost"
+            target="_blank"
+            rel="noreferrer"
+          >
             {icons.arrowUpRight({ size: 16 })}
             Or grab the .dmg from Releases
           </Button>
