@@ -8,7 +8,7 @@ export function AppShot() {
       style={{ boxShadow: "var(--shadow-key), var(--shadow-xl)" }}
     >
       <img
-        src="/screenshot.png"
+        src={`${import.meta.env.BASE_URL}screenshot.png`}
         width={3012}
         height={1964}
         alt="Tinycast's launcher floating over the macOS desktop, showing grouped Favorites and Applications with Ghostty selected and an Open Application action."
