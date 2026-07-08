@@ -8,19 +8,27 @@ struct CalcHistoryEntry: Identifiable, Codable, Hashable, Sendable {
     let createdAt: Date
 }
 
-/// Persists recent calculations as a JSON blob in UserDefaults — same shape as `FavoritesStore`:
-/// a small `@Published` array written back on every mutation. Capped, so the blob stays tiny and
-/// search is a plain scan.
+/// Persists recent calculations as a JSON file — same shape as before (a small `@Published` array
+/// written back on every mutation) but on disk under `~/Library/Caches/<bundle-id>/`, alongside
+/// `ClipboardStore`'s sqlite db and image blobs, so `brew uninstall --zap` (which trashes that whole
+/// directory) removes it too. Capped, so the file stays tiny and search is a plain scan.
 @MainActor
 final class CalculatorHistoryStore: ObservableObject {
-    private let defaults = UserDefaults.standard
-    private let key = "calculatorHistory"
     private static let cap = 200
+
+    private let fileURL: URL
 
     @Published private(set) var entries: [CalcHistoryEntry]  // newest first
 
     init() {
-        if let data = defaults.data(forKey: key),
+        let bundleID = Bundle.main.bundleIdentifier ?? "com.tinycast.app"
+        let base = FileManager.default
+            .urls(for: .cachesDirectory, in: .userDomainMask)[0]
+            .appendingPathComponent(bundleID, isDirectory: true)
+        try? FileManager.default.createDirectory(at: base, withIntermediateDirectories: true)
+        fileURL = base.appendingPathComponent("calculator-history.json")
+
+        if let data = try? Data(contentsOf: fileURL),
             let decoded = try? JSONDecoder().decode([CalcHistoryEntry].self, from: data)
         {
             entries = decoded
@@ -63,7 +71,7 @@ final class CalculatorHistoryStore: ObservableObject {
 
     private func persist() {
         if let data = try? JSONEncoder().encode(entries) {
-            defaults.set(data, forKey: key)
+            try? data.write(to: fileURL, options: .atomic)
         }
     }
 }
