@@ -42,7 +42,7 @@ export function Hero() {
         </h1>
 
         <p
-          className="rise mt-6 max-w-xl text-body-lg text-ash"
+          className="rise mt-6 max-w-xl text-sm text-ash"
           style={{ animationDelay: "160ms" }}
         >
           {site.name} is a tiny, fully native launcher — fuzzy app search, a
@@ -55,7 +55,7 @@ export function Hero() {
           style={{ animationDelay: "240ms" }}
         >
           <Button href="#install">
-            <AppleLogo size={16} />
+            <AppleLogo size={20} />
             Download for Mac
           </Button>
           <Button
@@ -64,7 +64,7 @@ export function Hero() {
             target="_blank"
             rel="noreferrer"
           >
-            <GitHubLogo size={16} />
+            <GitHubLogo size={20} />
             View source
           </Button>
         </div>

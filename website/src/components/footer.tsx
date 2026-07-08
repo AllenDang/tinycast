@@ -10,9 +10,9 @@ export function Footer() {
       <div className="container-page flex flex-col items-center gap-6 py-14 text-center">
         <a
           href="#top"
-          className="flex items-center gap-2 text-body font-medium text-white"
+          className="flex items-center gap-1 text-body font-medium text-white"
         >
-          <Logo size={20} />
+          <Logo size={24} />
           {site.name}
         </a>
 

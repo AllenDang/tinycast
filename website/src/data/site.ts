@@ -47,7 +47,7 @@ export const quarantineCommand =
 
 // Headline numbers for the "why it's tiny" band. Kept honest, from the README.
 export const stats = [
-  { value: "~1", unit: "MB", label: "On disk" },
+  { value: "~3", unit: "MB", label: "On disk" },
   { value: "<100", unit: "MB", label: "Memory" },
   { value: "0", unit: "", label: "Dependencies" },
   { value: "0", unit: "", label: "Telemetry" },

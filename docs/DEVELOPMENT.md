@@ -80,7 +80,7 @@ DISPLAY_NAME="Tinycast Alpha" BUNDLE_ID="com.tinycast.app.alpha" VERSION="0.1.0-
 ## Signing & Gatekeeper
 
 Tinycast is **not** signed with an Apple Developer ID and **not** notarized — deliberately, to
-avoid the $99/yr account. Ad-hoc signing (what CI does) is enough to *run* the app but gives
+avoid the $99/yr account. Ad-hoc signing (what CI does) is enough to _run_ the app but gives
 Gatekeeper nothing to vouch for, so users clear quarantine once after install:
 
 ```sh

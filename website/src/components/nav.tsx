@@ -23,9 +23,9 @@ export function Nav() {
             <a
               href="#top"
               onClick={close}
-              className="flex items-center gap-2 pl-1 text-body font-semibold text-white"
+              className="flex items-center gap-1 pl-1 text-body font-semibold text-white"
             >
-              <Logo size={20} />
+              <Logo size={24} />
               {site.name}
             </a>
 
@@ -43,7 +43,7 @@ export function Nav() {
             </div>
 
             <Button href="#install" size="sm" className="hidden md:inline-flex">
-              <AppleLogo size={14} />
+              <AppleLogo size={20} />
               Download
             </Button>
 
