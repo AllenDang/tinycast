@@ -60,10 +60,14 @@
 
   --text-heading: clamp(2rem, 1.55rem + 2.2vw, 2.5rem); /* 32→40px — h2 */
   --text-heading--line-height: 1.15;
+  --text-heading--font-weight: 500;
 
-  --text-display: clamp(2.5rem, 1.9rem + 3.2vw, 4rem); /* 40→64px — hero h1 */
-  --text-display--line-height: 1.08;
-  --text-display--letter-spacing: 0.2px;
+  /* Hero display — sized and weighted like Raycast's hero (large, semibold,
+     near-neutral tracking). Weight and leading ride along with the class. */
+  --text-display: clamp(2.75rem, 2.1rem + 3.4vw, 4rem); /* 44→64px — hero h1 */
+  --text-display--line-height: 1.06;
+  --text-display--letter-spacing: -0.01em;
+  --text-display--font-weight: 600;
 
   /* Spacing & radius use Tailwind's built-in scales — the 8px grid maps
      cleanly onto them (p-4 = 16px, p-6 = 24px, rounded-2xl = 16px, …). */
@@ -97,8 +101,8 @@
   /* The app screenshot: key treatment plus a deep ambient drop. */
   --shadow-window:
     rgb(255 255 255 / 0.05) 0px 1px 0px 0px inset,
-    rgb(255 255 255 / 0.14) 0px 0px 0px 1px,
-    rgb(0 0 0 / 0.4) 0px 4px 40px 8px, rgb(0 0 0 / 0.8) 0px 0px 0px 0.5px;
+    rgb(255 255 255 / 0.14) 0px 0px 0px 1px, rgb(0 0 0 / 0.4) 0px 4px 40px 8px,
+    rgb(0 0 0 / 0.8) 0px 0px 0px 0.5px;
 }
 
 @layer base {
@@ -200,6 +204,42 @@
       var(--color-void-black) 78%
     );
   }
+
+  /* Mobile nav drawer — the grid-rows trick, so height: auto animates. */
+  .nav-drawer {
+    display: grid;
+    grid-template-rows: 0fr;
+    transition: grid-template-rows 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  .nav-drawer > div {
+    overflow: hidden;
+    opacity: 0;
+    transition: opacity 0.25s ease;
+  }
+
+  .nav-drawer[data-open="true"] {
+    grid-template-rows: 1fr;
+  }
+
+  .nav-drawer[data-open="true"] > div {
+    opacity: 1;
+    transition-delay: 0.08s;
+  }
+
+  /* Scroll-triggered rise — driven by the <Reveal> component. */
+  .reveal {
+    opacity: 0;
+    translate: 0 1.25rem;
+    transition:
+      opacity 0.7s cubic-bezier(0.22, 1, 0.36, 1),
+      translate 0.7s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  .reveal-shown {
+    opacity: 1;
+    translate: 0 0;
+  }
 }
 
 /* Load-in and ambient motion — all gated on prefers-reduced-motion below. */
@@ -245,7 +285,9 @@
     animation-iteration-count: 1 !important;
     transition-duration: 0.001ms !important;
   }
-  .rise {
+  .rise,
+  .reveal {
     opacity: 1;
+    translate: 0 0;
   }
 }

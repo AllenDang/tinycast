@@ -1,4 +1,5 @@
 import type { AnchorHTMLAttributes, ReactNode } from "react";
+import { cn } from "../../lib/cn";
 
 type Variant = "solid" | "ghost";
 type Size = "sm" | "md";
@@ -11,8 +12,7 @@ type ButtonProps = {
 
 const variants: Record<Variant, string> = {
   // The only filled action in the system — neutral Mist, never chromatic.
-  solid:
-    "bg-mist text-iron shadow-cta hover:bg-white active:translate-y-px",
+  solid: "bg-mist text-iron shadow-cta hover:bg-white active:translate-y-px",
   // Edge-defined ghost: hairline border, fills only on hover.
   ghost:
     "text-ash border border-border hover:text-white hover:border-border-strong hover:bg-white/5",
@@ -29,12 +29,17 @@ export function Button({
   children,
   variant = "solid",
   size = "md",
-  className = "",
+  className,
   ...props
 }: ButtonProps) {
   return (
     <a
-      className={`inline-flex items-center justify-center gap-2 rounded-lg text-small font-medium transition-colors duration-150 ${variants[variant]} ${sizes[size]} ${className}`}
+      className={cn(
+        "inline-flex items-center justify-center gap-2 rounded-lg text-small font-medium transition-colors duration-150",
+        variants[variant],
+        sizes[size],
+        className,
+      )}
       {...props}
     >
       {children}

@@ -34,7 +34,7 @@ export function Hero() {
         </p>
 
         <h1
-          className="rise mt-6 max-w-3xl text-display font-normal"
+          className="rise mt-6 max-w-3xl text-display"
           style={{ animationDelay: "80ms" }}
         >
           Your shortcut to

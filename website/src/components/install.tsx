@@ -1,7 +1,9 @@
 import { ArrowUpRight, Check, Copy, Terminal } from "lucide-react";
 import { useState } from "react";
 import { channels, quarantineCommand, site } from "../data/site";
+import { cn } from "../lib/cn";
 import { Button } from "./ui/button";
+import { Reveal } from "./ui/reveal";
 import { Section } from "./ui/section";
 
 // A terminal-style command line with a copy button. The mono treatment signals
@@ -51,7 +53,7 @@ export function Install() {
       title="Install with Homebrew."
       intro="One command and you're running. Pick a channel — each installs as its own app, so a pre-release can live next to stable."
     >
-      <div className="mx-auto max-w-2xl">
+      <Reveal className="mx-auto max-w-2xl">
         {/* Channel picker */}
         <div className="mb-3 inline-flex rounded-lg bg-white/5 p-1">
           {channels.map((c, i) => (
@@ -59,9 +61,12 @@ export function Install() {
               key={c.id}
               type="button"
               onClick={() => setActive(i)}
-              className={`rounded-md px-4 py-1.5 text-small font-medium transition-colors ${
-                i === active ? "bg-mist text-iron" : "text-ash hover:text-white"
-              }`}
+              className={cn(
+                "rounded-md px-4 py-1.5 text-small font-medium transition-colors",
+                i === active
+                  ? "bg-mist text-iron"
+                  : "text-ash hover:text-white",
+              )}
             >
               {c.label}
             </button>
@@ -102,7 +107,7 @@ export function Install() {
             Or grab the .dmg from Releases
           </Button>
         </div>
-      </div>
+      </Reveal>
     </Section>
   );
 }

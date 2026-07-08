@@ -1,6 +1,7 @@
 import { Menu, X } from "lucide-react";
 import { useState } from "react";
 import { nav, site } from "../data/site";
+import { cn } from "../lib/cn";
 import { Button } from "./ui/button";
 import { AppleLogo, Logo } from "./ui/icon";
 
@@ -12,6 +13,7 @@ function navLinkProps(href: string) {
 
 export function Nav() {
   const [open, setOpen] = useState(false);
+  const close = () => setOpen(false);
 
   return (
     <header className="fixed inset-x-0 top-4 z-50">
@@ -20,8 +22,8 @@ export function Nav() {
           <div className="flex items-center justify-between gap-4 px-3 py-2">
             <a
               href="#top"
+              onClick={close}
               className="flex items-center gap-2 pl-1 text-body font-semibold text-white"
-              onClick={() => setOpen(false)}
             >
               <Logo size={20} />
               {site.name}
@@ -40,40 +42,71 @@ export function Nav() {
               ))}
             </div>
 
-            <div className="flex items-center gap-2">
-              <Button href="#install" size="sm" onClick={() => setOpen(false)}>
-                <AppleLogo size={14} />
-                Download
-              </Button>
-              <button
-                type="button"
-                onClick={() => setOpen((o) => !o)}
-                aria-expanded={open}
-                aria-controls="mobile-nav"
-                aria-label={open ? "Close menu" : "Open menu"}
-                className="flex size-8 items-center justify-center rounded-md text-ash transition-colors hover:bg-white/5 hover:text-white md:hidden"
-              >
-                {open ? <X size={18} /> : <Menu size={18} />}
-              </button>
-            </div>
+            <Button href="#install" size="sm" className="hidden md:inline-flex">
+              <AppleLogo size={14} />
+              Download
+            </Button>
+
+            <button
+              type="button"
+              onClick={() => setOpen((o) => !o)}
+              aria-expanded={open}
+              aria-controls="mobile-nav"
+              aria-label={open ? "Close menu" : "Open menu"}
+              className="flex size-8 items-center justify-center rounded-md text-ash transition-colors hover:bg-white/5 hover:text-white md:hidden"
+            >
+              <span className="relative size-4.5">
+                <Menu
+                  size={18}
+                  className={cn(
+                    "absolute inset-0 transition-all duration-300",
+                    open && "rotate-90 opacity-0",
+                  )}
+                />
+                <X
+                  size={18}
+                  className={cn(
+                    "absolute inset-0 transition-all duration-300",
+                    !open && "-rotate-90 opacity-0",
+                  )}
+                />
+              </span>
+            </button>
           </div>
 
-          {/* Mobile menu — the pill expands downward, Raycast-style. */}
-          {open && (
-            <div id="mobile-nav" className="border-t border-border p-2 md:hidden">
-              {nav.map((item) => (
-                <a
-                  key={item.label}
-                  href={item.href}
-                  {...navLinkProps(item.href)}
-                  onClick={() => setOpen(false)}
-                  className="block rounded-lg px-3 py-2.5 text-body font-medium text-ash transition-colors hover:bg-white/5 hover:text-white"
+          {/* Mobile menu — the pill expands downward, Raycast-style. Always
+              mounted so the drawer can animate open and closed. */}
+          <div
+            id="mobile-nav"
+            className="nav-drawer md:hidden"
+            data-open={open}
+            inert={!open}
+          >
+            <div>
+              <div className="border-t border-border p-2">
+                {nav.map((item) => (
+                  <a
+                    key={item.label}
+                    href={item.href}
+                    {...navLinkProps(item.href)}
+                    onClick={close}
+                    className="block rounded-lg px-3 py-2.5 text-body font-medium text-ash transition-colors hover:bg-white/5 hover:text-white"
+                  >
+                    {item.label}
+                  </a>
+                ))}
+                <Button
+                  href="#install"
+                  size="sm"
+                  onClick={close}
+                  className="mt-2 w-full"
                 >
-                  {item.label}
-                </a>
-              ))}
+                  <AppleLogo size={14} />
+                  Download
+                </Button>
+              </div>
             </div>
-          )}
+          </div>
         </nav>
       </div>
     </header>
