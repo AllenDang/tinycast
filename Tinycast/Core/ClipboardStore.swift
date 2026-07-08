@@ -77,7 +77,7 @@ enum ClipboardRetention: Int, CaseIterable, Identifiable, Sendable {
 @MainActor
 final class ClipboardStore: ObservableObject {
     @Published private(set) var items: [ClipboardItem] = []
-    var maxAge: TimeInterval = ClipboardRetention.month.maxAge
+    var maxAge: TimeInterval = ClipboardRetention.threeMonths.maxAge
 
     private static let memoryWindow = 1000
 

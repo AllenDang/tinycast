@@ -29,9 +29,10 @@ final class AppSettings: ObservableObject {
     }
 
     init() {
-        // integer(forKey:) returns 0 when unset, which no case matches — falls through to 1 Month.
+        // integer(forKey:) returns 0 when unset, which no case matches — falls through to 3 Months.
         clipboardRetention =
-            ClipboardRetention(rawValue: defaults.integer(forKey: Key.clipboardRetention)) ?? .month
+            ClipboardRetention(rawValue: defaults.integer(forKey: Key.clipboardRetention))
+            ?? .threeMonths
         // Password managers are excluded out of the box; the defaults apply only until the user
         // first edits the list.
         clipboardDisabledApps =
