@@ -1,7 +1,7 @@
+import { ArrowUpRight, Check, Copy, Terminal } from "lucide-react";
 import { useState } from "react";
 import { channels, quarantineCommand, site } from "../data/site";
 import { Button } from "./ui/button";
-import { icons } from "./ui/icon";
 import { Section } from "./ui/section";
 
 // A terminal-style command line with a copy button. The mono treatment signals
@@ -20,19 +20,20 @@ function CopyCommand({ command }: { command: string }) {
   }
 
   return (
-    <div className="flex items-center gap-3 rounded-lg bg-obsidian px-4 py-3 shadow-[var(--shadow-subtle-3)]">
+    <div className="flex items-center gap-3 rounded-lg bg-obsidian px-4 py-3 shadow-key">
       <span className="select-none text-smoke">
-        {icons.terminal({ size: 16 })}
+        <Terminal size={16} />
       </span>
-      <code className="flex-1 overflow-x-auto whitespace-nowrap font-geistmono text-[13px] text-white">
+      <code className="flex-1 overflow-x-auto whitespace-nowrap font-mono text-small text-white">
         {command}
       </code>
       <button
         type="button"
         onClick={copy}
-        className="shrink-0 rounded-md px-2 py-1 font-geistmono text-[12px] text-ash transition-colors hover:bg-white/[0.06] hover:text-white"
+        className="flex shrink-0 items-center gap-1.5 rounded-md px-2 py-1 font-mono text-caption text-ash transition-colors hover:bg-white/5 hover:text-white"
         aria-label={copied ? "Copied" : "Copy command"}
       >
+        {copied ? <Check size={13} /> : <Copy size={13} />}
         {copied ? "Copied" : "Copy"}
       </button>
     </div>
@@ -52,13 +53,13 @@ export function Install() {
     >
       <div className="mx-auto max-w-2xl">
         {/* Channel picker */}
-        <div className="mb-3 inline-flex rounded-lg bg-white/[0.04] p-1">
+        <div className="mb-3 inline-flex rounded-lg bg-white/5 p-1">
           {channels.map((c, i) => (
             <button
               key={c.id}
               type="button"
               onClick={() => setActive(i)}
-              className={`rounded-md px-4 py-1.5 text-[13px] font-medium transition-colors ${
+              className={`rounded-md px-4 py-1.5 text-small font-medium transition-colors ${
                 i === active ? "bg-mist text-iron" : "text-ash hover:text-white"
               }`}
             >
@@ -67,8 +68,8 @@ export function Install() {
           ))}
         </div>
 
-        <div className="mb-3 flex items-center gap-2 font-geistmono text-[12px] text-smoke">
-          <span className="rounded bg-graphite px-1.5 py-0.5 text-ash">
+        <div className="mb-3 font-mono text-caption text-smoke">
+          <span className="rounded-md bg-graphite px-1.5 py-0.5 text-ash">
             {channel.note}
           </span>
         </div>
@@ -76,11 +77,11 @@ export function Install() {
         <CopyCommand command={channel.command} />
 
         {/* The one manual step, stated plainly rather than hidden. */}
-        <div className="mt-8 rounded-2xl border border-[#363739] p-6">
-          <h3 className="text-[16px] font-medium">
+        <div className="mt-8 rounded-2xl border border-border p-4 sm:p-6">
+          <h3 className="text-body-lg font-medium">
             One-time: clear the quarantine flag
           </h3>
-          <p className="mt-2 text-[14px] leading-relaxed text-ash">
+          <p className="mt-2 text-body text-ash">
             Tinycast isn't notarized — there's no paid Developer ID behind it —
             so macOS quarantines it on first launch. Run this once to let it
             open:
@@ -97,7 +98,7 @@ export function Install() {
             target="_blank"
             rel="noreferrer"
           >
-            {icons.arrowUpRight({ size: 16 })}
+            <ArrowUpRight size={16} />
             Or grab the .dmg from Releases
           </Button>
         </div>

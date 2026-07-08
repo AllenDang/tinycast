@@ -1,26 +1,7 @@
-import { site, stats } from "../data/site";
-import { icons } from "./ui/icon";
+import { Check } from "lucide-react";
+import { values } from "../data/ethos";
+import { stats } from "../data/site";
 import { Section } from "./ui/section";
-
-// The values that make Tinycast Tinycast. Each is a plain promise, not a pitch.
-const values = [
-  {
-    title: "Free and open source",
-    body: `Every line is public under the ${site.license} license. Read it, fork it, build it yourself.`,
-  },
-  {
-    title: "Local by design",
-    body: "Your apps, clipboard, and shortcuts stay on your Mac. Nothing is uploaded, ever.",
-  },
-  {
-    title: "No account, no sign-in",
-    body: "Install it and it works. There's no login, no paywall, and no pro tier.",
-  },
-  {
-    title: "Zero telemetry",
-    body: "No analytics, no crash pings, no background phone-home. It does nothing you didn't ask for.",
-  },
-];
 
 export function Ethos() {
   return (
@@ -31,19 +12,19 @@ export function Ethos() {
       intro="SwiftUI and AppKit, zero dependencies, no Electron runtime hiding underneath. It's fast because there's barely anything to it."
     >
       {/* Stat strip — the one place numbers get loud. */}
-      <div
-        className="mb-14 grid grid-cols-2 gap-px overflow-hidden rounded-2xl bg-white/[0.06] md:grid-cols-4"
-        style={{ boxShadow: "var(--shadow-key)" }}
-      >
+      <div className="mb-10 grid grid-cols-2 gap-px overflow-hidden rounded-2xl bg-white/5 shadow-key md:mb-14 md:grid-cols-4">
         {stats.map((stat) => (
-          <div key={stat.label} className="bg-ink px-6 py-8 text-center">
-            <div className="font-inter text-[38px] font-medium leading-none text-white">
+          <div
+            key={stat.label}
+            className="bg-ink px-4 py-6 text-center sm:px-6 sm:py-8"
+          >
+            <div className="text-stat font-medium text-white">
               {stat.value}
               {stat.unit && (
-                <span className="ml-1 text-[18px] text-ash">{stat.unit}</span>
+                <span className="ml-1 text-body-lg text-ash">{stat.unit}</span>
               )}
             </div>
-            <div className="mt-3 font-geistmono text-[12px] uppercase tracking-[0.08em] text-smoke">
+            <div className="mt-3 font-mono text-eyebrow uppercase text-smoke">
               {stat.label}
             </div>
           </div>
@@ -54,16 +35,14 @@ export function Ethos() {
         {values.map((value) => (
           <article
             key={value.title}
-            className="flex gap-4 rounded-2xl border border-[#363739] p-6"
+            className="flex gap-4 rounded-2xl border border-border p-4 sm:p-6"
           >
-            <span className="mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full bg-violet/[0.14] text-violet-bright">
-              {icons.check({ size: 15, strokeWidth: 2 })}
+            <span className="mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full bg-violet/15 text-violet-bright">
+              <Check size={15} strokeWidth={2} />
             </span>
             <div>
-              <h3 className="text-[17px] font-medium">{value.title}</h3>
-              <p className="mt-1.5 text-[15px] leading-relaxed text-ash">
-                {value.body}
-              </p>
+              <h3 className="text-body-lg font-medium">{value.title}</h3>
+              <p className="mt-1.5 text-body text-ash">{value.body}</p>
             </div>
           </article>
         ))}

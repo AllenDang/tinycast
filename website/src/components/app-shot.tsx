@@ -3,10 +3,7 @@
 // The source of record is docs/screenshot.png; public/screenshot.png is a copy.
 export function AppShot() {
   return (
-    <figure
-      className="w-full max-w-7xl overflow-hidden rounded-2xl ring-1 ring-white/10"
-      style={{ boxShadow: "var(--shadow-key), var(--shadow-xl)" }}
-    >
+    <figure className="w-full overflow-hidden rounded-2xl shadow-window">
       <img
         src={`${import.meta.env.BASE_URL}screenshot.png`}
         width={3012}

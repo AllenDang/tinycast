@@ -20,22 +20,16 @@ export function Section({
   className = "",
 }: SectionProps) {
   return (
-    <section id={id} className={`container-page py-20 md:py-28 ${className}`}>
+    <section id={id} className={`container-page py-16 md:py-24 ${className}`}>
       {(eyebrow || title || intro) && (
-        <header className="mx-auto mb-14 max-w-2xl text-center">
+        <header className="mx-auto mb-10 max-w-2xl text-center md:mb-14">
           {eyebrow && (
-            <p className="mb-4 font-geistmono text-[11px] uppercase tracking-[0.14em] text-violet-bright">
+            <p className="mb-4 font-mono text-eyebrow uppercase text-violet-bright">
               {eyebrow}
             </p>
           )}
-          {title && (
-            <h2 className="text-[32px] font-normal leading-tight md:text-[40px]">
-              {title}
-            </h2>
-          )}
-          {intro && (
-            <p className="mt-4 text-[17px] leading-relaxed text-ash">{intro}</p>
-          )}
+          {title && <h2 className="text-heading font-normal">{title}</h2>}
+          {intro && <p className="mt-4 text-body-lg text-ash">{intro}</p>}
         </header>
       )}
       {children}

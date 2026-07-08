@@ -1,125 +1,104 @@
 @import "tailwindcss";
 
+/*
+ * Tinycast design tokens — the single source of truth for the site.
+ * Components must only use sizes, colors, and shadows defined here; Tailwind's
+ * default text scale is disabled below so an off-scale size can't slip in.
+ */
 @theme {
-  /* Colors */
-  --color-void-black: #040506;
-  --color-ink: #07080a;
-  --color-obsidian: #111214;
-  --color-graphite: #1b1c1e;
-  --color-smoke: #6a6b6c;
-  --color-ash: #9c9c9d;
-  --color-mist: #e6e6e6;
-  --color-iron: #454647;
-  --color-slate: #2f3031;
-  --color-pure-white: #ffffff;
-  --color-coral-pulse: #ff6363;
-  --color-ember-hush: #452324;
-  --color-electric-sky: #63a1ff;
+  /* ── Colors ──────────────────────────────────────────────────────────── */
+  --color-void-black: #040506; /* page canvas */
+  --color-ink: #07080a; /* card surface */
+  --color-obsidian: #111214; /* recessed wells (inputs, command lines) */
+  --color-graphite: #1b1c1e; /* badge fill */
+  --color-smoke: #6a6b6c; /* muted text */
+  --color-ash: #9c9c9d; /* secondary text */
+  --color-mist: #e6e6e6; /* the one filled-action surface */
+  --color-iron: #454647; /* text on mist */
+  --color-border: #363739; /* hairline borders */
+  --color-border-strong: #54555a; /* hovered borders */
 
-  /* Tinycast brand — violet mark from the app icon, cyan as its counter-tone.
-     Swaps in for Raycast's coral so the site matches the real logo. */
+  /* Tinycast brand — violet mark from the app icon, cyan as its counter-tone. */
   --color-violet: #863bff;
   --color-violet-bright: #a875ff;
   --color-violet-deep: #7e14ff;
-  --color-violet-tint: #1a1230;
   --color-cyan: #47bfff;
-  --color-cobalt-edge: #143ca3;
-  --color-deep-space: #02193b;
-  --color-info-blue: #56c2ff;
-  --color-success-green: #59d499;
 
-  /* Typography */
-  --font-inter:
+  /* ── Typography ──────────────────────────────────────────────────────── */
+  --font-sans:
     "Inter Variable", ui-sans-serif, system-ui, -apple-system,
     BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  --font-geistmono:
+  --font-mono:
     "Geist Mono Variable", ui-monospace, SFMono-Regular, Menlo, Monaco,
     Consolas, monospace;
 
-  /* Typography — Scale */
-  --text-eyebrow: 11px;
-  --leading-eyebrow: 0.91;
-  --tracking-eyebrow: 0.8px;
-  --text-body: 16px;
-  --leading-body: 1.15;
-  --text-body-lg: 18px;
-  --leading-body-lg: 1.15;
-  --text-subheading: 20px;
-  --leading-subheading: 1.2;
-  --tracking-subheading: 0.2px;
-  --text-heading-sm: 24px;
-  --leading-heading-sm: 1.15;
-  --text-heading: 32px;
-  --leading-heading: 1.15;
-  --text-heading-lg: 56px;
-  --leading-heading-lg: 1.17;
-  --tracking-heading-lg: 0.22px;
-  --text-display: 64px;
-  --leading-display: 1.1;
+  /* Type scale — every size on the site, with its line-height and tracking
+     baked in. `text-sm`, `text-base`, etc. are disabled: use these roles. */
+  --text-*: initial;
 
-  /* Spacing & radius are left to Tailwind's built-in scales — the design's
-     8px grid maps cleanly onto them */
+  --text-eyebrow: 0.6875rem; /* 11px — mono uppercase section labels */
+  --text-eyebrow--line-height: 1;
+  --text-eyebrow--letter-spacing: 0.14em;
 
-  /* Shadows */
-  --shadow-subtle:
-    rgba(0, 0, 0, 0.4) 0px 1.5px 0.5px 2.5px, rgb(0, 0, 0) 0px 0px 0.5px 1px,
-    rgba(0, 0, 0, 0.25) 0px 2px 1px 1px inset,
-    rgba(255, 255, 255, 0.2) 0px 1px 1px 1px inset;
-  --shadow-subtle-2:
-    rgb(27, 28, 30) 0px 0px 0px 1px, rgb(7, 8, 10) 0px 0px 0px 1px inset;
-  --shadow-lg:
-    rgba(215, 201, 175, 0.05) 0px 0px 20px 5px,
-    rgba(215, 201, 175, 0.05) 0px 0px 16px -7px;
-  --shadow-subtle-3:
-    rgba(255, 255, 255, 0.05) 0px 1px 0px 0px inset,
-    rgba(255, 255, 255, 0.25) 0px 0px 0px 1px,
-    rgba(0, 0, 0, 0.2) 0px -1px 0px 0px inset;
-  --shadow-subtle-4:
-    rgba(0, 0, 0, 0.03) 0px 7px 3px 0px, rgba(0, 0, 0, 0.25) 0px 4px 4px 0px;
-  --shadow-subtle-5: rgba(255, 255, 255, 0.1) 0px 1px 0px 0px inset;
-  --shadow-xl:
-    rgba(0, 0, 0, 0.4) 0px 4px 40px 8px, rgba(0, 0, 0, 0.8) 0px 0px 0px 0.5px,
-    rgba(255, 255, 255, 0.3) 0px 0.5px 0px 0px inset;
-  --shadow-subtle-6: rgba(255, 255, 255, 0.15) 0px 1px 1px 0px inset;
-  --shadow-sm: rgba(0, 0, 0, 0.25) 0px 4px 4px 0px;
-  --shadow-subtle-7:
-    rgba(255, 255, 255, 0.1) 0px 1px 0px 0px inset,
-    rgba(0, 0, 0, 0.4) 0px 30px 50px 0px,
-    rgba(3, 15, 129, 0.09) 0px 4px 24px 0px,
-    rgba(255, 255, 255, 0.06) 0px 0px 0px 1px inset;
-  --shadow-xl-2:
-    rgba(255, 255, 255, 0.03) 0px 0px 40px 20px,
-    rgba(255, 255, 255, 0.3) 0px 0.5px 0px 0px inset;
-  --shadow-subtle-8:
-    rgba(255, 255, 255, 0.19) 0px 0px 2px 0px,
-    rgba(255, 255, 255, 0.1) 0px 0.5px 0px 0px inset;
-  --shadow-subtle-9:
-    rgba(255, 255, 255, 0.1) 0px 1px 0px 0px inset,
-    rgba(7, 13, 79, 0.1) 0px 0px 20px 3px,
-    rgba(85, 0, 98, 0.1) 0px 0px 40px 20px,
-    rgba(255, 255, 255, 0.06) 0px 0px 0px 1px inset;
-  --shadow-subtle-10:
-    rgba(255, 255, 255, 0.1) 0px 1px 0px 0px inset,
-    rgba(0, 0, 0, 0.4) 0px 30px 50px 0px,
-    rgba(51, 3, 129, 0.09) 0px 4px 24px 0px,
-    rgba(255, 255, 255, 0.06) 0px 0px 0px 1px inset;
-  --shadow-subtle-11:
-    rgba(255, 255, 255, 0.1) 0px 1px 0px 0px inset,
-    rgba(7, 13, 79, 0.1) 0px 0px 20px 3px,
-    rgba(7, 40, 79, 0.1) 0px 0px 40px 20px,
-    rgba(255, 255, 255, 0.06) 0px 0px 0px 1px inset;
+  --text-caption: 0.75rem; /* 12px — mono metadata, badges, keycaps */
+  --text-caption--line-height: 1.5;
+
+  --text-small: 0.8125rem; /* 13px — nav links, buttons, hints, commands */
+  --text-small--line-height: 1.5;
+
+  --text-body: 0.9375rem; /* 15px — card and paragraph copy */
+  --text-body--line-height: 1.65;
+
+  --text-body-lg: 1.0625rem; /* 17px — intros, card titles */
+  --text-body-lg--line-height: 1.6;
+
+  --text-subheading: 1.25rem; /* 20px — feature card titles */
+  --text-subheading--line-height: 1.3;
+
+  --text-stat: 2.25rem; /* 36px — the ethos stat numbers */
+  --text-stat--line-height: 1;
+
+  --text-heading: clamp(2rem, 1.55rem + 2.2vw, 2.5rem); /* 32→40px — h2 */
+  --text-heading--line-height: 1.15;
+
+  --text-display: clamp(2.5rem, 1.9rem + 3.2vw, 4rem); /* 40→64px — hero h1 */
+  --text-display--line-height: 1.08;
+  --text-display--letter-spacing: 0.2px;
+
+  /* Spacing & radius use Tailwind's built-in scales — the 8px grid maps
+     cleanly onto them (p-4 = 16px, p-6 = 24px, rounded-2xl = 16px, …). */
+
+  /* ── Shadows ─────────────────────────────────────────────────────────── */
+  /* Only these; Tailwind's default shadow scale is disabled. */
+  --shadow-*: initial;
 
   /* Signature: the 'keyboard key' surface — pressed, tactile, no drop shadow. */
   --shadow-key:
-    rgba(255, 255, 255, 0.05) 0px 1px 0px 0px inset,
-    rgba(255, 255, 255, 0.14) 0px 0px 0px 1px,
-    rgba(0, 0, 0, 0.2) 0px -1px 0px 0px inset;
+    rgb(255 255 255 / 0.05) 0px 1px 0px 0px inset,
+    rgb(255 255 255 / 0.14) 0px 0px 0px 1px,
+    rgb(0 0 0 / 0.2) 0px -1px 0px 0px inset;
   --shadow-key-hover:
-    rgba(255, 255, 255, 0.08) 0px 1px 0px 0px inset,
-    rgba(255, 255, 255, 0.22) 0px 0px 0px 1px,
-    rgba(0, 0, 0, 0.25) 0px -1px 0px 0px inset;
+    rgb(255 255 255 / 0.08) 0px 1px 0px 0px inset,
+    rgb(255 255 255 / 0.22) 0px 0px 0px 1px,
+    rgb(0 0 0 / 0.25) 0px -1px 0px 0px inset;
+
+  /* A single inset top highlight — icon chips and other small raised surfaces. */
+  --shadow-highlight: rgb(255 255 255 / 0.08) 0px 1px 0px 0px inset;
+
+  /* Physical keycap for <Kbd>: top highlight plus a hard bottom edge. */
+  --shadow-keycap:
+    rgb(255 255 255 / 0.08) 0px 1px 0px 0px inset,
+    rgb(0 0 0 / 0.4) 0px -1px 0px 0px inset;
+
+  /* Lift under the neutral filled CTA. */
   --shadow-cta:
-    rgba(0, 0, 0, 0.03) 0px 7px 3px 0px, rgba(0, 0, 0, 0.25) 0px 4px 4px 0px;
+    rgb(0 0 0 / 0.03) 0px 7px 3px 0px, rgb(0 0 0 / 0.25) 0px 4px 4px 0px;
+
+  /* The app screenshot: key treatment plus a deep ambient drop. */
+  --shadow-window:
+    rgb(255 255 255 / 0.05) 0px 1px 0px 0px inset,
+    rgb(255 255 255 / 0.14) 0px 0px 0px 1px,
+    rgb(0 0 0 / 0.4) 0px 4px 40px 8px, rgb(0 0 0 / 0.8) 0px 0px 0px 0.5px;
 }
 
 @layer base {
@@ -131,7 +110,7 @@
   body {
     background-color: var(--color-void-black);
     color: var(--color-ash);
-    font-family: var(--font-inter);
+    font-family: var(--font-sans);
     font-feature-settings: "calt", "kern", "liga", "ss03";
     -webkit-font-smoothing: antialiased;
     text-rendering: optimizeLegibility;
@@ -140,7 +119,7 @@
 
   ::selection {
     background-color: color-mix(in srgb, var(--color-violet) 40%, transparent);
-    color: var(--color-pure-white);
+    color: var(--color-white);
   }
 
   :focus-visible {
@@ -152,16 +131,75 @@
   h1,
   h2,
   h3 {
-    color: var(--color-pure-white);
+    color: var(--color-white);
     text-wrap: balance;
+  }
+
+  /* Anchor targets land below the floating nav instead of underneath it. */
+  section[id] {
+    scroll-margin-top: 5.5rem;
   }
 }
 
+/* The page gutter: 16px on mobile, 24px from the sm breakpoint up. */
 @utility container-page {
   width: 100%;
-  max-width: 1152px;
+  max-width: 72rem;
   margin-inline: auto;
-  padding-inline: 24px;
+  padding-inline: --spacing(4);
+
+  @media (width >= theme(--breakpoint-sm)) {
+    padding-inline: --spacing(6);
+  }
+}
+
+/* Hero atmosphere — the one place the austere system allows color to bloom.
+   Kept in CSS so the gradients derive from the brand color tokens above. */
+@layer components {
+  .hero-glow-violet,
+  .hero-glow-cyan {
+    position: absolute;
+    border-radius: 50%;
+    translate: -50% 0;
+  }
+
+  .hero-glow-violet {
+    left: 50%;
+    top: -10%;
+    width: 51.25rem;
+    height: 32.5rem;
+    filter: blur(110px);
+    background: radial-gradient(
+      closest-side,
+      color-mix(in srgb, var(--color-violet) 32%, transparent),
+      color-mix(in srgb, var(--color-violet-deep) 10%, transparent),
+      transparent
+    );
+  }
+
+  .hero-glow-cyan {
+    left: 18%;
+    top: 24%;
+    width: 26.25rem;
+    height: 17.5rem;
+    filter: blur(100px);
+    background: radial-gradient(
+      closest-side,
+      color-mix(in srgb, var(--color-cyan) 16%, transparent),
+      transparent
+    );
+  }
+
+  .hero-fade {
+    position: absolute;
+    inset: 0;
+    opacity: 0.5;
+    background: linear-gradient(
+      to bottom,
+      transparent,
+      var(--color-void-black) 78%
+    );
+  }
 }
 
 /* Load-in and ambient motion — all gated on prefers-reduced-motion below. */
@@ -184,15 +222,6 @@
   55%,
   100% {
     opacity: 0;
-  }
-}
-
-@keyframes drift {
-  from {
-    transform: translate(-50%, 0) rotate(0deg);
-  }
-  to {
-    transform: translate(-50%, -3%) rotate(4deg);
   }
 }
 
