@@ -1,10 +1,6 @@
 import Carbon.HIToolbox
 
-/// C entry point for the Carbon event handler. It can't capture context, so the owning
-/// `HotKeyCenter` rides along in `userData`. Carbon dispatches hot-key events on the main
-/// event target (the main thread), which is what makes `assumeIsolated` sound here. The raw
-/// `EventRef` is decoded to a plain `EventHotKeyID` value before crossing into actor code, so
-/// the pointer never leaves this shim.
+/// C entry point for the Carbon handler: the owning `HotKeyCenter` rides in `userData`, and since Carbon dispatches on the main thread the `EventRef` is decoded to a plain `EventHotKeyID` before `assumeIsolated` crosses into actor code.
 private func hotKeyCarbonEventHandler(
     _: EventHandlerCallRef?, event: EventRef?, userData: UnsafeMutableRawPointer?
 ) -> OSStatus {
@@ -24,9 +20,7 @@ private func hotKeyCarbonEventHandler(
     return MainActor.assumeIsolated { center.handle(hotKeyID) }
 }
 
-/// The Carbon layer and nothing else: turns `KeyShortcut`s into system-wide
-/// `RegisterEventHotKey` registrations and routes their events to plain closures.
-/// Which shortcuts exist and what they do is `HotKeyManager`'s business.
+/// The Carbon layer only: turns `KeyShortcut`s into system-wide `RegisterEventHotKey` registrations routed to closures (which shortcuts exist is `HotKeyManager`'s business).
 @MainActor
 final class HotKeyCenter {
     private struct Entry {
@@ -55,8 +49,7 @@ final class HotKeyCenter {
         }
     }
 
-    /// Registers (or re-registers) `shortcut` under `id`. Any previous registration for the
-    /// same id is dropped first, so changing a binding never leaks the old combo.
+    /// Registers (or re-registers) `shortcut` under `id`, dropping any previous registration first so changing a binding never leaks the old combo.
     func register(id: String, shortcut: KeyShortcut, onKeyDown: @escaping () -> Void) {
         unregister(id: id)
         nextCarbonID += 1

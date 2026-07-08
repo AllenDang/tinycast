@@ -74,9 +74,7 @@ private struct AboutLinkButton: View {
     }
 }
 
-/// Hosts auxiliary SwiftUI windows (About, Settings) for the accessory app. Each window is torn
-/// down on close so its SwiftUI tree — and any timers it drives — deallocates instead of lingering
-/// for the app's lifetime. Reopening rebuilds instantly (the views read live state).
+/// Hosts auxiliary SwiftUI windows (About, Settings), torn down on close so their SwiftUI trees deallocate instead of lingering, and rebuilt instantly on reopen from live state.
 @MainActor
 final class AuxWindowController: NSObject, NSWindowDelegate {
     private var windows: [String: NSWindow] = [:]
@@ -114,13 +112,7 @@ final class AuxWindowController: NSObject, NSWindowDelegate {
         NSApp.activate(ignoringOtherApps: true)
         window.makeKeyAndOrderFront(nil)
 
-        // A plain `NSWindow` can only become key while the app is active. When opened from the menu
-        // bar the app isn't active yet, and `NSApp.activate` is processed asynchronously — so the
-        // synchronous `makeKeyAndOrderFront` above can land *before* the app is active, leaving the
-        // window visible but not key. The first click then just makes the window key (NSTextField
-        // doesn't accept first-mouse) instead of focusing the control under it, which is why the
-        // hotkey recorder's key capture didn't arm on the first click. Re-asserting key on the next
-        // runloop, after activation has taken effect, makes the window truly key up front.
+        // A plain `NSWindow` only becomes key while the app is active, but `NSApp.activate` from the menu bar is async, so the synchronous `makeKeyAndOrderFront` above can land first; re-asserting key on the next runloop makes the window truly key up front.
         DispatchQueue.main.async {
             window.makeKeyAndOrderFront(nil)
         }

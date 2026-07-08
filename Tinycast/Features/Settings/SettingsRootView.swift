@@ -44,11 +44,7 @@ struct SettingsRootView: View {
         HStack(spacing: 0) {
             sidebar
 
-            // A plain conditional swap — not a `TabView`. macOS's TabView is backed by `NSTabView`,
-            // which re-hosts each tab's view on selection; that re-hosting is the visible flicker and
-            // it also tears down the hotkey `Recorder`'s window membership mid-interaction (so the
-            // first recording attempt fails). Switching content this way keeps each pane's hosting
-            // view stable, fixing both.
+            // A plain conditional swap, not a `TabView`: `NSTabView` re-hosts each tab on selection, which flickers and tears down the hotkey recorder's window membership mid-interaction — swapping this way keeps each pane's hosting view stable.
             Group {
                 switch tab {
                 case .general: GeneralSettingsView()
@@ -58,9 +54,7 @@ struct SettingsRootView: View {
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
-            // Only the *background* bleeds to every window edge (under the titlebar, down to the
-            // bottom corners). The pane content keeps the safe area, so it lays out below the
-            // transparent titlebar automatically — no manual titlebar spacer, no exposed dark bar.
+            // Only the background bleeds to every window edge; the pane content keeps the safe area, so it lays out below the transparent titlebar with no manual spacer.
             .background(
                 VisualEffectView(material: .contentBackground, blending: .behindWindow)
                     .ignoresSafeArea()
@@ -89,10 +83,7 @@ struct SettingsRootView: View {
         .padding(.horizontal, Theme.Spacing.md)
         .frame(width: Theme.Size.settingsSidebar)
         .frame(maxHeight: .infinity)
-        // Bleed the sidebar material to every edge (up under the traffic lights, down to the bottom
-        // corners) so it reads as one continuous surface behind the safe-area content. The trailing
-        // hairline lives in the same edge-to-edge background — a plain `Divider` in the HStack would
-        // stop at the safe area, leaving the titlebar band without a seam.
+        // Bleed the sidebar material to every edge so it reads as one continuous surface, with the trailing hairline in the same background since a plain `Divider` would stop at the safe area.
         .background(
             ZStack(alignment: .trailing) {
                 VisualEffectView(material: .sidebar, blending: .behindWindow)

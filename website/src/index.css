@@ -62,8 +62,7 @@
   --text-heading--line-height: 1.15;
   --text-heading--font-weight: 500;
 
-  /* Hero display — sized and weighted like Raycast's hero (large, semibold,
-     near-neutral tracking). Weight and leading ride along with the class. */
+  /* Hero display: large, semibold, near-neutral tracking. */
   --text-display: clamp(2.75rem, 2.1rem + 3.4vw, 4rem); /* 44→64px — hero h1 */
   --text-display--line-height: 1.06;
   --text-display--letter-spacing: -0.01em;

@@ -1,7 +1,6 @@
 import Foundation
 
-/// Persists the user's favorite apps as an ordered list of keys (bundle id, or file path when an
-/// app has no bundle id). Favorites pin to the top of the launcher when the search is empty.
+/// Persists favorite apps as an ordered list of keys (bundle id, or file path when none), pinned to the top of the launcher when the search is empty.
 @MainActor
 final class FavoritesStore: ObservableObject {
     private let defaults = UserDefaults.standard

@@ -2,11 +2,7 @@ import AppKit
 import Carbon.HIToolbox
 import SwiftUI
 
-/// Raycast-style shortcut recorder. Deliberately *not* a focusable control: which recorder is
-/// active is just `HotKeyManager.recordingAction`, so clicking any recorder — including while
-/// another one is recording — is a plain state flip with no first-responder handoff (the source
-/// of the old package's multi-click glitch). Keystrokes are captured by a local event monitor
-/// owned by `CaptureSession` while this recorder is the active one.
+/// Shortcut recorder that's deliberately *not* a focusable control: the active recorder is just `HotKeyManager.recordingAction`, so clicking one is a plain state flip with no first-responder handoff, and `CaptureSession` captures keystrokes via a local monitor while it's active.
 struct ShortcutRecorder: View {
     let action: HotKeyAction
 
@@ -106,9 +102,7 @@ struct ShortcutRecorder: View {
     }
 }
 
-/// Owns the local event monitors for the one active recording. Created per recorder but only
-/// live between `start()` and `stop()`; everything runs on the main actor (local NSEvent
-/// monitors deliver on the main thread).
+/// Owns the local event monitors for the one active recording, live only between `start()` and `stop()` and entirely on the main actor.
 @MainActor
 private final class CaptureSession: ObservableObject {
     /// Modifiers currently held, for the live "⌃⌥…" preview while recording.
@@ -124,28 +118,33 @@ private final class CaptureSession: ObservableObject {
         stop()
         heldModifiers = NSEvent.modifierFlags.intersection([.command, .option, .control, .shift])
 
-        // The handlers below run on the main thread (local monitors deliver where the event
-        // is dispatched), but AppKit's API predates actor annotations — hence assumeIsolated.
-        // Only Sendable pieces of the event (key code, flags) cross into the isolated closure.
-        if let monitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown, handler: {
-            [weak self, weak hotKeys] event in
-            let keyCode = Int(event.keyCode)
-            let flags = event.modifierFlags
-            MainActor.assumeIsolated {
-                guard let self, let hotKeys else { return }
-                self.handleKeyDown(keyCode: keyCode, flags: flags, action: action, hotKeys: hotKeys)
-            }
-            return nil  // always consume: no beeps, no leaking keys to the window
-        }) {
+        // The handlers run on the main thread but AppKit predates actor annotations, hence assumeIsolated; only Sendable event pieces (key code, flags) cross in.
+        if let monitor = NSEvent.addLocalMonitorForEvents(
+            matching: .keyDown,
+            handler: {
+                [weak self, weak hotKeys] event in
+                let keyCode = Int(event.keyCode)
+                let flags = event.modifierFlags
+                MainActor.assumeIsolated {
+                    guard let self, let hotKeys else { return }
+                    self.handleKeyDown(
+                        keyCode: keyCode, flags: flags, action: action, hotKeys: hotKeys)
+                }
+                return nil  // always consume: no beeps, no leaking keys to the window
+            })
+        {
             monitors.append(monitor)
         }
 
-        if let monitor = NSEvent.addLocalMonitorForEvents(matching: .flagsChanged, handler: {
-            [weak self] event in
-            let flags = event.modifierFlags.intersection([.command, .option, .control, .shift])
-            MainActor.assumeIsolated { self?.heldModifiers = flags }
-            return event
-        }) {
+        if let monitor = NSEvent.addLocalMonitorForEvents(
+            matching: .flagsChanged,
+            handler: {
+                [weak self] event in
+                let flags = event.modifierFlags.intersection([.command, .option, .control, .shift])
+                MainActor.assumeIsolated { self?.heldModifiers = flags }
+                return event
+            })
+        {
             monitors.append(monitor)
         }
 
@@ -192,7 +191,7 @@ private final class CaptureSession: ObservableObject {
             hotKeys.recordingAction = nil
             return
         }
-        // Plain Delete clears the existing binding (matches Raycast and the old recorder).
+        // Plain Delete clears the existing binding.
         if bareKey, keyCode == kVK_Delete || keyCode == kVK_ForwardDelete {
             hotKeys.setShortcut(nil, for: action)
             hotKeys.recordingAction = nil

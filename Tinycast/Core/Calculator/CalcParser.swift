@@ -4,8 +4,7 @@ enum CalcToken: Equatable, Sendable {
     case number(Double)
     /// Radix-prefixed integer literal (0xff / 0b1010 / 0o777), kept exact for base conversion.
     case intLiteral(UInt64, radix: Int)
-    /// Lowercased word: function, constant, unit, or connector. `²`/`³` fold to "2"/"3" so `m²`
-    /// and `m2` are the same ident; `°` is kept (`°c`).
+    /// Lowercased word (function, constant, unit, or connector); `²`/`³` fold to "2"/"3" so `m²` and `m2` match, while `°` is kept.
     case ident(String)
     case op(Character)  // + - * / ^ ! % ( )
     case arrow  // -> or →
@@ -114,8 +113,7 @@ enum CalcTokenizer {
     }
 }
 
-/// Precedence-climbing evaluator over the token stream — evaluates while parsing, no AST.
-/// Returns nil for anything malformed or non-finite; the caller shows no card.
+/// Precedence-climbing evaluator over the token stream (evaluates while parsing, no AST), returning nil for anything malformed or non-finite.
 enum CalcParser {
     static func evaluate(_ tokens: [CalcToken]) -> Double? {
         var parser = Parser(tokens: tokens)
@@ -186,8 +184,14 @@ private struct Parser {
         let result: Double
         switch op {
         // `450 + 20%` reads as a relative change: 450 * 1.2. With a plain rhs it's ordinary math.
-        case "+": result = rhs.isPercent ? lhs.effective * (1 + rhs.value / 100) : lhs.effective + rhs.effective
-        case "-": result = rhs.isPercent ? lhs.effective * (1 - rhs.value / 100) : lhs.effective - rhs.effective
+        case "+":
+            result =
+                rhs.isPercent
+                ? lhs.effective * (1 + rhs.value / 100) : lhs.effective + rhs.effective
+        case "-":
+            result =
+                rhs.isPercent
+                ? lhs.effective * (1 - rhs.value / 100) : lhs.effective - rhs.effective
         case "*": result = lhs.effective * rhs.effective
         case "/": result = lhs.effective / rhs.effective
         case "^": result = pow(lhs.effective, rhs.effective)

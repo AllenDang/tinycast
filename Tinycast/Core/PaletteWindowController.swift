@@ -44,11 +44,7 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
         hide(restoreFocus: false)
     }
 
-    /// Re-bump focusToken once the panel has *actually* become key. Activating an accessory app
-    /// from a global hotkey is asynchronous — `NSApp.activate` + `makeKeyAndOrderFront` in `show()`
-    /// can return before AppKit finishes handing the window key status, so setting @FocusState right
-    /// after those calls can lose the race and never take. This notification is the one point we
-    /// know for certain the window is key, so refocusing here always sticks.
+    /// Re-bump focusToken once the panel has *actually* become key, since activating an accessory app from a hotkey is async and refocusing right after `show()` can lose the race.
     func windowDidBecomeKey(_ notification: Notification) {
         core.palette.focusToken = UUID()
     }
@@ -69,9 +65,7 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
             .environmentObject(core.hotKeys)
         let panel = PalettePanel(rootView: root)
         panel.delegate = self
-        // Backspace in an already-empty search backs out of a sub-screen (clipboard / calculator
-        // history) to a fresh root launcher, Raycast-style. `prepare` clears query/selection and
-        // bumps focusToken so the field re-focuses.
+        // Backspace in an already-empty search backs out of a sub-screen to a fresh root launcher; `prepare` clears state and re-focuses the field.
         panel.onBareBackspace = { [weak self] in
             guard let vm = self?.core.palette, vm.mode != .launcher, vm.query.isEmpty else {
                 return false

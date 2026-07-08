@@ -1,7 +1,6 @@
 import SwiftUI
 
-/// Central design tokens for the palette UI. Spacing, sizing, radii, typography and colors live
-/// here so the look stays consistent and visual tweaks happen in one place.
+/// Central design tokens for the palette UI, so visual tweaks happen in one place.
 enum Theme {
     enum Spacing {
         static let xs: CGFloat = 4
@@ -36,7 +35,7 @@ enum Theme {
         static let settingsRowIcon: CGFloat = 20
     }
 
-    /// System text styles (not hardcoded point sizes) so the UI honors Dynamic Type and matches
+    /// System text styles (not hardcoded sizes) so the UI honors Dynamic Type.
     enum Typography {
         static let searchField = Font.system(size: 20, weight: .regular)
         static let headerIcon = Font.system(size: 18, weight: .medium)
@@ -51,24 +50,19 @@ enum Theme {
     }
 
     enum Colors {
-        /// Raycast-style selection: a soft, neutral translucent fill (not a saturated accent
-        /// block). In the always-dark palette this reads as a gentle lighter row. The same token
-        /// is shared by the launcher and clipboard so the two lists look identical.
+        /// Selection fill: a soft neutral translucent layer shared by launcher and clipboard so both lists look identical.
         static let selection = Color.primary.opacity(0.12)
         /// Mouse hover — a fainter layer that follows the cursor, visually distinct from selection.
         static let rowHover = Color.primary.opacity(0.06)
         static let menuHover = Color.primary.opacity(0.10)
-        /// Settings grouped "card": a faint raised surface with a hairline border. The border color
-        /// doubles as the inset divider between rows in a card.
+        /// Settings grouped "card": a faint raised surface whose hairline border doubles as the inset row divider.
         static let cardFill = Color.primary.opacity(0.04)
         static let cardStroke = Color.primary.opacity(0.08)
     }
 }
 
 extension View {
-    /// A floating Tahoe Liquid Glass control surface (the action pill + menu button). The glass
-    /// sits over the app list, so `.interactive()` gives the native lensing/press response and
-    /// `.tint(.clear)` keeps the material untinted on macOS.
+    /// A floating Liquid Glass control surface (action pill + menu button), interactive for native lensing and untinted via `.tint(.clear)`.
     func frosted(in shape: some Shape) -> some View {
         glassEffect(.regular.interactive(), in: shape)
             .tint(.clear)

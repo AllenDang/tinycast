@@ -1,8 +1,6 @@
 import SwiftUI
 
-/// Raycast-style menu, reused by the bottom-left app menu and the row actions menu. Rendered as an
-/// in-window overlay anchored to a bottom corner (not a system popover), so it stays clipped inside
-/// the palette. The surface is stock Tahoe Liquid Glass so it reads like a native macOS menu.
+/// In-window overlay menu (not a system popover), anchored to a bottom corner so it stays clipped inside the palette, with a stock Liquid Glass surface.
 struct PopoverMenu<Content: View>: View {
     var header: String? = nil
     @ViewBuilder var content: Content

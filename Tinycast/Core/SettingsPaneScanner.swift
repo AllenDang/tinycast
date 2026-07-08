@@ -1,8 +1,6 @@
 import Foundation
 
-/// Enumerates the System Settings panes (the `.appex` bundles that back each pane on
-/// macOS 13+) and turns them into launchable `AppEntry` values. Runs inside `AppIndex.scan()`
-/// off the main actor.
+/// Enumerates the System Settings panes (the `.appex` bundles behind each) into launchable `AppEntry` values, off the main actor inside `AppIndex.scan()`.
 enum SettingsPaneScanner {
     private static let extensionsDir = URL(
         fileURLWithPath: "/System/Library/ExtensionKit/Extensions")
@@ -35,8 +33,9 @@ enum SettingsPaneScanner {
                 let name = displayName(appexURL: url, info: info, bundleID: bundleID)
             else { continue }
             result.append(
-                AppEntry(id: url.path, name: name, url: url, bundleID: bundleID,
-                         kind: .systemSettings))
+                AppEntry(
+                    id: url.path, name: name, url: url, bundleID: bundleID,
+                    kind: .systemSettings))
         }
         return result.sorted {
             $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending
@@ -50,8 +49,7 @@ enum SettingsPaneScanner {
         return ns as? String == settingsExtensionPoint
     }
 
-    /// Override table → localized loctable name → Info.plist names. Returns `nil` (skip the
-    /// pane) when nothing usable is found.
+    /// Override table → localized loctable name → Info.plist names, returning `nil` (skip the pane) when nothing usable is found.
     private static func displayName(
         appexURL: URL, info: [String: Any], bundleID: String
     ) -> String? {
@@ -60,8 +58,7 @@ enum SettingsPaneScanner {
         return (info["CFBundleDisplayName"] as? String) ?? (info["CFBundleName"] as? String)
     }
 
-    /// Localized `CFBundleDisplayName` from `Contents/Resources/InfoPlist.loctable` — a plist
-    /// dictionary keyed by locale. Tries the user's preferred languages, then English.
+    /// Localized `CFBundleDisplayName` from `InfoPlist.loctable` (keyed by locale), trying the user's preferred languages then English.
     private static func loctableName(appexURL: URL) -> String? {
         let url = appexURL.appendingPathComponent("Contents/Resources/InfoPlist.loctable")
         guard let table = plist(at: url) else { return nil }

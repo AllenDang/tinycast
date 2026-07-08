@@ -72,9 +72,7 @@ final class AppCore: ObservableObject {
 
     func start() {
         NSApp.setActivationPolicy(.accessory)
-        // Tinycast is always dark — the Liquid Glass palette is tuned for a deep, Raycast-style
-        // dark surface, and forcing the appearance keeps the material from rendering washed-out
-        // when the system is in Light mode.
+        // Force dark: the Liquid Glass material is tuned for a deep dark surface and renders washed-out in Light mode.
         NSApp.appearance = NSAppearance(named: .darkAqua)
 
         clipboardStore.maxAge = settings.clipboardRetention.maxAge

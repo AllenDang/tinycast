@@ -78,8 +78,7 @@ export function Nav() {
             </button>
           </div>
 
-          {/* Mobile menu — the pill expands downward, Raycast-style. Always
-              mounted so the drawer can animate open and closed. */}
+          {/* Mobile menu, always mounted so the drawer can animate open and closed. */}
           <div
             id="mobile-nav"
             className="nav-drawer md:hidden"

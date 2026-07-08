@@ -1,6 +1,6 @@
 # Tinycast
 
-A tiny, fully native macOS launcher — the core of Raycast, without the bloat.
+A tiny, fully native macOS launcher — the essentials, without the bloat.
 
 <!-- Screenshot placeholder — drop the real image at docs/screenshot.png -->
 <p align="center">

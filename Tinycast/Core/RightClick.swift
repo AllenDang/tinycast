@@ -1,9 +1,6 @@
 import SwiftUI
 
-/// Right-click handler. SwiftUI's `.contextMenu` opens at the cursor; we want the actions popover
-/// anchored to a fixed point, so we capture the right-click ourselves and present separately.
-/// Used as an `.overlay` whose `hitTest` only claims right-mouse events — left-clicks (launch) pass
-/// straight through to the SwiftUI row beneath.
+/// Right-click handler used as an `.overlay` whose `hitTest` claims only right-mouse events (left-clicks pass through), so the actions popover can anchor to a fixed point instead of the cursor.
 struct RightClickCatcher: NSViewRepresentable {
     let action: () -> Void
 

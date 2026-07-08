@@ -53,11 +53,7 @@ struct ClipboardList: View {
                                 imageURL: store.imageURL(for: item)
                             )
                             .contentShape(Rectangle())
-                            // Single click selects *instantly* — the double-click-to-paste gesture
-                            // is `.simultaneousGesture`, so the single tap never waits on the
-                            // double-click timeout to disambiguate. Right-click uses the lightweight
-                            // catcher — not SwiftUI's `.contextMenu`, which stalls clicks for
-                            // seconds inside a LazyVStack on macOS.
+                            // Single click selects instantly (double-click-to-paste is a `.simultaneousGesture`, so the tap never waits on the double-click timeout); right-click uses the lightweight catcher, since `.contextMenu` stalls clicks for seconds in a LazyVStack.
                             .onTapGesture { onSelect(item) }
                             .simultaneousGesture(
                                 TapGesture(count: 2).onEnded {
@@ -82,8 +78,7 @@ struct ClipboardList: View {
     }
 }
 
-/// Coarse date buckets for grouping clipboard and calculator-history entries into sections,
-/// mirroring Raycast's Today / Yesterday / This Week / … grouping. Ordered newest-first by raw value.
+/// Coarse date buckets (Today / Yesterday / This Week / …) for sectioning clipboard and calculator-history entries, ordered newest-first by raw value.
 enum DateBucket: Int {
     case today, yesterday, thisWeek, thisMonth, earlier
 
@@ -112,8 +107,7 @@ enum DateBucket: Int {
     }
 }
 
-/// Actions popover for a clipboard entry — shown anchored bottom-right on right-click, mirroring the
-/// launcher's `AppActionsMenu`. Same stock Liquid Glass `PopoverMenu` surface.
+/// Actions popover for a clipboard entry, anchored bottom-right on right-click, mirroring the launcher's `AppActionsMenu`.
 struct ClipboardActionsMenu: View {
     let item: ClipboardItem
     let dismiss: () -> Void
@@ -170,8 +164,7 @@ private struct ClipboardRow: View {
     let item: ClipboardItem
     let selected: Bool
     let imageURL: URL?
-    /// Hover lives on the row itself so a mouse sweep repaints only the rows entering/leaving — it
-    /// never invalidates the parent list body. Mirrors the launcher's `AppRow`.
+    /// Hover lives on the row itself so a mouse sweep repaints only the rows entering/leaving, mirroring the launcher's `AppRow`.
     @State private var hovered = false
 
     /// Selection wins over hover when a row is both; otherwise hover shows its fainter layer.
@@ -243,10 +236,7 @@ private struct ClipboardRow: View {
     }
 }
 
-/// Renders a downsampled clipboard thumbnail, decoding misses off the main thread so the UI never
-/// stalls when the clipboard first appears. Cache hits resolve on the first task tick; misses show
-/// `placeholder` until the background decode completes. `content` styles the loaded image per site
-/// (row thumbnail vs. large preview).
+/// Renders a downsampled clipboard thumbnail, decoding misses off the main thread (cache hits resolve on the first tick, misses show `placeholder`); `content` styles the loaded image per site.
 private struct AsyncThumbnail<Content: View, Placeholder: View>: View {
     let url: URL?
     let maxPixel: CGFloat
@@ -330,10 +320,7 @@ struct ClipboardPreview: View {
     }
 }
 
-/// Raycast-style "Information" block under the preview: label/value rows split by hairlines.
-/// Everything that touches disk or walks the full text (dimensions, file size, character/word
-/// counts) is gathered off the main actor per selection, so clicking through huge entries never
-/// hitches the palette.
+/// The "Information" block under the preview (label/value rows split by hairlines); disk- or full-text-touching details are gathered off the main actor per selection so clicking huge entries never hitches.
 private struct ClipboardInfoSection: View {
     let item: ClipboardItem
     let imageURL: URL?
@@ -354,8 +341,7 @@ private struct ClipboardInfoSection: View {
         var id: String { label }
     }
 
-    /// "Today at 1:22:57 AM" — relative day name plus exact time. DateFormatter is expensive to
-    /// build, so it's shared; @MainActor because the view only reads it from body.
+    /// Relative day name plus exact time ("Today at 1:22:57 AM"); shared because `DateFormatter` is expensive to build.
     @MainActor private static let copiedFormatter: DateFormatter = {
         let formatter = DateFormatter()
         formatter.dateStyle = .medium
@@ -423,8 +409,7 @@ private struct ClipboardInfoSection: View {
         return rows
     }
 
-    /// Source app name + icon, resolved from the recorded bundle ID. Launch Services lookup is a
-    /// quick main-thread call and the icon comes from the shared `IconCache`, so no extra caching.
+    /// Source app name + icon from the recorded bundle ID; the Launch Services lookup is a quick main-thread call and the icon comes from the shared `IconCache`.
     private var source: (name: String, icon: NSImage)? {
         guard let bundleID = item.sourceBundleID,
             let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundleID)

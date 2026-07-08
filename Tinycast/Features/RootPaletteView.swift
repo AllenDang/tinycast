@@ -11,15 +11,12 @@ struct RootPaletteView: View {
     @FocusState private var searchFocused: Bool
     @State private var showActions = false
     @State private var showAppMenu = false
-    /// Bumped only when the selection should pull the scroll view with it — keyboard navigation and
-    /// list resets. Mouse selection (click / right-click) targets an already-visible row, so it never
-    /// bumps this and the list stays put.
+    /// Bumped only when the selection should pull the scroll view with it (keyboard nav, list resets); mouse selection targets a visible row, so it leaves this and the list put.
     @State private var scrollToken = UUID()
 
     private var isQueryEmpty: Bool { vm.query.trimmingCharacters(in: .whitespaces).isEmpty }
 
-    /// Ordered launcher results — the single source of truth for the list, selection and activation.
-    /// Empty query pins favorites to the top; otherwise plain ranked matches.
+    /// Ordered launcher results (the single source of truth for list, selection and activation): empty query pins favorites to the top, otherwise plain ranked matches.
     private var appResults: [AppEntry] {
         // Visibility filtering stays downstream of `matches` so its one-deep memo cache is
         // never keyed on hidden state; hidden favorites drop out here too.
@@ -31,9 +28,7 @@ struct RootPaletteView: View {
     private var clipResults: [ClipboardItem] { store.search(vm.query) }
     private var histResults: [CalcHistoryEntry] { calcHistory.search(vm.query) }
 
-    /// Inline calculator answer for the current query — live in the launcher *and* in the
-    /// Calculator History search (Raycast lets you do math right from history). When present it
-    /// occupies flat selection index 0 and every row access below shifts by `calcCount`.
+    /// Inline calculator answer for the current query, live in both the launcher and Calculator History search; when present it occupies flat selection index 0 so rows shift by `calcCount`.
     private var calcResult: CalcResult? {
         vm.mode != .clipboard ? CalcMemo.evaluate(vm.query) : nil
     }
@@ -51,8 +46,7 @@ struct RootPaletteView: View {
     private var selection: Int { resultCount == 0 ? 0 : min(max(vm.selection, 0), resultCount - 1) }
 
     var body: some View {
-        // Filter once per render for the active mode only; event handlers (rare) use the computed
-        // properties above. Avoids running the matcher/search several times for a single render.
+        // Filter once per render for the active mode only, so the matcher/search doesn't run several times per render (rare event handlers use the computed properties above).
         let apps = vm.mode == .launcher ? appResults : []
         let clips = vm.mode == .clipboard ? clipResults : []
         let hist = vm.mode == .calculatorHistory ? histResults : []
@@ -70,9 +64,7 @@ struct RootPaletteView: View {
         let selectedClip = clips.indices.contains(sel) ? clips[sel] : nil
         let selectedHist = hist.indices.contains(sel - offset) ? hist[sel - offset] : nil
 
-        // The results layer fills the whole panel; the search header and action bar float on top
-        // as translucent Liquid Glass bars (via safeAreaInset). The list scrolls *behind* them and
-        // stays faintly visible through the glass — the Raycast look, with no hard dividers.
+        // The results layer fills the whole panel; the header and action bar float over it as translucent Liquid Glass (via safeAreaInset) with the list scrolling faintly behind, no hard dividers.
         return content(
             apps: apps, clips: clips, hist: hist, calc: calc, selection: sel,
             favoriteCount: favoriteCount, showSections: showSections
@@ -169,8 +161,7 @@ struct RootPaletteView: View {
 
     private var header: some View {
         HStack(alignment: .center, spacing: Theme.Spacing.md) {
-            // Clipboard and Calculator History are sub-screens of the root search, so their header
-            // icon is a back chevron (Raycast style) instead of a mode glyph.
+            // Clipboard and Calculator History are sub-screens of the root search, so their header icon is a back chevron instead of a mode glyph.
             if vm.mode != .launcher {
                 Button(action: exitToLauncher) {
                     Image(systemName: "chevron.left")
@@ -371,8 +362,7 @@ struct RootPaletteView: View {
         }
     }
 
-    /// Pill label for the current selection. Reads the memoized `appResults`, so the extra
-    /// lookup during render is cheap.
+    /// Pill label for the current selection; reads the memoized `appResults`, so the extra render lookup is cheap.
     private var actionPillLabel: String {
         switch vm.mode {
         case .clipboard:
@@ -415,8 +405,7 @@ struct RootPaletteView: View {
         }
     }
 
-    /// Inset of the menu panels from the window's bottom corners. Kept just inside the panel's
-    /// rounded corner so the menu's own corner isn't clipped.
+    /// Inset of the menu panels from the window's bottom corners, kept just inside the rounded corner so the menu's own corner isn't clipped.
     private static let menuInset: CGFloat = 8
     private static let menuAnimation: Animation = .easeOut(duration: 0.14)
 

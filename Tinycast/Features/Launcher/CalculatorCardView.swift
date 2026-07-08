@@ -15,8 +15,7 @@ enum CalcMemo {
     }
 }
 
-/// The Raycast-style inline answer card pinned above the app results: expression → result,
-/// or a friendly message when a conversion is impossible. Selectable like a row; Enter copies.
+/// The inline answer card pinned above the app results (expression → result, or a friendly message on impossible conversion); selectable like a row, Enter copies.
 struct CalculatorCard: View {
     let result: CalcResult
     let selected: Bool

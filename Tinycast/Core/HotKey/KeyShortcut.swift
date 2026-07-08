@@ -1,11 +1,7 @@
 import AppKit
 import Carbon.HIToolbox
 
-/// A global keyboard shortcut: a hardware key plus modifier keys, stored in Carbon's encoding.
-///
-/// The Carbon representation (virtual key code + `cmdKey`-style modifier mask) is what
-/// `RegisterEventHotKey` consumes, and it is also the on-disk JSON shape the previously used
-/// KeyboardShortcuts package persisted — keeping it means existing users' bindings load unchanged.
+/// A global keyboard shortcut stored in Carbon's encoding (virtual key code + `cmdKey` mask), which is what `RegisterEventHotKey` consumes and also the legacy on-disk JSON shape, so existing bindings load unchanged.
 struct KeyShortcut: Hashable, Sendable {
     let carbonKeyCode: Int
     let carbonModifiers: Int
@@ -27,8 +23,7 @@ struct KeyShortcut: Hashable, Sendable {
         self.init(carbonKeyCode: keyCode, carbonModifiers: Self.carbonModifiers(from: flags))
     }
 
-    /// One string per keycap in canonical macOS order (⌃⌥⇧⌘), the key glyph last —
-    /// e.g. `["⌃", "⌥", "T"]`. Feeds the launcher rows and the settings recorder.
+    /// One string per keycap in canonical macOS order (⌃⌥⇧⌘) with the key glyph last, feeding the launcher rows and settings recorder.
     @MainActor var keycaps: [String] {
         Self.modifierSymbols(from: modifierFlags) + [keyGlyph]
     }
@@ -97,7 +92,8 @@ struct KeyShortcut: Hashable, Sendable {
         guard
             let source = TISCopyCurrentASCIICapableKeyboardLayoutInputSource()?
                 .takeRetainedValue(),
-            let layoutDataPointer = TISGetInputSourceProperty(source, kTISPropertyUnicodeKeyLayoutData)
+            let layoutDataPointer = TISGetInputSourceProperty(
+                source, kTISPropertyUnicodeKeyLayoutData)
         else { return nil }
 
         let layoutData = unsafeBitCast(layoutDataPointer, to: CFData.self)
@@ -147,8 +143,7 @@ enum HotKeyAction: Hashable, Sendable {
     case app(bundleID: String)
     case settingsPane(bundleID: String)
 
-    /// UserDefaults key holding the shortcut JSON. The `KeyboardShortcuts_` prefix is a fossil
-    /// of the package this replaced — kept verbatim so existing bindings need no migration.
+    /// UserDefaults key holding the shortcut JSON; the `KeyboardShortcuts_` prefix is a fossil of the replaced package, kept verbatim so existing bindings need no migration.
     var defaultsKey: String {
         switch self {
         case .togglePalette: "KeyboardShortcuts_togglePalette"

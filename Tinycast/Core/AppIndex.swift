@@ -21,8 +21,7 @@ struct AppEntry: Identifiable, Hashable, Sendable {
         }
     }
 
-    /// The global-hotkey action that opens this entry, or `nil` when it has no bundle ID
-    /// (nothing stable to key the binding on). Commands have no bundle ID, so no hotkeys.
+    /// The global-hotkey action that opens this entry, or `nil` when it has no bundle ID to key the binding on.
     var hotKeyAction: HotKeyAction? {
         guard let bundleID else { return nil }
         switch kind {
@@ -41,18 +40,10 @@ struct AppEntry: Identifiable, Hashable, Sendable {
     }
 }
 
-/// Caches app icons by file path so list rows don't re-hit `NSWorkspace` on every render.
-///
-/// `NSWorkspace` returns a multi-representation icon with reps up to 512/1024px, but we only ever draw
-/// it at ≤24pt — caching those raw is what spiked Settings' App-Hotkeys list to hundreds of MB. So we
-/// downsample each icon once to a small fixed bitmap and byte-bound the cache (system-evicted under
-/// pressure, like `ImageThumbnail`).
+/// Caches app icons by file path, downsampled to a small fixed bitmap and byte-bounded, so list rows don't re-hit `NSWorkspace` or balloon memory.
 @MainActor
 enum IconCache {
-    // Icons display at ≤24pt, so 48pt (2× for Retina) is plenty crisp. Keeping each icon this small is
-    // also what stops the launcher from ballooning: a `LazyVStack` scrolled to the bottom materializes
-    // every app row and pins its icon, so per-icon size sets the ceiling. At ~36KB the whole app set is
-    // a shared ~18MB (fits the cache with no eviction) instead of 500 distinct 256KB copies (~128MB).
+    // 48pt (2× Retina) is plenty for the ≤24pt draw size, and keeping each icon small caps launcher memory since a scrolled `LazyVStack` pins every row's icon.
     private static let displayPixel: CGFloat = 48
 
     private static let cache: NSCache<NSString, NSImage> = {
@@ -69,8 +60,7 @@ enum IconCache {
         return icon
     }
 
-    /// Command "icons": an SF Symbol centered on a rounded tile, rendered once into the same small
-    /// bitmap shape as app icons so `AppRow`/`ShortcutRow` treat every entry identically.
+    /// Command "icons": an SF Symbol on a rounded tile, in the same bitmap shape as app icons so rows treat every entry identically.
     static func symbolIcon(named name: String) -> NSImage {
         let key = "symbol:" + name as NSString
         if let cached = cache.object(forKey: key) { return cached }
@@ -100,8 +90,7 @@ enum IconCache {
         return icon
     }
 
-    /// Rasterize the multi-rep workspace icon into one `displayPixel`-square bitmap so the cache holds
-    /// ~64–256KB per app instead of multi-MB. Returns the image and its decoded byte cost.
+    /// Rasterize the multi-rep workspace icon into one `displayPixel`-square bitmap, returning it and its decoded byte cost.
     private static func downsampled(_ source: NSImage) -> (NSImage, Int) {
         let scale = NSScreen.main?.backingScaleFactor ?? 2
         let pixels = Int(displayPixel * scale)
@@ -113,7 +102,9 @@ enum IconCache {
                 bytesPerRow: 0, bitsPerPixel: 0)
         else { return (source, fallbackCost) }
         rep.size = NSSize(width: displayPixel, height: displayPixel)
-        guard let ctx = NSGraphicsContext(bitmapImageRep: rep) else { return (source, fallbackCost) }
+        guard let ctx = NSGraphicsContext(bitmapImageRep: rep) else {
+            return (source, fallbackCost)
+        }
 
         NSGraphicsContext.saveGraphicsState()
         NSGraphicsContext.current = ctx
@@ -131,8 +122,7 @@ enum IconCache {
 final class AppIndex: ObservableObject {
     @Published private(set) var apps: [AppEntry] = []
 
-    /// One-entry memo so repeated renders for the same query (e.g. while hovering moves the
-    /// selection) reuse the ranking instead of re-running the fuzzy match every frame.
+    /// One-entry memo so repeated renders for the same query reuse the ranking instead of re-matching every frame.
     private var matchCache: (query: String, result: [AppEntry])?
 
     func refresh() async {
@@ -175,10 +165,7 @@ final class AppIndex: ObservableObject {
                         kind: .application))
             }
         }
-        // Apps (sorted by name), then Settings panes, then Commands (each sorted by name). The
-        // launcher's sectioned list relies on this invariant: with an empty query the results are
-        // contiguous runs of favorites/apps/panes/commands, so the flat selection index maps 1:1
-        // onto sectioned rows.
+        // Apps, then Settings panes, then Commands — the sectioned launcher relies on this order so its flat selection index maps 1:1 onto rows.
         let apps = result.sorted {
             $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending
         }
@@ -213,8 +200,7 @@ final class AppIndex: ObservableObject {
 }
 
 enum FuzzyMatch {
-    /// Tiered relevance score; higher is better. Returns nil when the query doesn't match at all.
-    /// Tiers are spaced far enough apart that a better kind always beats a worse one.
+    /// Tiered relevance score (higher is better), or nil when the query doesn't match; tiers are spaced so a better kind always wins.
     static func score(query: String, candidate: String) -> Int? {
         let q = query.lowercased()
         let c = candidate.lowercased()
@@ -238,8 +224,7 @@ enum FuzzyMatch {
         return !before.isLetter && !before.isNumber
     }
 
-    /// Subsequence match with bonuses for consecutive hits and word boundaries.
-    /// Returns nil when `q` is not a subsequence of `c`. Always below the substring tier.
+    /// Subsequence match with bonuses for consecutive hits and word boundaries, or nil when `q` isn't a subsequence of `c`.
     private static func subsequenceScore(_ q: [Character], _ c: [Character]) -> Int? {
         var qi = 0
         var score = 0

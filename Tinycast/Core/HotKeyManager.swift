@@ -7,11 +7,7 @@ final class HotKeyManager: ObservableObject {
     var onTogglePalette: (() -> Void)?
     var onToggleClipboard: (() -> Void)?
 
-    /// The recorder currently capturing keystrokes, or `nil`. This single published value is
-    /// what makes the recorders glitch-free: "which field is recording" is plain app state, so
-    /// clicking another field is just a state flip — there is no first-responder handoff.
-    /// While any recorder is active every Carbon registration is paused, so the combo being
-    /// typed can't trigger the palette (Carbon consumes hotkeys before local monitors see them).
+    /// The recorder currently capturing keystrokes, or `nil`; keeping this as plain app state makes recorders glitch-free, and any active recorder pauses Carbon so the typed combo can't fire a hotkey.
     @Published var recordingAction: HotKeyAction? {
         didSet { center.isPaused = recordingAction != nil }
     }
@@ -39,8 +35,7 @@ final class HotKeyManager: ObservableObject {
     }
 
     func shortcut(for action: HotKeyAction) -> KeyShortcut? {
-        // The stored value is a JSON *string* (the replaced package's format). Anything else —
-        // e.g. the boolean sentinel old package versions could write — reads as unbound.
+        // The stored value is a JSON *string* (a legacy package format); anything else reads as unbound.
         guard
             let json = UserDefaults.standard.string(forKey: action.defaultsKey),
             let data = json.data(using: .utf8)
@@ -48,8 +43,7 @@ final class HotKeyManager: ObservableObject {
         return try? JSONDecoder().decode(KeyShortcut.self, from: data)
     }
 
-    /// Persists (or clears, when `nil`) the binding and swaps the live Carbon registration.
-    /// Publishing lets the launcher list and every recorder re-render immediately.
+    /// Persists (or clears, when `nil`) the binding, swaps the live Carbon registration, and publishes so the launcher and recorders re-render.
     func setShortcut(_ shortcut: KeyShortcut?, for action: HotKeyAction) {
         objectWillChange.send()
         if let shortcut,
@@ -76,8 +70,7 @@ final class HotKeyManager: ObservableObject {
         }
     }
 
-    /// The display name of whatever `shortcut` is already bound to (other than `action`
-    /// itself), or `nil` if it's free. Drives the recorder's "Used by …" message.
+    /// The display name of whatever else `shortcut` is bound to (or `nil` if free), driving the recorder's "Used by …" message.
     func conflictOwner(of shortcut: KeyShortcut, excluding action: HotKeyAction) -> String? {
         var candidates: [HotKeyAction] = [.togglePalette, .toggleClipboard]
         candidates += boundBundleIDs.map { .app(bundleID: $0) }

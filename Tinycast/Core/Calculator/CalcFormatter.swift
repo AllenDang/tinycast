@@ -1,8 +1,6 @@
 import Foundation
 
-/// Hand-rolled, locale-independent number formatting: `.` decimal point, `,` thousands grouping.
-/// Deterministic on purpose — the standalone test harness asserts exact strings, and the palette
-/// always renders the same answer regardless of system locale.
+/// Hand-rolled, locale-independent number formatting (`.` decimal, `,` grouping), deterministic so the test harness can assert exact strings and the palette renders identically across locales.
 enum CalcFormatter {
     /// Human-facing: ≤10 significant digits, trailing zeros trimmed, thousands separators.
     static func display(_ value: Double) -> String {

@@ -16,29 +16,20 @@ struct CalcResult: Equatable, Sendable {
     let payload: Payload
 }
 
-/// Entry point: turns a raw launcher query into a calculator answer, or nil when the query is not
-/// calculator input at all (app names, bare numbers, half-typed expressions). The pipeline is
-/// pre-filter → number-base conversion → unit conversion → arithmetic expression; every stage is
-/// pure and allocation-light so live per-keystroke evaluation stays well under a millisecond.
-///
-/// These files (Core/Calculator/*) are Foundation-only on purpose: `Tools/calc-test.swift`
-/// compiles them directly into a standalone test binary.
+/// Entry point turning a raw query into a calculator answer (or nil when it isn't calculator input), via a pure pre-filter → base → unit → arithmetic pipeline; kept Foundation-only so `Tools/calc-test.swift` compiles it standalone.
 enum CalcEngine {
     static func evaluate(_ raw: String) -> CalcResult? {
         let query = raw.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !query.isEmpty, query.count <= 256 else { return nil }
-        // Cheap reject before tokenizing: calculator input always carries a digit or a constant
-        // ("pi", "e"). App searches that slip through ("preview") still cost only a failed
-        // tokenize/parse — this filter just keeps the common case near-free.
-        guard query.contains(where: { $0.isASCII && $0.isNumber })
+        // Cheap reject before tokenizing: calculator input always carries a digit or a constant, keeping the common app-search case near-free.
+        guard
+            query.contains(where: { $0.isASCII && $0.isNumber })
                 || query.lowercased().contains("e") || query.contains("π")
         else { return nil }
 
         guard let tokens = CalcTokenizer.tokenize(query), !tokens.isEmpty else { return nil }
 
-        // A lone literal or constant ("45", "3.14", "pi") is far more likely an app search than a
-        // calculation — no card. The exception is a radix literal ("0xff"), where echoing the
-        // decimal value is genuinely useful.
+        // A lone literal or constant is more likely an app search than a calculation, so no card — except a radix literal ("0xff"), where echoing the decimal is useful.
         if tokens.count == 1 {
             if case .intLiteral(let value, let radix) = tokens[0], radix != 10 {
                 let display = CalcFormatter.grouped(String(value))
@@ -112,7 +103,8 @@ enum CalcEngine {
         let sourceText = query.split(whereSeparator: \.isWhitespace).first.map(String.init) ?? query
         return CalcResult(
             expression: sourceText,
-            payload: .value(display: output, copyText: output.replacingOccurrences(of: ",", with: "")))
+            payload: .value(
+                display: output, copyText: output.replacingOccurrences(of: ",", with: "")))
     }
 
     /// Light cleanup of the typed expression for the card: collapse whitespace and use the pretty

@@ -1,9 +1,6 @@
 import Foundation
 
-/// Persists which launcher items and categories the user has hidden from the launcher list
-/// (managed from Settings → Shortcuts). Everything is visible by default; only exclusions are
-/// stored. Hiding affects the launcher list only — favorites keys and hotkey bindings persist
-/// and keep working while hidden.
+/// Persists which launcher items and categories the user has hidden (only exclusions are stored); hiding affects the launcher list only, leaving favorites and hotkey bindings intact.
 @MainActor
 final class VisibilityStore: ObservableObject {
     private let defaults = UserDefaults.standard

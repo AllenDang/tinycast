@@ -106,8 +106,7 @@ struct LauncherList: View {
     }
 }
 
-/// Section label above a group of rows. Shared by the launcher (Favorites/Applications) and the
-/// clipboard (Today/Yesterday/…) so both lists use one identical header + row layout.
+/// Section label above a group of rows, shared by the launcher and clipboard so both lists use one identical header + row layout.
 struct SectionHeader: View {
     let title: String
     var body: some View {
@@ -139,7 +138,7 @@ private struct AppRow: View {
         return .clear
     }
 
-    /// Raycast-style keycaps for this entry's hotkey, or `nil` if none is bound.
+    /// Keycaps for this entry's hotkey, or `nil` if none is bound.
     private var shortcutCaps: [String]? {
         guard let action = app.hotKeyAction,
             let shortcut = hotKeys.shortcut(for: action)
@@ -185,8 +184,7 @@ private struct AppRow: View {
     }
 }
 
-/// A single Raycast-style keycap (one modifier symbol or the key) shown next to an app with a
-/// bound hotkey.
+/// A single keycap (one modifier symbol or the key) shown next to an app with a bound hotkey.
 private struct KeyCap: View {
     let text: String
 
@@ -207,8 +205,7 @@ private struct KeyCap: View {
     }
 }
 
-/// Actions popover content for a launcher app — shown anchored at the bottom-right on right-click
-/// or from the Actions pill. Styled like Raycast's actions menu.
+/// Actions popover content for a launcher app, anchored at the bottom-right on right-click or from the Actions pill.
 struct AppActionsMenu: View {
     let app: AppEntry
     let dismiss: () -> Void

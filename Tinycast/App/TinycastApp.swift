@@ -3,9 +3,7 @@ import SwiftUI
 @main
 struct TinycastApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var delegate
-    // `@AppStorage` is the idiomatic driver for scene state persisted in UserDefaults. Unlike
-    // observing a shared `@Published` object from the `App`, it only republishes when the value
-    // actually changes — no scene ⇄ binding feedback loop. The Settings toggle writes the same key.
+    // `@AppStorage` republishes only when the value changes, avoiding a scene ⇄ binding feedback loop.
     @AppStorage(SettingsKey.showInMenuBar) private var showInMenuBar = true
 
     // Channel-aware: "Tinycast", "Tinycast Alpha", or "Tinycast Beta".

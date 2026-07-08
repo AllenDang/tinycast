@@ -16,9 +16,7 @@ enum UnitCategory: String, CaseIterable, Sendable {
     }
 }
 
-/// One unit as an affine map onto its category's base unit: `base = value * factor + offset`.
-/// `offset` is zero everywhere except temperature (base Kelvin), which is why conversion below is
-/// affine rather than a plain ratio — °C/°F/K come out right with no special-casing.
+/// One unit as an affine map onto its category's base unit (`base = value * factor + offset`); `offset` is nonzero only for temperature, so °C/°F/K convert with no special-casing.
 struct UnitDef: Equatable, Sendable {
     let symbol: String  // canonical display form: "mi", "°F", "GiB"
     let category: UnitCategory
@@ -39,13 +37,7 @@ enum CalcUnits {
         case mismatch(from: UnitDef, to: UnitDef)
     }
 
-    /// Detects `expr unit (to|in|->) unit` in the token stream. Returns nil when the query is not
-    /// a unit conversion at all; `.mismatch` only when both units are known but incompatible — the
-    /// one case that deserves a friendly error instead of silence.
-    ///
-    /// The connector must be the second-to-last token and the last token a known unit. Taking the
-    /// *last* qualifying position resolves "in" doubling as inches: in "10 in in cm" the first
-    /// "in" is the unit and the second the connector.
+    /// Detects `expr unit (to|in|->) unit` (connector second-to-last, known unit last), returning `.mismatch` only when both units are known but incompatible; matching the last position lets "in" double as inches.
     static func parseConversion(_ tokens: [CalcToken]) -> ConversionParse? {
         guard tokens.count >= 4, isConnector(tokens[tokens.count - 2]),
             case .ident(let toName) = tokens[tokens.count - 1],
@@ -78,10 +70,16 @@ enum CalcUnits {
         }
 
         // Length (base: meter)
-        add(UnitDef("mm", .length, 0.001), ["mm", "millimeter", "millimeters", "millimetre", "millimetres"])
-        add(UnitDef("cm", .length, 0.01), ["cm", "centimeter", "centimeters", "centimetre", "centimetres"])
+        add(
+            UnitDef("mm", .length, 0.001),
+            ["mm", "millimeter", "millimeters", "millimetre", "millimetres"])
+        add(
+            UnitDef("cm", .length, 0.01),
+            ["cm", "centimeter", "centimeters", "centimetre", "centimetres"])
         add(UnitDef("m", .length, 1), ["m", "meter", "meters", "metre", "metres"])
-        add(UnitDef("km", .length, 1000), ["km", "kilometer", "kilometers", "kilometre", "kilometres"])
+        add(
+            UnitDef("km", .length, 1000),
+            ["km", "kilometer", "kilometers", "kilometre", "kilometres"])
         add(UnitDef("in", .length, 0.0254), ["in", "inch", "inches"])
         add(UnitDef("ft", .length, 0.3048), ["ft", "foot", "feet"])
         add(UnitDef("yd", .length, 0.9144), ["yd", "yard", "yards"])
@@ -122,7 +120,9 @@ enum CalcUnits {
         add(UnitDef("ha", .area, 10000), ["ha", "hectare", "hectares"])
 
         // Volume (base: liter; US customary)
-        add(UnitDef("mL", .volume, 0.001), ["ml", "milliliter", "milliliters", "millilitre", "millilitres"])
+        add(
+            UnitDef("mL", .volume, 0.001),
+            ["ml", "milliliter", "milliliters", "millilitre", "millilitres"])
         add(UnitDef("L", .volume, 1), ["l", "liter", "liters", "litre", "litres"])
         add(UnitDef("cup", .volume, 0.2365882365), ["cup", "cups"])
         add(UnitDef("tbsp", .volume, 0.01478676478125), ["tbsp", "tablespoon", "tablespoons"])

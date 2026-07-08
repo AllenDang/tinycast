@@ -1,7 +1,6 @@
 import AppKit
 
-/// Tracks which apps are currently running so the launcher can show a running indicator.
-/// Updates live from NSWorkspace launch/terminate notifications.
+/// Tracks running apps for the launcher's running indicator, updating live from NSWorkspace launch/terminate notifications.
 @MainActor
 final class RunningAppsMonitor: ObservableObject {
     @Published private(set) var runningBundleIDs: Set<String> = []

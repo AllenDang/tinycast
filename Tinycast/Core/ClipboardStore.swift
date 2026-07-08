@@ -39,9 +39,7 @@ struct ClipboardItem: Identifiable, Hashable, Sendable {
     }
 }
 
-/// How long clipboard history is kept before entries are pruned. Raw value is the age in days,
-/// which is also what gets persisted to UserDefaults. `forever` is -1 (not 0) because an unset
-/// UserDefaults key reads as 0 and must keep falling through to the default.
+/// How long clipboard history is kept before pruning; raw value is the age in days persisted to UserDefaults, and `forever` is -1 so an unset key (0) falls through to the default.
 enum ClipboardRetention: Int, CaseIterable, Identifiable, Sendable {
     case day = 1
     case week = 7
@@ -70,10 +68,7 @@ enum ClipboardRetention: Int, CaseIterable, Identifiable, Sendable {
     }
 }
 
-/// SQLite-backed clipboard history: rows + FTS5 index in `clipboard.sqlite3`, image blobs on disk.
-/// The trigram tokenizer gives case-insensitive *substring* search over the full table, while
-/// `items` mirrors only the newest rows for browsing. If the database can't be opened the store
-/// degrades to session-only in-memory history.
+/// SQLite-backed clipboard history (rows + trigram FTS5 index in `clipboard.sqlite3`, image blobs on disk), degrading to session-only in-memory history if the database can't be opened.
 @MainActor
 final class ClipboardStore: ObservableObject {
     @Published private(set) var items: [ClipboardItem] = []
@@ -113,8 +108,7 @@ final class ClipboardStore: ObservableObject {
     private var deleteStaleStmt: OpaquePointer?
 
     init() {
-        // Stored under ~/Library/Caches/<bundle-id>, the same convention Raycast uses — clipboard
-        // history is regenerable, and the in-app "Clear History" button is the durable control.
+        // Stored under ~/Library/Caches/<bundle-id> since clipboard history is regenerable; "Clear History" is the durable control.
         let bundleID = Bundle.main.bundleIdentifier ?? "com.tinycast.app"
         let base = FileManager.default
             .urls(for: .cachesDirectory, in: .userDomainMask)[0]

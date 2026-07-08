@@ -3,7 +3,7 @@
 
 export const site = {
   name: "Tinycast",
-  tagline: "The core of Raycast, without the bloat.",
+  tagline: "The essentials, without the bloat.",
   repo: "https://github.com/abue-ammar/tinycast",
   version: "v0.1.0",
   platform: "macOS 26+",

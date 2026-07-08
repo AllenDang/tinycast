@@ -4,10 +4,7 @@ import SwiftUI
 
 /// Borderless floating panel that hosts the SwiftUI command palette.
 final class PalettePanel: NSPanel {
-    /// Called for a bare backspace before the event reaches the field editor; return true to
-    /// consume it. Needed for "backspace in an empty search backs out to the root launcher":
-    /// the focused field editor handles plain backspace itself (a no-op when the field is empty),
-    /// so SwiftUI `onKeyPress` handlers up the hierarchy never see it — unlike ⌘⌫ or the arrows.
+    /// Called for a bare backspace before it reaches the field editor (return true to consume); the field editor swallows plain backspace itself, so SwiftUI `onKeyPress` up the hierarchy never sees it.
     var onBareBackspace: (() -> Bool)?
 
     override func sendEvent(_ event: NSEvent) {

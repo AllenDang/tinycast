@@ -1,8 +1,6 @@
 import SwiftUI
 
-/// Full-width list of past calculations, mirroring `ClipboardList`'s structure (date-bucket
-/// sections, instant single-tap select, double-tap activate, right-click actions). Each row
-/// carries both sides of the calculation, so there's no preview pane.
+/// Full-width list of past calculations, mirroring `ClipboardList`'s structure; each row carries both sides of the calculation, so there's no preview pane.
 struct CalculatorHistoryList: View {
     let results: [CalcHistoryEntry]
     let selectedID: CalcHistoryEntry.ID?
@@ -34,8 +32,7 @@ struct CalculatorHistoryList: View {
         }
     }
 
-    /// Entries are newest-first, so grouping is a walk that emits a date header whenever the
-    /// bucket changes — same shape as the clipboard list. A live calculation pins above them.
+    /// Entries are newest-first, so grouping walks and emits a date header whenever the bucket changes (same as the clipboard list); a live calculation pins above them.
     private var rows: [Row] {
         var rows: [Row] = []
         if let calc { rows = [.header("Calculator"), .calc(calc)] }

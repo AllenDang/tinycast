@@ -1,27 +1,10 @@
 import AppKit
 import SwiftUI
 
-/// A thin, auto-hiding overlay scrollbar drawn entirely in SwiftUI, tuned to feel like Raycast's: a
-/// hairline thumb that appears while scrolling and fades out, plus a hover-reveal along the trailing
-/// edge that fades in a subtle rail and fattens the thumb so it can be grabbed and dragged.
-///
-/// It's a pure floating overlay — no layout changes — and never reintroduces the native `NSScroller`
-/// (whose overlay flashes on every panel re-show). Three independent interaction signals drive it;
-/// `visible` and `expanded` are *derived* from them so hover, scroll and drag never clobber each other.
-///
-/// The SwiftUI layer only *draws*; every pointer interaction (hover, thumb drag, wheel) lives in one
-/// AppKit view, `ScrollbarInteraction`. That split is deliberate, not incidental:
-/// - Dragging must scroll the backing `NSScrollView` directly. `ScrollPosition.scrollTo(y:)` is
-///   silently ignored on macOS once the user has scrolled manually (the position flips to
-///   "positioned by user"), which froze the thumb.
-/// - The thumb must not carry a SwiftUI gesture. One makes `NSHostingView.hitTest` claim that region,
-///   and the hosting view is an *ancestor* of the `NSScrollView` — so wheel events over the thumb
-///   bubbled up past the scroll view and died instead of scrolling.
+/// A thin auto-hiding SwiftUI overlay scrollbar (hairline thumb while scrolling plus a hover-reveal rail), with all pointer handling isolated in the AppKit `ScrollbarInteraction` view to sidestep SwiftUI/AppKit event-routing gaps.
 struct ThinScrollbar: ViewModifier {
     private struct Metrics: Equatable {
-        /// Raw `contentOffset.y` — equals the clip view's origin, so with `safeAreaInset` bars it is
-        /// `-insetTop` at rest and tops out at `content − viewport − insetTop`. Normalize with
-        /// `insetTop` before mapping to a track fraction, or the thumb never reaches the rail's end.
+        /// Raw `contentOffset.y`; with `safeAreaInset` bars it rests at `-insetTop`, so normalize by `insetTop` before mapping to a track fraction.
         var offset: CGFloat = 0
         var insetTop: CGFloat = 0
         var content: CGFloat = 0
@@ -58,8 +41,7 @@ struct ThinScrollbar: ViewModifier {
     func body(content: Content) -> some View {
         content
             .scrollIndicators(.hidden)  // drop the native scroller (and its flash) entirely
-            // Geometry drives the thumb's size/position; it changes on layout too, so it never
-            // touches visibility.
+            // Geometry drives the thumb's size/position, never its visibility.
             .onScrollGeometryChange(for: Metrics.self) { geo in
                 Metrics(
                     offset: geo.contentOffset.y,
@@ -70,19 +52,13 @@ struct ThinScrollbar: ViewModifier {
             } action: { _, new in
                 metrics = new
             }
-            // Scrolling reveals the thumb (not the rail) and re-hides a beat after it stops.
-            // A thumb drag scrolls the clip view directly (no user phase), so its handlers own
-            // visibility.
+            // Scrolling reveals the thumb (not the rail) and re-hides a beat after it stops; a thumb drag has no scroll phase, so its own handlers own visibility.
             .onScrollPhaseChange { _, phase in
                 guard !isDragging else { return }
                 phase == .idle ? scheduleScrollStop() : beganScrolling()
             }
             .overlay(alignment: .topTrailing) { bar }
-            // All pointer handling for the whole trailing strip, via one tracking view laid over
-            // everything. It hit-tests as transparent except over the visible thumb, so content
-            // clicks fall through; over the thumb it owns the drag and forwards wheel events to the
-            // scroll view. Because it sits *above* the thumb, moving onto the thumb still reads as
-            // "in zone" — so the rail never flickers the way a content-level SwiftUI hover did.
+            // One tracking view over the whole trailing strip owns all pointer handling: transparent except over the thumb, where it takes the drag and forwards wheel events, and never flickers the rail the way a content-level hover did.
             .overlay {
                 ScrollbarInteraction(
                     edgeWidth: hoverZone,
@@ -198,26 +174,13 @@ extension View {
         modifier(ThinScrollbar())
     }
 
-    /// Attach *inside* a `ScrollView` (on its content) to remove the native scrollers, so our
-    /// `thinScrollbar` is the only one shown. Scrolling via trackpad/wheel/keyboard is unaffected.
+    /// Attach *inside* a `ScrollView` (on its content) to remove the native scrollers so only our `thinScrollbar` shows.
     func hideNativeScrollers() -> some View {
         background(NativeScrollerHider().frame(width: 0, height: 0))
     }
 }
 
-/// Clears the backing `NSScrollView`'s scrollers. `.scrollIndicators(.hidden)` alone can't hide a
-/// *legacy* (always-on) scroller when the system setting is "Always show scroll bars", so we remove
-/// them on the AppKit view directly — only the widget goes; scrollability stays.
-///
-/// It also switches the scroller *style* to `.overlay`. A legacy scroller reserves a fixed strip of
-/// layout width on the trailing edge even after its widget is hidden; overlay scrollers float over the
-/// content and reserve zero width. Without this the content keeps an empty right-hand gutter.
-///
-/// macOS re-derives the preferred scroller style at runtime (unlock, appearance change, a mouse being
-/// plugged/unplugged) and posts `preferredScrollerStyleDidChangeNotification`; AppKit reacts by
-/// resetting every scroll view back to that system style — which re-adds the legacy scroller under our
-/// custom bar. We observe that notification and re-assert the overlay/hidden config, so the fix is
-/// event-driven rather than a one-shot that silently regresses.
+/// Forces the backing `NSScrollView` to a hidden `.overlay` scroller (removing the always-on legacy widget and its reserved gutter), re-asserting it on `preferredScrollerStyleDidChangeNotification` since macOS otherwise resets it.
 private struct NativeScrollerHider: NSViewRepresentable {
     func makeNSView(context: Context) -> NSView { HiderView() }
     func updateNSView(_ nsView: NSView, context: Context) {
@@ -249,8 +212,7 @@ private struct NativeScrollerHider: NSViewRepresentable {
                 forName: NSScroller.preferredScrollerStyleDidChangeNotification,
                 object: nil, queue: .main
             ) { [weak self] _ in
-                // AppKit resets this scroll view to the system style *on* this notification; re-assert
-                // ours on the next tick, after its own handler has run.
+                // Re-assert on the next tick, after AppKit's own handler has reset the style.
                 DispatchQueue.main.async { self?.applyOverlayStyle() }
             }
             styleChangeObserver = NotificationToken(token, center: .default)
@@ -269,8 +231,7 @@ private struct NativeScrollerHider: NSViewRepresentable {
                 DispatchQueue.main.async { [weak self] in self?.applyOverlayStyle() }
                 return
             }
-            // Idempotent: bail once the scroll view is already in the target state so re-runs (update,
-            // repeated notifications) are cheap and don't churn layout.
+            // Idempotent: bail once already in the target state so re-runs don't churn layout.
             guard
                 scrollView.scrollerStyle != .overlay
                     || scrollView.hasVerticalScroller
@@ -285,25 +246,7 @@ private struct NativeScrollerHider: NSViewRepresentable {
     }
 }
 
-/// The single AppKit view that owns every pointer interaction for the scrollbar. Laid over the whole
-/// scroll view (as a sibling of the backing `NSScrollView` inside the hosting view), it plays three
-/// roles that must live in one place to avoid the SwiftUI/AppKit event-routing gaps described on
-/// `ThinScrollbar`:
-///
-/// - **Hover**: an `NSTrackingArea` reports whether the pointer is within `edgeWidth` of the trailing
-///   edge. Because this view sits above the thumb, the cursor resting *on* the thumb still reads as
-///   "in zone" — flicker-free, unlike a content-level SwiftUI hover.
-/// - **Thumb drag & track click**: `hitTest` returns `self` inside the thumb's grab strip while the
-///   bar is visible, and over the whole trailing strip while the rail is expanded — so a click aimed
-///   at the scrollbar can never fall through and activate the row beneath. A track click jumps the
-///   thumb to the pointer (native "jump to spot") and continues as a drag. Scrolling is done on the
-///   backing `NSScrollView`'s clip view directly — the one channel that always works, unlike
-///   `ScrollPosition.scrollTo(y:)` after a manual scroll — and the legal offset range comes from
-///   `NSClipView.constrainBoundsRect`, which accounts for the content insets that `safeAreaInset`
-///   bars (palette header/footer) put on the scroll view. Raw `[0, content − viewport]` clamping is
-///   wrong there: the at-rest origin is `-topInset`, and the bottom inset's travel would be lost.
-/// - **Wheel**: owning those hit-tests means wheel events over the bar land here; they are forwarded
-///   to the scroll view (an AppKit sibling the responder chain would otherwise skip).
+/// The single AppKit view (a sibling of the backing `NSScrollView`) that owns hover tracking, thumb drag/track-click, and wheel forwarding, driving the clip view directly since SwiftUI's scroll APIs and responder chain don't reach it reliably.
 private struct ScrollbarInteraction: NSViewRepresentable {
     let edgeWidth: CGFloat
     let inset: CGFloat
@@ -362,9 +305,7 @@ private struct ScrollbarInteraction: NSViewRepresentable {
 
         // MARK: Hit testing
 
-        /// Opaque over the visible thumb's grab strip, and over the whole trailing strip while the
-        /// rail is expanded (so a click aimed at the scrollbar never activates the row beneath);
-        /// transparent everywhere else so content clicks and wheel events fall straight through.
+        /// Opaque over the thumb's grab strip (and the whole trailing strip while the rail is expanded), transparent elsewhere so content clicks and wheel events fall through.
         override func hitTest(_ point: NSPoint) -> NSView? {
             guard let superview else { return nil }
             let p = convert(point, from: superview)
@@ -373,8 +314,7 @@ private struct ScrollbarInteraction: NSViewRepresentable {
             return nil
         }
 
-        /// Full trailing-strip width (not just the drawn capsule) at the thumb's vertical span, so
-        /// the hairline thumb is comfortably grabbable — like the fattened native overlay knob.
+        /// Full trailing-strip width at the thumb's vertical span, so the hairline thumb is comfortably grabbable.
         private var grabRect: CGRect {
             guard thumbGrabbable else { return .null }
             return CGRect(
@@ -383,8 +323,7 @@ private struct ScrollbarInteraction: NSViewRepresentable {
 
         // MARK: Wheel routing
 
-        /// We only receive wheel events when the cursor is over the bar (see `hitTest`); hand them
-        /// to the scroll view, which the responder chain would otherwise bypass (it's a sibling).
+        /// Wheel events only reach us over the bar; hand them to the sibling scroll view the responder chain would otherwise bypass.
         override func scrollWheel(with event: NSEvent) {
             if let target = targetScrollView() {
                 target.scrollWheel(with: event)
@@ -398,8 +337,7 @@ private struct ScrollbarInteraction: NSViewRepresentable {
         override func mouseDown(with event: NSEvent) {
             guard let target = targetScrollView() else { return }
             let p = convert(event.locationInWindow, from: nil)
-            // Track click (outside the thumb's span): jump so the thumb centers on the pointer,
-            // *then* anchor — the click seamlessly continues as a drag of the jumped-to thumb.
+            // Track click outside the thumb's span jumps the thumb to center on the pointer, then continues as a drag.
             if !(thumbY...(thumbY + thumbHeight)).contains(p.y) {
                 jumpThumb(toPointerY: p.y, in: target)
             }
@@ -413,8 +351,7 @@ private struct ScrollbarInteraction: NSViewRepresentable {
             let travel = trackTravel
             guard maxOffset > minOffset, travel > 0 else { return }
             let p = convert(event.locationInWindow, from: nil)
-            // Map thumb travel (points along the track) back to content offset, anchored at the
-            // mouse-down state so clamped over-drags don't accumulate drift.
+            // Map thumb travel back to content offset, anchored at mouse-down so clamped over-drags don't drift.
             let offset =
                 dragStart.offset + (p.y - dragStart.pointerY) / travel * (maxOffset - minOffset)
             scroll(target, toOffset: min(maxOffset, max(minOffset, offset)))
@@ -439,10 +376,7 @@ private struct ScrollbarInteraction: NSViewRepresentable {
             scroll(target, toOffset: minOffset + fraction * (maxOffset - minOffset))
         }
 
-        /// The clip view's legal `bounds.origin.y` range, via AppKit's own constraint logic. This is
-        /// what makes the drag inset-correct: with `safeAreaInset` bars the at-rest origin is
-        /// `-topInset` and the max extends past `content − viewport` by the bottom inset — a raw
-        /// `[0, content − viewport]` clamp snaps content under the header and can't reach the end.
+        /// The clip view's legal `bounds.origin.y` range via AppKit's own constraint logic, which keeps the drag inset-correct where a raw `[0, content − viewport]` clamp isn't.
         private func offsetRange(of clip: NSClipView) -> (min: CGFloat, max: CGFloat) {
             var probe = clip.bounds
             probe.origin.y = -1_000_000_000
@@ -460,9 +394,7 @@ private struct ScrollbarInteraction: NSViewRepresentable {
             target.reflectScrolledClipView(clip)
         }
 
-        /// The `NSScrollView` backing the SwiftUI `ScrollView` this overlay covers. As an overlay we
-        /// are its sibling, not its descendant, so `enclosingScrollView` can't find it — walk up and
-        /// take the nearest scroll view in a surrounding subtree, cached weakly across events.
+        /// The backing `NSScrollView`, found by walking up to the nearest scroll view in a sibling subtree (since `enclosingScrollView` can't reach a sibling) and cached weakly.
         private func targetScrollView() -> NSScrollView? {
             if let scrollView, scrollView.window === window { return scrollView }
             var branch: NSView = self
@@ -492,9 +424,7 @@ private struct ScrollbarInteraction: NSViewRepresentable {
         override func updateTrackingAreas() {
             super.updateTrackingAreas()
             trackingAreas.forEach(removeTrackingArea)
-            // `.inVisibleRect` keeps the area pinned to the (resizing) bounds; the rect arg is
-            // ignored. `.activeAlways` so hover reveals the rail in non-key windows too (Settings/
-            // About behind another window), like the native overlay scroller.
+            // `.inVisibleRect` pins the area to the resizing bounds; `.activeAlways` so hover reveals the rail in non-key windows too.
             addTrackingArea(
                 NSTrackingArea(
                     rect: .zero,

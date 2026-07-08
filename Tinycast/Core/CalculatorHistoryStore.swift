@@ -8,10 +8,7 @@ struct CalcHistoryEntry: Identifiable, Codable, Hashable, Sendable {
     let createdAt: Date
 }
 
-/// Persists recent calculations as a JSON file — same shape as before (a small `@Published` array
-/// written back on every mutation) but on disk under `~/Library/Caches/<bundle-id>/`, alongside
-/// `ClipboardStore`'s sqlite db and image blobs, so `brew uninstall --zap` (which trashes that whole
-/// directory) removes it too. Capped, so the file stays tiny and search is a plain scan.
+/// Persists recent calculations as a capped JSON file under `~/Library/Caches/<bundle-id>/`, alongside `ClipboardStore`'s data so `brew uninstall --zap` removes it too.
 @MainActor
 final class CalculatorHistoryStore: ObservableObject {
     private static let cap = 200

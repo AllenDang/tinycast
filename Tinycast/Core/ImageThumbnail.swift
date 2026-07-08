@@ -1,31 +1,19 @@
 import AppKit
 import ImageIO
 
-/// Downsampled, memory-capped image loading for the clipboard UI.
-///
-/// Clipboard images on disk can be full-resolution screenshots. Decoding those at full size just to
-/// draw a 32pt row thumbnail wastes RAM and CPU, so we ask ImageIO for a thumbnail at the exact pixel
-/// size we need and cache the results in an `NSCache` (which the system evicts under memory pressure).
+/// Downsampled, memory-capped image loading for the clipboard UI: ImageIO decodes each on-disk image to exactly the pixel size needed and caches it in a system-evicted `NSCache`.
 enum ImageThumbnail {
-    /// `NSCache` is documented thread-safe ("you can add, remove, and query items in the cache from
-    /// different threads without having to lock the cache yourself") but is not annotated `Sendable`,
-    /// so shared-across-threads use — a decode on a detached task populating what the main actor
-    /// reads — needs the guarantee asserted once, here.
+    /// `NSCache` is thread-safe but not annotated `Sendable`, so cross-thread use (a detached decode populating what the main actor reads) needs the guarantee asserted once here.
     private final class ImageCache: NSCache<NSString, NSImage>, @unchecked Sendable {}
 
-    /// Small row thumbnails (≤ `rowThreshold` px on the longest edge). These are cheap to keep, so the
-    /// cache survives palette dismissals — reopening the clipboard list then draws instantly with no
-    /// decode flash. Bounded by *bytes* so it can't drift.
+    /// Small row thumbnails (≤ `rowThreshold` px), byte-bounded and kept warm across palette dismissals so re-opening draws instantly.
     private static let rowCache: ImageCache = {
         let cache = ImageCache()
         cache.totalCostLimit = 8 * 1024 * 1024
         return cache
     }()
 
-    /// Large previews (> `rowThreshold` px). A single full-screen screenshot preview decodes to a
-    /// multi-MB bitmap, so this is bounded by *bytes* — not object count, which was the leak: 80 huge
-    /// bitmaps were all "allowed" — and is purged the moment the palette closes (see `purgePreviews`).
-    /// Byte-bounding is what keeps browsing memory flat no matter how many items the user clicks.
+    /// Large previews (> `rowThreshold` px), byte-bounded (not object-count, which leaked) and purged on palette close so browsing memory stays flat.
     private static let previewCache: ImageCache = {
         let cache = ImageCache()
         cache.totalCostLimit = 48 * 1024 * 1024
@@ -43,23 +31,17 @@ enum ImageThumbnail {
         "\(url.path)#\(Int(maxPixel))" as NSString
     }
 
-    /// Frees the large preview bitmaps — called when the palette is dismissed so idle RAM drops back
-    /// near baseline. The row-thumbnail cache is intentionally left warm for an instant re-open.
+    /// Frees the large preview bitmaps on palette dismiss; row thumbnails stay warm for an instant re-open.
     static func purgePreviews() {
         previewCache.removeAllObjects()
     }
 
-    /// Cache-only lookup — never touches disk. Lets views render an already-decoded thumbnail on the
-    /// same frame (no flash) while reserving the disk decode for the async path below.
+    /// Cache-only lookup (never touches disk) so views render an already-decoded thumbnail on the same frame.
     static func cached(_ url: URL, maxPixel: CGFloat) -> NSImage? {
         pick(maxPixel).object(forKey: cacheKey(url, maxPixel))
     }
 
-    /// Decodes off the main thread, then returns the result read back from the (thread-safe) cache on
-    /// the caller. Decoding a full-res clipboard screenshot is expensive, so doing it inline in a view
-    /// body would stall the UI when the clipboard first appears; this keeps that work off the main
-    /// actor. The `NSImage` itself never crosses the actor boundary — the detached task only populates
-    /// the cache — so it stays clean under strict concurrency.
+    /// Decodes off the main thread and reads the result back from the thread-safe cache; the `NSImage` never crosses the actor boundary, keeping it clean under strict concurrency.
     static func loadAsync(_ url: URL, maxPixel: CGFloat) async -> NSImage? {
         if let cached = cached(url, maxPixel: maxPixel) { return cached }
         await Task.detached(priority: .userInitiated) {
@@ -68,8 +50,7 @@ enum ImageThumbnail {
         return cached(url, maxPixel: maxPixel)
     }
 
-    /// A thumbnail no larger than `maxPixel` on its longest edge. Cached per (path, size). Decodes
-    /// synchronously — call off the main thread (see `loadAsync`) for anything user-facing.
+    /// A thumbnail no larger than `maxPixel` on its longest edge, cached per (path, size); decodes synchronously, so call off the main thread for anything user-facing.
     static func load(_ url: URL, maxPixel: CGFloat) -> NSImage? {
         let cache = pick(maxPixel)
         let key = cacheKey(url, maxPixel)

@@ -15,16 +15,13 @@ enum Paster {
         }
     }
 
-    /// Put the item on the system pasteboard without pasting. The internal marker keeps our own
-    /// poller from re-capturing it, so the history is left unchanged.
+    /// Put the item on the pasteboard without pasting; the internal marker keeps our poller from re-capturing it.
     @MainActor
     static func copy(_ item: ClipboardItem, store: ClipboardStore) {
         write(item, store: store)
     }
 
-    /// Put a plain string on the system pasteboard *without* the internal marker: the clipboard
-    /// poller captures it, so a copied calculator answer shows up in clipboard history like any
-    /// other copy (Raycast behavior).
+    /// Put a plain string on the pasteboard *without* the internal marker, so a copied calculator answer flows into clipboard history like any other copy.
     @MainActor
     static func copyPlainText(_ text: String) {
         let pb = NSPasteboard.general
@@ -33,8 +30,7 @@ enum Paster {
         pb.setString(text, forType: .string)
     }
 
-    /// Paste into `app` *without* activating it, by delivering the ⌘V straight to that process.
-    /// This leaves Tinycast frontmost, so the palette can stay open with no focus flicker.
+    /// Paste into `app` *without* activating it (⌘V delivered straight to its process), leaving Tinycast frontmost so the palette stays open.
     @MainActor
     static func pasteInPlace(
         _ item: ClipboardItem, store: ClipboardStore, into app: NSRunningApplication?
@@ -66,8 +62,7 @@ enum Paster {
         pb.setData(Data(), forType: ClipboardManager.internalType)
     }
 
-    /// Synthesize ⌘V. When `pid` is given, the event is delivered to that process only (keeping the
-    /// current app frontmost); otherwise it goes through the system tap to whatever is frontmost.
+    /// Synthesize ⌘V — delivered to `pid` alone when given, otherwise through the system tap to whatever is frontmost.
     @MainActor
     private static func postCommandV(toPid pid: pid_t? = nil) {
         guard Permissions.ensureAccessibility() else { return }
