@@ -54,7 +54,7 @@ export function Hero() {
           className="rise mt-9 flex flex-wrap items-center justify-center gap-3"
           style={{ animationDelay: "240ms" }}
         >
-          <Button href="#install">
+          <Button href="#install" className="gap-1">
             <AppleLogo size={20} />
             Download for Mac
           </Button>
@@ -69,7 +69,7 @@ export function Hero() {
           </Button>
         </div>
 
-        <div className="rise mt-6" style={{ animationDelay: "300ms" }}>
+        <div className="rise mt-2" style={{ animationDelay: "300ms" }}>
           <MetaStrip />
         </div>
 

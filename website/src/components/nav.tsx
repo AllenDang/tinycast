@@ -42,7 +42,11 @@ export function Nav() {
               ))}
             </div>
 
-            <Button href="#install" size="sm" className="hidden md:inline-flex">
+            <Button
+              href="#install"
+              size="sm"
+              className="hidden md:inline-flex gap-1"
+            >
               <AppleLogo size={20} />
               Download
             </Button>
