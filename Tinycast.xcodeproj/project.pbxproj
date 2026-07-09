@@ -28,6 +28,7 @@
 		6F08764D6CC09E9B3FD1E05A /* RootPaletteView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0F50886DC766B9923C3875A5 /* RootPaletteView.swift */; };
 		72406E09AD9A33B56EA4923D /* CalcParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = 423CFE8AB90484D0309F24C0 /* CalcParser.swift */; };
 		72ACD144841BF1117CD4E705 /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7BC2DEA0A052116A92F9A539 /* Theme.swift */; };
+		75FE110AA8A1FC60C2B956AE /* ProgressiveEdgeBlur.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9884BE07C8B224D2F051A114 /* ProgressiveEdgeBlur.swift */; };
 		80F1A591DB0F5385F5C9A06C /* PopoverMenu.swift in Sources */ = {isa = PBXBuildFile; fileRef = 98B7211D27EDF764EC477A0F /* PopoverMenu.swift */; };
 		85BCD328F402C7E09461D87F /* ThinScrollbar.swift in Sources */ = {isa = PBXBuildFile; fileRef = A31288EC60144BD31C495FE2 /* ThinScrollbar.swift */; };
 		86D400D72735A8D0829029DE /* SettingsComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = D4777FBB3A4FBB2F95FDC250 /* SettingsComponents.swift */; };
@@ -89,6 +90,7 @@
 		825AC18CE5DAFBEDA0CF3209 /* VisibilityStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VisibilityStore.swift; sourceTree = "<group>"; };
 		849FF3D93960B75F341D867C /* ClipboardSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClipboardSettingsView.swift; sourceTree = "<group>"; };
 		93E9ACD504E016DFF6FE6C1B /* RightClick.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RightClick.swift; sourceTree = "<group>"; };
+		9884BE07C8B224D2F051A114 /* ProgressiveEdgeBlur.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProgressiveEdgeBlur.swift; sourceTree = "<group>"; };
 		98B7211D27EDF764EC477A0F /* PopoverMenu.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PopoverMenu.swift; sourceTree = "<group>"; };
 		99945F0952ADADBBEB9B8388 /* ImageThumbnail.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageThumbnail.swift; sourceTree = "<group>"; };
 		9C37CCD024267EB21876C7E9 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
@@ -143,6 +145,7 @@
 				A5447AEAD87BFE0E2D979B39 /* PaletteWindowController.swift */,
 				6185011A02366B30B48B5B6C /* Paster.swift */,
 				F31E3ACB6D2C26ECA485C3DB /* Permissions.swift */,
+				9884BE07C8B224D2F051A114 /* ProgressiveEdgeBlur.swift */,
 				93E9ACD504E016DFF6FE6C1B /* RightClick.swift */,
 				4B432D84D8F9C10521342199 /* RunningApps.swift */,
 				C722D73D270A3A6CED4023F7 /* SettingsPaneScanner.swift */,
@@ -370,6 +373,7 @@
 				32697AB3853D043A12888B96 /* Permissions.swift in Sources */,
 				2085C9433B7534044E0A8A7D /* PermissionsSettingsView.swift in Sources */,
 				80F1A591DB0F5385F5C9A06C /* PopoverMenu.swift in Sources */,
+				75FE110AA8A1FC60C2B956AE /* ProgressiveEdgeBlur.swift in Sources */,
 				5568D02AE095293A15A7F30D /* RightClick.swift in Sources */,
 				6F08764D6CC09E9B3FD1E05A /* RootPaletteView.swift in Sources */,
 				C7DD1345A6BFB1D9EB22FCEE /* RunningApps.swift in Sources */,

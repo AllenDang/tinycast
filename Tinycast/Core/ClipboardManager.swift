@@ -5,6 +5,10 @@ final class ClipboardManager {
     /// Marker we attach to the pasteboard when *we* write to it, so polling ignores our own pastes.
     static let internalType = NSPasteboard.PasteboardType("com.tinycast.internal")
 
+    /// Longest text we capture into history. Bigger copies are skipped outright — truncating
+    /// would make a paste from history silently drop the tail.
+    static let maxTextLength = 32_000
+
     private let store: ClipboardStore
     private let settings: AppSettings
     private var timer: Timer?
@@ -39,6 +43,7 @@ final class ClipboardManager {
         if let text = pb.string(forType: .string),
             !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
         {
+            guard text.count <= Self.maxTextLength else { return }
             store.addText(text, sourceBundleID: sourceBundleID)
             return
         }

@@ -64,7 +64,10 @@ struct RootPaletteView: View {
         let selectedClip = clips.indices.contains(sel) ? clips[sel] : nil
         let selectedHist = hist.indices.contains(sel - offset) ? hist[sel - offset] : nil
 
-        // The results layer fills the whole panel; the header and action bar float over it as translucent Liquid Glass (via safeAreaInset) with the list scrolling faintly behind, no hard dividers.
+        // The results layer fills the whole panel; the header and action bar float over it via
+        // safeAreaInset with a progressive backdrop blur behind each, so rows melt away as they
+        // scroll under the bars — no hard dividers. (The native scroll edge effect is unusable
+        // here: inside a transparent panel it renders a hard-bounded rectangle.)
         return content(
             apps: apps, clips: clips, hist: hist, calc: calc, selection: sel,
             favoriteCount: favoriteCount, showSections: showSections
@@ -98,7 +101,7 @@ struct RootPaletteView: View {
             }
         }
         .frame(width: Theme.Size.panelWidth, height: Theme.Size.panelHeight)
-        .background(Color.black.opacity(0.40))
+        .background(Color.black.opacity(Theme.Colors.panelDimming))
         .background(VisualEffectView())
         .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.panel, style: .continuous))
         // Every show bumps focusToken — refocus search and drop any menu left open from last time
@@ -188,7 +191,7 @@ struct RootPaletteView: View {
         .frame(height: Theme.Size.headerHeight)
         .padding(.top, Theme.Spacing.md)
         .frame(maxWidth: .infinity)
-        .background(EdgeFade(edge: .top))
+        .background(ProgressiveEdgeBlur(edge: .top))
     }
 
     @ViewBuilder
@@ -321,8 +324,8 @@ struct RootPaletteView: View {
     }
 
     private var bottomBar: some View {
-        // No bar — just floating glass buttons over the list, with a soft dark fade up from the
-        // bottom edge so they read clearly without any hard-edged strip.
+        // No bar — just floating glass buttons over the list; the progressive backdrop blur melts
+        // rows passing beneath, so they read clearly without any hard-edged strip.
         HStack(spacing: 0) {
             appMenuButton
             Spacer()
@@ -331,7 +334,14 @@ struct RootPaletteView: View {
         .padding(.horizontal, Theme.Spacing.md)
         .frame(height: Theme.Size.bottomBarHeight)
         .frame(maxWidth: .infinity)
-        .background(EdgeFade(edge: .bottom))
+        .background(
+            // Lighter than the header, like Raycast: weaker blur held tight to the bottom edge,
+            // no extra reach into the list, subtler scrim.
+            ProgressiveEdgeBlur(
+                edge: .bottom, radius: 0.5, reach: 12,
+                falloff: [(0.0, 1.0), (0.3, 0.55), (0.65, 0.2), (1.0, 0.0)]
+            )
+        )
     }
 
     private var appMenuButton: some View {
@@ -481,24 +491,5 @@ struct EmptyResults: View {
             Text(text).foregroundStyle(.secondary)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-    }
-}
-
-private struct EdgeFade: View {
-    let edge: VerticalEdge
-
-    var body: some View {
-        let start: UnitPoint = edge == .top ? .top : .bottom
-        let end: UnitPoint = edge == .top ? .bottom : .top
-        let fade = LinearGradient(
-            stops: [
-                .init(color: .black.opacity(1), location: 0.0),
-                .init(color: .black.opacity(0.90), location: 0.4),
-                .init(color: .clear, location: 1.0),
-            ],
-            startPoint: start, endPoint: end
-        )
-        VisualEffectView(material: .hudWindow, blending: .withinWindow)
-            .mask(fade)
     }
 }
