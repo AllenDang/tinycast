@@ -8,14 +8,16 @@ struct ProgressiveEdgeBlur: View {
 
     let edge: VerticalEdge
     /// Blur radius at the panel edge, eased down to 0 at the content side.
-    var radius: CGFloat = 2
+    var radius: CGFloat = 3
     /// Extra distance the melt reaches past the bar into the list (negative shrinks); never affects the bar's layout.
     var reach: CGFloat = 8
     /// Defaults hold strength tight against the edge, then let go.
     var falloff: Falloff = [(0.0, 1.0), (0.2, 0.8), (0.5, 0.45), (0.75, 0.18), (1.0, 0.0)]
+    /// Backdrop saturation: 1 is neutral, below 1 mattes the blur's sheen; masked by `falloff`, so it fades like the blur instead of boxing.
+    var saturation: CGFloat = 0.2
 
     var body: some View {
-        VariableBlurBackdrop(edge: edge, radius: radius, falloff: falloff)
+        VariableBlurBackdrop(edge: edge, radius: radius, falloff: falloff, saturation: saturation)
             .padding(edge == .top ? .bottom : .top, -reach)
             .allowsHitTesting(false)
     }
@@ -25,9 +27,10 @@ private struct VariableBlurBackdrop: NSViewRepresentable {
     let edge: VerticalEdge
     let radius: CGFloat
     let falloff: ProgressiveEdgeBlur.Falloff
+    let saturation: CGFloat
 
     func makeNSView(context: Context) -> ProgressiveBlurView {
-        ProgressiveBlurView(edge: edge, radius: radius, falloff: falloff)
+        ProgressiveBlurView(edge: edge, radius: radius, falloff: falloff, saturation: saturation)
     }
 
     func updateNSView(_ nsView: ProgressiveBlurView, context: Context) {}
@@ -36,22 +39,37 @@ private struct VariableBlurBackdrop: NSViewRepresentable {
 final class ProgressiveBlurView: NSView {
     private let edge: VerticalEdge
 
-    init(edge: VerticalEdge, radius: CGFloat, falloff: ProgressiveEdgeBlur.Falloff) {
+    init(
+        edge: VerticalEdge, radius: CGFloat, falloff: ProgressiveEdgeBlur.Falloff,
+        saturation: CGFloat = 1
+    ) {
         self.edge = edge
         super.init(frame: .zero)
-        if let backdropClass = NSClassFromString("CABackdropLayer") as? CALayer.Type,
-            let mask = Self.gradientMask(edge: edge, falloff: falloff),
-            let blur = Self.variableBlurFilter(radius: radius, mask: mask)
-        {
-            // Layer-hosting (layer assigned before wantsLayer): AppKit silently clears filters on layer-backed views.
-            let backdrop = backdropClass.init()
-            backdrop.filters = [blur]
-            layer = backdrop
-            wantsLayer = true
-        } else {
+        guard let backdropClass = NSClassFromString("CABackdropLayer") as? CALayer.Type,
+            let maskImage = Self.gradientMask(edge: edge, falloff: falloff),
+            let blur = Self.variableBlurFilter(radius: radius, mask: maskImage)
+        else {
             wantsLayer = true
             installFallback()
+            return
         }
+        let root = CALayer()
+        let blurLayer = backdropClass.init()
+        blurLayer.filters = [blur]
+        root.addSublayer(blurLayer)
+        // Saturation rides a second backdrop over the blurred result, gradient-masked so it melts with the blur.
+        if saturation != 1, let saturate = Self.saturationFilter(amount: saturation) {
+            let satLayer = backdropClass.init()
+            satLayer.filters = [saturate]
+            let mask = CALayer()
+            mask.contents = maskImage
+            mask.contentsGravity = .resize
+            satLayer.mask = mask
+            root.addSublayer(satLayer)
+        }
+        // Layer-hosting (layer assigned before wantsLayer): AppKit silently clears filters on layer-backed views.
+        layer = root
+        wantsLayer = true
     }
 
     @available(*, unavailable)
@@ -60,17 +78,50 @@ final class ProgressiveBlurView: NSView {
     /// Decorative only — never intercept clicks meant for the bar's controls.
     override func hitTest(_ point: NSPoint) -> NSView? { nil }
 
+    override func layout() {
+        super.layout()
+        syncSublayerFrames()
+    }
+
+    override func setFrameSize(_ newSize: NSSize) {
+        super.setFrameSize(newSize)
+        syncSublayerFrames()
+    }
+
+    /// Hosted sublayers don't track the view's size on their own.
+    private func syncSublayerFrames() {
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
+        for sublayer in layer?.sublayers ?? [] {
+            sublayer.frame = bounds
+            sublayer.mask?.frame = CGRect(origin: .zero, size: bounds.size)
+        }
+        CATransaction.commit()
+    }
+
     /// `CAFilter("variableBlur")` scaling `radius` per-pixel by the mask's alpha.
     private static func variableBlurFilter(radius: CGFloat, mask: CGImage) -> NSObject? {
-        guard let filterClass = NSClassFromString("CAFilter") as? NSObject.Type else { return nil }
-        let selector = NSSelectorFromString("filterWithType:")
-        guard filterClass.responds(to: selector),
-            let filter = filterClass.perform(selector, with: "variableBlur")?
-                .takeUnretainedValue() as? NSObject
-        else { return nil }
+        guard let filter = caFilter(type: "variableBlur") else { return nil }
         filter.setValue(radius, forKey: "inputRadius")
         filter.setValue(mask, forKey: "inputMaskImage")
         filter.setValue(true, forKey: "inputNormalizeEdges")
+        return filter
+    }
+
+    /// `CAFilter("colorSaturate")` — the system materials' vibrancy filter, dialed below 1 for matte.
+    private static func saturationFilter(amount: CGFloat) -> NSObject? {
+        guard let filter = caFilter(type: "colorSaturate") else { return nil }
+        filter.setValue(amount, forKey: "inputAmount")
+        return filter
+    }
+
+    private static func caFilter(type: String) -> NSObject? {
+        guard let filterClass = NSClassFromString("CAFilter") as? NSObject.Type else { return nil }
+        let selector = NSSelectorFromString("filterWithType:")
+        guard filterClass.responds(to: selector),
+            let filter = filterClass.perform(selector, with: type)?
+                .takeUnretainedValue() as? NSObject
+        else { return nil }
         return filter
     }
 
