@@ -1,16 +1,19 @@
 import SwiftUI
 
-/// Settings → Shortcuts: everything the launcher can open, grouped by category. Each category has
-/// a switch that hides the whole group from the launcher; each row has a visibility checkbox and a
-/// hotkey recorder. This tab never applies the visibility filter itself — hidden rows must stay
-/// visible here so they can be re-checked.
+/// Settings → Shortcuts: everything the launcher can open, split into one tab per category
+/// (Applications / System Settings / Commands) so each list gets the pane's full height. The
+/// active tab has a "show this category in the launcher" switch; each row has a visibility
+/// checkbox and a hotkey recorder. Search is scoped to the active tab. This pane never applies
+/// the visibility filter itself — hidden rows must stay visible here so they can be re-checked.
 struct ShortcutsSettingsView: View {
     @EnvironmentObject private var appIndex: AppIndex
-    @EnvironmentObject private var visibility: VisibilityStore
+    @State private var tab: AppEntry.Kind = .application
     @State private var query = ""
 
-    private var filtered: [AppEntry] {
-        query.isEmpty ? appIndex.apps : appIndex.matches(query)
+    private var entries: [AppEntry] {
+        // Run the matcher once per render, then scope the results to the active tab.
+        let matched = query.isEmpty ? appIndex.apps : appIndex.matches(query)
+        return matched.filter { $0.kind == tab }
     }
 
     var body: some View {
@@ -22,20 +25,36 @@ struct ShortcutsSettingsView: View {
                 subtitle: "Choose what appears in the launcher and assign global shortcuts."
             )
 
+            Picker("Category", selection: $tab) {
+                Text("Applications").tag(AppEntry.Kind.application)
+                Text("System Settings").tag(AppEntry.Kind.systemSettings)
+                Text("Commands").tag(AppEntry.Kind.command)
+            }
+            .pickerStyle(.segmented)
+            .labelsHidden()
+
             searchField
 
-            sectionList
+            CategoryCard(kind: tab, entries: entries, query: query)
         }
         .padding(Theme.Spacing.xxl)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .ignoresSafeArea(edges: .top)
     }
 
+    private var searchPrompt: String {
+        switch tab {
+        case .application: return "Search applications…"
+        case .systemSettings: return "Search System Settings…"
+        case .command: return "Search commands…"
+        }
+    }
+
     private var searchField: some View {
         HStack(spacing: Theme.Spacing.sm) {
             Image(systemName: "magnifyingglass")
                 .foregroundStyle(.secondary)
-            TextField("Search apps…", text: $query)
+            TextField(searchPrompt, text: $query)
                 .textFieldStyle(.plain)
             if !query.isEmpty {
                 Button {
@@ -58,52 +77,22 @@ struct ShortcutsSettingsView: View {
                 .strokeBorder(Theme.Colors.cardStroke, lineWidth: 1)
         )
     }
-
-    private var sectionList: some View {
-        // Run the matcher once per render, not once per row.
-        let entries = filtered
-        let apps = entries.filter { $0.kind == .application }
-        let panes = entries.filter { $0.kind == .systemSettings }
-        let commands = entries.filter { $0.kind == .command }
-        // Each category is its own independently scrollable card; they split the remaining
-        // height between them. When a search empties one category, the other takes the space.
-        return VStack(alignment: .leading, spacing: Theme.Spacing.xl) {
-            if entries.isEmpty {
-                Text("No apps match “\(query)”.")
-                    .font(.callout)
-                    .foregroundStyle(.secondary)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, Theme.Spacing.xxl * 2)
-            } else {
-                if !apps.isEmpty {
-                    CategorySection(title: "Applications", kind: .application, entries: apps)
-                }
-                if !panes.isEmpty {
-                    CategorySection(
-                        title: "System Settings", kind: .systemSettings, entries: panes)
-                }
-                if !commands.isEmpty {
-                    CategorySection(title: "Commands", kind: .command, entries: commands)
-                }
-            }
-        }
-        .frame(maxHeight: .infinity, alignment: .top)
-    }
 }
 
-/// One category card: a header row with the section title and the "show this category in the
-/// launcher" switch, then the item rows. Rows dim when the category is off but stay interactive.
-private struct CategorySection: View {
-    let title: String
+/// The active tab's card: a header row with the "show this category in the launcher" switch,
+/// then the item rows filling the remaining pane height. Rows dim when the category is off but
+/// stay interactive.
+private struct CategoryCard: View {
     let kind: AppEntry.Kind
     let entries: [AppEntry]
+    let query: String
     @EnvironmentObject private var visibility: VisibilityStore
 
     var body: some View {
         let kindVisible = visibility.isKindVisible(kind)
         VStack(alignment: .leading, spacing: Theme.Spacing.md) {
             HStack {
-                Text(title)
+                Text("Show in launcher")
                     .font(Theme.Typography.sectionHeader)
                     .foregroundStyle(.secondary)
                 Spacer()
@@ -133,6 +122,13 @@ private struct CategorySection: View {
                 RoundedRectangle(cornerRadius: Theme.Radius.card, style: .continuous)
                     .strokeBorder(Theme.Colors.cardStroke, lineWidth: 1)
             )
+            .overlay {
+                if entries.isEmpty {
+                    Text(query.isEmpty ? "Nothing here yet." : "No matches for “\(query)”.")
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
+                }
+            }
             .opacity(kindVisible ? 1 : 0.45)
         }
     }
@@ -160,8 +156,6 @@ private struct ShortcutRow: View {
             Spacer(minLength: Theme.Spacing.xl)
             if let action = entry.hotKeyAction {
                 ShortcutRecorder(action: action)
-            } else {
-                Text("—").foregroundStyle(.tertiary)
             }
             Toggle("", isOn: itemBinding)
                 .labelsHidden()
