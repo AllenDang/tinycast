@@ -23,7 +23,7 @@ struct ProgressiveEdgeBlur: View {
     /// Extra distance the melt reaches past the bar into the list. Applied as negative padding on
     /// the bar's background, so it never affects the bar's own layout (negative values shrink the
     /// blur region to less than the bar).
-    var reach: CGFloat = 12
+    var reach: CGFloat = 8
     /// Defaults hold strength tight against the edge, then let go.
     var falloff: Falloff = [(0.0, 1.0), (0.2, 0.8), (0.5, 0.45), (0.75, 0.18), (1.0, 0.0)]
     /// Backdrop saturation under the blur: 1 is neutral, below 1 mattes down the glossy sheen the
