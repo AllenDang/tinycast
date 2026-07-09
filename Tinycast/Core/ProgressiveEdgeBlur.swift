@@ -12,7 +12,38 @@ import SwiftUI
 /// Both classes are private but stable (they're what `NSVisualEffectView` and the system scroll
 /// edge effect are built on); if either ever disappears, we fall back to a gradient-masked
 /// `NSVisualEffectView` so the bars never lose separation entirely.
-struct ProgressiveEdgeBlur: NSViewRepresentable {
+struct ProgressiveEdgeBlur: View {
+    let edge: VerticalEdge
+    /// Extra distance the melt reaches past the bar into the list. Applied as negative padding on
+    /// the bar's background, so it never affects the bar's own layout.
+    var reach: CGFloat = 12
+
+    var body: some View {
+        ZStack {
+            VariableBlurBackdrop(edge: edge)
+            scrim
+        }
+        .padding(edge == .top ? .bottom : .top, -reach)
+        .allowsHitTesting(false)
+    }
+
+    /// Soft wash matching the panel's dark surface so rows dim as they melt into the chrome,
+    /// instead of staying full-brightness under the blur.
+    private var scrim: LinearGradient {
+        LinearGradient(
+            stops: [
+                .init(color: .black.opacity(0.50), location: 0),
+                .init(color: .black.opacity(0.28), location: 0.35),
+                .init(color: .black.opacity(0.10), location: 0.7),
+                .init(color: .clear, location: 1),
+            ],
+            startPoint: edge == .top ? .top : .bottom,
+            endPoint: edge == .top ? .bottom : .top
+        )
+    }
+}
+
+private struct VariableBlurBackdrop: NSViewRepresentable {
     let edge: VerticalEdge
 
     func makeNSView(context: Context) -> ProgressiveBlurView {
@@ -24,7 +55,7 @@ struct ProgressiveEdgeBlur: NSViewRepresentable {
 
 final class ProgressiveBlurView: NSView {
     /// Blur radius at the panel edge; the mask eases it down to 0 at the content side.
-    private static let maxRadius: CGFloat = 14
+    private static let maxRadius: CGFloat = 2
 
     private let edge: VerticalEdge
 
@@ -79,9 +110,10 @@ final class ProgressiveBlurView: NSView {
                 bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
             )
         else { return nil }
-        // Alpha from the panel edge inward; eased stops so the falloff reads as a melt.
+        // Alpha from the panel edge inward; relaxed eased stops so the falloff carries deeper
+        // into the list before letting go.
         let stops: [(location: CGFloat, alpha: CGFloat)] = [
-            (0.0, 1.0), (0.2, 0.8), (0.5, 0.45), (0.8, 0.15), (1.0, 0.0),
+            (0.0, 1.0), (0.25, 0.85), (0.55, 0.55), (0.8, 0.3), (1.0, 0.0),
         ]
         guard
             let gradient = CGGradient(
