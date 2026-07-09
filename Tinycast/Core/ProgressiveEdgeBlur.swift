@@ -13,14 +13,25 @@ import SwiftUI
 /// edge effect are built on); if either ever disappears, we fall back to a gradient-masked
 /// `NSVisualEffectView` so the bars never lose separation entirely.
 struct ProgressiveEdgeBlur: View {
+    /// Alpha ramp from the panel edge (location 0) to the content side (location 1); each alpha
+    /// is the fraction of `radius` applied at that depth.
+    typealias Falloff = [(location: CGFloat, alpha: CGFloat)]
+
     let edge: VerticalEdge
+    /// Blur radius at the panel edge; the falloff eases it down to 0 at the content side.
+    var radius: CGFloat = 2
     /// Extra distance the melt reaches past the bar into the list. Applied as negative padding on
-    /// the bar's background, so it never affects the bar's own layout.
+    /// the bar's background, so it never affects the bar's own layout (negative values shrink the
+    /// blur region to less than the bar).
     var reach: CGFloat = 12
+    /// Defaults hold strength tight against the edge, then let go.
+    var falloff: Falloff = [(0.0, 1.0), (0.2, 0.8), (0.5, 0.45), (0.75, 0.18), (1.0, 0.0)]
+    /// Multiplier on the scrim's darkness — 1 is the header treatment, lower is subtler.
+    var scrimStrength: CGFloat = 1
 
     var body: some View {
         ZStack {
-            VariableBlurBackdrop(edge: edge)
+            VariableBlurBackdrop(edge: edge, radius: radius, falloff: falloff)
             scrim
         }
         .padding(edge == .top ? .bottom : .top, -reach)
@@ -32,9 +43,9 @@ struct ProgressiveEdgeBlur: View {
     private var scrim: LinearGradient {
         LinearGradient(
             stops: [
-                .init(color: .black.opacity(0.50), location: 0),
-                .init(color: .black.opacity(0.28), location: 0.35),
-                .init(color: .black.opacity(0.10), location: 0.7),
+                .init(color: .black.opacity(0.50 * scrimStrength), location: 0),
+                .init(color: .black.opacity(0.28 * scrimStrength), location: 0.35),
+                .init(color: .black.opacity(0.10 * scrimStrength), location: 0.7),
                 .init(color: .clear, location: 1),
             ],
             startPoint: edge == .top ? .top : .bottom,
@@ -45,26 +56,25 @@ struct ProgressiveEdgeBlur: View {
 
 private struct VariableBlurBackdrop: NSViewRepresentable {
     let edge: VerticalEdge
+    let radius: CGFloat
+    let falloff: ProgressiveEdgeBlur.Falloff
 
     func makeNSView(context: Context) -> ProgressiveBlurView {
-        ProgressiveBlurView(edge: edge)
+        ProgressiveBlurView(edge: edge, radius: radius, falloff: falloff)
     }
 
     func updateNSView(_ nsView: ProgressiveBlurView, context: Context) {}
 }
 
 final class ProgressiveBlurView: NSView {
-    /// Blur radius at the panel edge; the mask eases it down to 0 at the content side.
-    private static let maxRadius: CGFloat = 2
-
     private let edge: VerticalEdge
 
-    init(edge: VerticalEdge) {
+    init(edge: VerticalEdge, radius: CGFloat, falloff: ProgressiveEdgeBlur.Falloff) {
         self.edge = edge
         super.init(frame: .zero)
         if let backdropClass = NSClassFromString("CABackdropLayer") as? CALayer.Type,
-            let mask = Self.gradientMask(edge: edge),
-            let blur = Self.variableBlurFilter(radius: Self.maxRadius, mask: mask)
+            let mask = Self.gradientMask(edge: edge, falloff: falloff),
+            let blur = Self.variableBlurFilter(radius: radius, mask: mask)
         {
             // Layer-hosting, not layer-backed: assigning `layer` before `wantsLayer` hands us
             // ownership of the layer's properties. A layer-backed view won't do — AppKit manages
@@ -101,7 +111,9 @@ final class ProgressiveBlurView: NSView {
 
     /// Vertical alpha ramp stretched over the layer: opaque (full radius) at the panel edge,
     /// eased down to clear at the content side so the blur melts instead of cutting off.
-    private static func gradientMask(edge: VerticalEdge) -> CGImage? {
+    private static func gradientMask(
+        edge: VerticalEdge, falloff stops: ProgressiveEdgeBlur.Falloff
+    ) -> CGImage? {
         let height = 96
         guard
             let context = CGContext(
@@ -110,11 +122,6 @@ final class ProgressiveBlurView: NSView {
                 bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
             )
         else { return nil }
-        // Alpha from the panel edge inward; relaxed eased stops so the falloff carries deeper
-        // into the list before letting go.
-        let stops: [(location: CGFloat, alpha: CGFloat)] = [
-            (0.0, 1.0), (0.25, 0.85), (0.55, 0.55), (0.8, 0.3), (1.0, 0.0),
-        ]
         guard
             let gradient = CGGradient(
                 colorsSpace: CGColorSpaceCreateDeviceRGB(),

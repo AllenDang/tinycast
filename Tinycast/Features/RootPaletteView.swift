@@ -334,7 +334,15 @@ struct RootPaletteView: View {
         .padding(.horizontal, Theme.Spacing.md)
         .frame(height: Theme.Size.bottomBarHeight)
         .frame(maxWidth: .infinity)
-        .background(ProgressiveEdgeBlur(edge: .bottom))
+        .background(
+            // Lighter than the header, like Raycast: weaker blur held tight to the bottom edge,
+            // no extra reach into the list, subtler scrim.
+            ProgressiveEdgeBlur(
+                edge: .bottom, radius: 0.5, reach: 16,
+                falloff: [(0.0, 1.0), (0.3, 0.55), (0.65, 0.2), (1.0, 0.0)],
+                scrimStrength: 1
+            )
+        )
     }
 
     private var appMenuButton: some View {
