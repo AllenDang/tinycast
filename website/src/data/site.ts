@@ -7,7 +7,7 @@ export const site = {
   repo: "https://github.com/abue-ammar/tinycast",
   version: "v0.1.0",
   platform: "macOS 26+",
-  license: "GPL-3.0",
+  license: "AGPL-3.0",
   licenseUrl: "https://github.com/abue-ammar/tinycast/blob/main/LICENSE",
 } as const;
 
