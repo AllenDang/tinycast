@@ -339,8 +339,7 @@ struct RootPaletteView: View {
             // no extra reach into the list, subtler scrim.
             ProgressiveEdgeBlur(
                 edge: .bottom, radius: 0.5, reach: 16,
-                falloff: [(0.0, 1.0), (0.3, 0.55), (0.65, 0.2), (1.0, 0.0)],
-                scrimStrength: 1
+                falloff: [(0.0, 1.0), (0.3, 0.55), (0.65, 0.2), (1.0, 0.0)]
             )
         )
     }

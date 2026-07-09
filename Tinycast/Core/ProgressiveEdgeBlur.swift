@@ -26,36 +26,16 @@ struct ProgressiveEdgeBlur: View {
     var reach: CGFloat = 12
     /// Defaults hold strength tight against the edge, then let go.
     var falloff: Falloff = [(0.0, 1.0), (0.2, 0.8), (0.5, 0.45), (0.75, 0.18), (1.0, 0.0)]
-    /// Multiplier on the scrim's darkness — 1 is the header treatment, lower is subtler.
-    var scrimStrength: CGFloat = 1.5
+    /// Backdrop saturation under the blur: 1 is neutral, below 1 mattes down the glossy sheen the
+    /// blur makes by smearing bright pixels. Beware: unlike the blur it is NOT masked by `falloff`
+    /// — it covers the whole bar rect, and over bright desktops behind the translucent panel it
+    /// reads as a hard-edged gray region, so keep it at (or very near) 1.
+    var saturation: CGFloat = 1
 
     var body: some View {
-        ZStack {
-            VariableBlurBackdrop(edge: edge, radius: radius, falloff: falloff)
-            scrim
-        }
-        .padding(edge == .top ? .bottom : .top, -reach)
-        .allowsHitTesting(false)
-    }
-
-    /// Soft wash matching the panel's dark surface so rows dim as they melt into the chrome,
-    /// instead of staying full-brightness under the blur. Capped at the panel's own surface tint:
-    /// rows melt *to* the panel background, never darker — raising `scrimStrength` makes the wash
-    /// hold that level deeper into the list rather than going blacker.
-    private var scrim: LinearGradient {
-        func level(_ base: CGFloat) -> CGFloat {
-            min(Theme.Colors.panelDimming, base * scrimStrength)
-        }
-        return LinearGradient(
-            stops: [
-                .init(color: .black.opacity(level(0.50)), location: 0),
-                .init(color: .black.opacity(level(0.28)), location: 0.35),
-                .init(color: .black.opacity(level(0.10)), location: 0.7),
-                .init(color: .clear, location: 1),
-            ],
-            startPoint: edge == .top ? .top : .bottom,
-            endPoint: edge == .top ? .bottom : .top
-        )
+        VariableBlurBackdrop(edge: edge, radius: radius, falloff: falloff, saturation: saturation)
+            .padding(edge == .top ? .bottom : .top, -reach)
+            .allowsHitTesting(false)
     }
 }
 
@@ -63,9 +43,10 @@ private struct VariableBlurBackdrop: NSViewRepresentable {
     let edge: VerticalEdge
     let radius: CGFloat
     let falloff: ProgressiveEdgeBlur.Falloff
+    let saturation: CGFloat
 
     func makeNSView(context: Context) -> ProgressiveBlurView {
-        ProgressiveBlurView(edge: edge, radius: radius, falloff: falloff)
+        ProgressiveBlurView(edge: edge, radius: radius, falloff: falloff, saturation: saturation)
     }
 
     func updateNSView(_ nsView: ProgressiveBlurView, context: Context) {}
@@ -74,7 +55,10 @@ private struct VariableBlurBackdrop: NSViewRepresentable {
 final class ProgressiveBlurView: NSView {
     private let edge: VerticalEdge
 
-    init(edge: VerticalEdge, radius: CGFloat, falloff: ProgressiveEdgeBlur.Falloff) {
+    init(
+        edge: VerticalEdge, radius: CGFloat, falloff: ProgressiveEdgeBlur.Falloff,
+        saturation: CGFloat = 1
+    ) {
         self.edge = edge
         super.init(frame: .zero)
         if let backdropClass = NSClassFromString("CABackdropLayer") as? CALayer.Type,
@@ -85,13 +69,30 @@ final class ProgressiveBlurView: NSView {
             // ownership of the layer's properties. A layer-backed view won't do — AppKit manages
             // its backing layer and silently clears `filters` during setup.
             let backdrop = backdropClass.init()
-            backdrop.filters = [blur]
+            var filters: [Any] = [blur]
+            if saturation != 1, let saturate = Self.saturationFilter(amount: saturation) {
+                filters.insert(saturate, at: 0)
+            }
+            backdrop.filters = filters
             layer = backdrop
             wantsLayer = true
         } else {
             wantsLayer = true
             installFallback()
         }
+    }
+
+    /// `CAFilter.filterWithType("colorSaturate")` — same backdrop filter the system materials use
+    /// for vibrancy, here dialed below 1 to matte the blur down instead of juicing it up.
+    private static func saturationFilter(amount: CGFloat) -> NSObject? {
+        guard let filterClass = NSClassFromString("CAFilter") as? NSObject.Type else { return nil }
+        let selector = NSSelectorFromString("filterWithType:")
+        guard filterClass.responds(to: selector),
+            let filter = filterClass.perform(selector, with: "colorSaturate")?
+                .takeUnretainedValue() as? NSObject
+        else { return nil }
+        filter.setValue(amount, forKey: "inputAmount")
+        return filter
     }
 
     @available(*, unavailable)

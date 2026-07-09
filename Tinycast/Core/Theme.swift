@@ -50,9 +50,8 @@ enum Theme {
     }
 
     enum Colors {
-        /// Black opacity of the panel's surface tint over the behind-window material; the edge
-        /// scrim caps at this so rows melt *to* the panel background, never darker than it.
-        static let panelDimming: CGFloat = 0.3
+        /// Black opacity of the panel's surface tint over the behind-window material.
+        static let panelDimming: CGFloat = 0.4
         /// Selection fill: a soft neutral translucent layer shared by launcher and clipboard so both lists look identical.
         static let selection = Color.primary.opacity(0.12)
         /// Mouse hover — a fainter layer that follows the cursor, visually distinct from selection.
