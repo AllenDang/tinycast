@@ -27,7 +27,7 @@ struct ProgressiveEdgeBlur: View {
     /// Defaults hold strength tight against the edge, then let go.
     var falloff: Falloff = [(0.0, 1.0), (0.2, 0.8), (0.5, 0.45), (0.75, 0.18), (1.0, 0.0)]
     /// Multiplier on the scrim's darkness — 1 is the header treatment, lower is subtler.
-    var scrimStrength: CGFloat = 1
+    var scrimStrength: CGFloat = 1.5
 
     var body: some View {
         ZStack {
@@ -39,13 +39,18 @@ struct ProgressiveEdgeBlur: View {
     }
 
     /// Soft wash matching the panel's dark surface so rows dim as they melt into the chrome,
-    /// instead of staying full-brightness under the blur.
+    /// instead of staying full-brightness under the blur. Capped at the panel's own surface tint:
+    /// rows melt *to* the panel background, never darker — raising `scrimStrength` makes the wash
+    /// hold that level deeper into the list rather than going blacker.
     private var scrim: LinearGradient {
-        LinearGradient(
+        func level(_ base: CGFloat) -> CGFloat {
+            min(Theme.Colors.panelDimming, base * scrimStrength)
+        }
+        return LinearGradient(
             stops: [
-                .init(color: .black.opacity(0.50 * scrimStrength), location: 0),
-                .init(color: .black.opacity(0.28 * scrimStrength), location: 0.35),
-                .init(color: .black.opacity(0.10 * scrimStrength), location: 0.7),
+                .init(color: .black.opacity(level(0.50)), location: 0),
+                .init(color: .black.opacity(level(0.28)), location: 0.35),
+                .init(color: .black.opacity(level(0.10)), location: 0.7),
                 .init(color: .clear, location: 1),
             ],
             startPoint: edge == .top ? .top : .bottom,

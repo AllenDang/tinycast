@@ -101,7 +101,7 @@ struct RootPaletteView: View {
             }
         }
         .frame(width: Theme.Size.panelWidth, height: Theme.Size.panelHeight)
-        .background(Color.black.opacity(0.40))
+        .background(Color.black.opacity(Theme.Colors.panelDimming))
         .background(VisualEffectView())
         .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.panel, style: .continuous))
         // Every show bumps focusToken — refocus search and drop any menu left open from last time
