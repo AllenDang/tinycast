@@ -64,11 +64,10 @@ struct RootPaletteView: View {
         let selectedClip = clips.indices.contains(sel) ? clips[sel] : nil
         let selectedHist = hist.indices.contains(sel - offset) ? hist[sel - offset] : nil
 
-        // Raycast layout: the results layer fills the whole panel; the header and action bar float
-        // over it via safeAreaInset as fully transparent overlays — no separators. Each list's
-        // `edgeDissolve` mask ghosts rows as they slide under the bars, Raycast's scroll-driven
-        // fade. (The native scroll edge effect is unusable here: inside a transparent panel it
-        // renders a hard-bounded rectangle.)
+        // The results layer fills the whole panel; the header and action bar float over it via
+        // safeAreaInset as fully transparent overlays. Each list's `edgeDissolve` mask ghosts
+        // rows as they scroll under the bars — no hard dividers. (The native scroll edge effect
+        // is unusable here: inside a transparent panel it renders a hard-bounded rectangle.)
         return content(
             apps: apps, clips: clips, hist: hist, calc: calc, selection: sel,
             favoriteCount: favoriteCount, showSections: showSections
@@ -147,7 +146,7 @@ struct RootPaletteView: View {
             core.showSettings()
             return .handled
         }
-        // ⌘K toggles the actions panel for the current selection, Raycast-style.
+        // ⌘K toggles the actions panel for the current selection.
         .onKeyPress(keys: ["k"], phases: .down) { press in
             guard press.modifiers.contains(.command) else { return .ignored }
             guard resultCount > 0 else { return .handled }
@@ -200,6 +199,7 @@ struct RootPaletteView: View {
         // Align the search icon with the list rows and section headers below (list inset + row inset).
         .padding(.horizontal, Theme.Spacing.md * 2)
         .frame(height: Theme.Size.headerHeight)
+        .padding(.top, Theme.Spacing.md)
         .frame(maxWidth: .infinity)
     }
 
@@ -333,9 +333,8 @@ struct RootPaletteView: View {
     }
 
     private var bottomBar: some View {
-        // No bar — a transparent strip over the list, Raycast-style: the menu circle at the left
-        // and one glass control group at the right; the list's edge dissolve ghosts rows passing
-        // beneath, so the buttons read clearly without any hard-edged strip.
+        // No bar — just floating glass controls over the list; the list's edge dissolve ghosts
+        // rows passing beneath, so the buttons read clearly without any hard-edged strip.
         HStack(spacing: 0) {
             appMenuButton
             Spacer()
@@ -352,8 +351,7 @@ struct RootPaletteView: View {
         } label: {
             Image(systemName: "ellipsis")
                 .font(.title3)
-                .symbolRenderingMode(.hierarchical)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(Theme.Colors.textSecondary)
                 .frame(width: Theme.Size.menuButton, height: Theme.Size.menuButton)
                 .contentShape(.circle)
         }
@@ -361,8 +359,7 @@ struct RootPaletteView: View {
         .frosted(in: Circle())
     }
 
-    /// Raycast's footer control group: primary action and the Actions toggle sharing one glass
-    /// container, each with its own hover fill and filled keycap chips.
+    /// The footer control group: primary action and the Actions toggle sharing one glass capsule.
     private var actionGroup: some View {
         HStack(spacing: 2) {
             BarButton(action: activateSelection) {
@@ -386,7 +383,7 @@ struct RootPaletteView: View {
             }
         }
         .padding(Theme.Spacing.xs)
-        .frosted(in: RoundedRectangle(cornerRadius: Theme.Radius.card, style: .continuous))
+        .frosted(in: Capsule())
     }
 
     private var appMenu: some View {
@@ -496,7 +493,7 @@ struct RootPaletteView: View {
     }
 }
 
-/// Flat action-bar button (Raycast footer style): bare label at rest, white-5% rounded fill on hover.
+/// Footer button: bare label at rest, a faint capsule fill on hover.
 private struct BarButton<Label: View>: View {
     let action: () -> Void
     @ViewBuilder let label: Label
@@ -507,11 +504,8 @@ private struct BarButton<Label: View>: View {
             label
                 .padding(.horizontal, Theme.Spacing.md)
                 .frame(height: 28)
-                .contentShape(RoundedRectangle(cornerRadius: Theme.Radius.control))
-                .background(
-                    RoundedRectangle(cornerRadius: Theme.Radius.control, style: .continuous)
-                        .fill(hovered ? Theme.Colors.rowHover : Color.clear)
-                )
+                .contentShape(Capsule())
+                .background(Capsule().fill(hovered ? Theme.Colors.rowHover : Color.clear))
         }
         .buttonStyle(.plain)
         .onHover { hovered = $0 }

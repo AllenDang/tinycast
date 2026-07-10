@@ -88,7 +88,7 @@ struct LauncherList: View {
                             }
                         }
                         .padding(.horizontal, Theme.Spacing.md)
-                        .padding(.top, Theme.Spacing.md)
+                        .padding(.top, Theme.Spacing.xs)
                         .padding(.bottom, Theme.Spacing.md)
                         .hideNativeScrollers()
                     }
@@ -107,17 +107,17 @@ struct LauncherList: View {
     }
 }
 
-/// Section label above a group of rows, shared by the launcher and clipboard so both lists use one identical header + row layout (Raycast: 13pt medium at 40% white).
+/// Section label above a group of rows, shared by the launcher and clipboard so both lists use one identical header + row layout.
 struct SectionHeader: View {
     let title: String
     var body: some View {
         Text(title)
             .font(Theme.Typography.sectionHeader)
-            .foregroundStyle(Theme.Colors.textTertiary)
+            .foregroundStyle(.secondary)
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.horizontal, Theme.Spacing.md)
-            .padding(.top, Theme.Spacing.md)
-            .padding(.bottom, Theme.Spacing.xs)
+            .padding(.top, Theme.Spacing.xs)
+            .padding(.bottom, Theme.Spacing.xs / 2)
     }
 }
 

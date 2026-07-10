@@ -1,15 +1,14 @@
 import SwiftUI
 
-/// Raycast's scroll-driven edge dissolve, applied to a scroll view that underlaps the palette's
-/// transparent floating bars: at rest there is no fade at all (rows sit below/above the bars);
-/// once content scrolls under a bar it ghosts through a soft alpha ramp whose midpoint slides
-/// inward with scroll distance and whose alpha floors at 15% (top) / 25% (bottom) — rows stay
-/// readable under the bars, sharp but translucent, and vanish only at the window edge.
-/// (Mirrors Raycast v2's `scroll-area` mask math, see docs/raycast-design.md §4.)
+/// Scroll-driven edge dissolve for a scroll view underlapping the palette's transparent floating
+/// bars: at rest there is no fade at all; once content scrolls under a bar it ghosts through a
+/// soft alpha ramp whose midpoint slides inward with scroll distance and whose alpha floors at
+/// 15% (top) / 25% (bottom) — rows stay readable under the bars, sharp but translucent, and
+/// vanish only at the window edge (Raycast's scroll-area mask, docs/raycast-design.md §4).
 struct EdgeDissolveMask: ViewModifier {
     /// Fade zones cover the bars' occupied heights (= the safe-area insets), so the ramp spans
     /// exactly the region where rows slide beneath a bar.
-    var topFade: CGFloat = Theme.Size.headerHeight
+    var topFade: CGFloat = Theme.Size.headerHeight + Theme.Spacing.md
     var bottomFade: CGFloat = Theme.Size.bottomBarHeight
     private static let topMinAlpha: CGFloat = 0.15
     private static let bottomMinAlpha: CGFloat = 0.25
