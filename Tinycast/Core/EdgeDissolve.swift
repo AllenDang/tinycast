@@ -9,15 +9,15 @@ struct EdgeDissolveMask: ViewModifier {
     /// first/last rows sit exactly at full alpha and only content sliding under a bar dissolves.
     /// The top band borrows the list's own top padding so the ramp ends exactly at the first
     /// at-rest row instead of a few points above it.
-    var topFade: CGFloat = Theme.Size.headerHeight + Theme.Spacing.md
+    var topFade: CGFloat = Theme.Size.headerHeight + Theme.Spacing.lg
     /// Shorter and gentler than the top, like the old bottom blur was.
     var bottomFade: CGFloat = Theme.Size.bottomBarHeight - Theme.Spacing.md
 
     /// Ramp stops as (fraction of the band from that edge, alpha). Rows stay ghosted through the
     /// search-text zone (like Raycast) and reach full transparency only above the text line.
     private static let top: [(CGFloat, CGFloat)] = [
-        (0.00, 0.00), (0.15, 0.02), (0.30, 0.10), (0.45, 0.25),
-        (0.60, 0.45), (0.75, 0.68), (0.90, 0.90), (1.00, 1.00),
+        (0.00, 0.00), (0.28, 0.01), (0.46, 0.04), (0.60, 0.12),
+        (0.72, 0.30), (0.84, 0.58), (0.93, 0.86), (1.00, 1.00),
     ]
     private static let bottom: [(CGFloat, CGFloat)] = [
         (0.00, 0.00), (0.16, 0.05), (0.28, 0.14), (0.40, 0.30),
