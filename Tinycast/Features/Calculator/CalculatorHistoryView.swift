@@ -51,7 +51,7 @@ struct CalculatorHistoryList: View {
     var body: some View {
         ScrollViewReader { proxy in
             ScrollView {
-                LazyVStack(spacing: 1) {
+                LazyVStack(spacing: 0) {
                     ForEach(rows) { row in
                         switch row {
                         case .header(let title):
@@ -77,7 +77,7 @@ struct CalculatorHistoryList: View {
                     }
                 }
                 .padding(.horizontal, Theme.Spacing.md)
-                .padding(.top, Theme.Spacing.xs)
+                .padding(.top, Theme.Spacing.md)
                 .padding(.bottom, Theme.Spacing.md)
                 .hideNativeScrollers()
             }
@@ -107,9 +107,9 @@ private struct CalcHistoryRow: View {
     }
 
     var body: some View {
-        HStack(spacing: Theme.Spacing.lg) {
+        HStack(spacing: Theme.Spacing.xl) {
             RoundedRectangle(cornerRadius: Theme.Radius.thumbnail, style: .continuous)
-                .fill(Color.primary.opacity(0.08))
+                .fill(Theme.Colors.controlSurface)
                 .frame(width: Theme.Size.rowIcon, height: Theme.Size.rowIcon)
                 .overlay(
                     Image(systemName: "plus.forwardslash.minus")
@@ -128,7 +128,7 @@ private struct CalcHistoryRow: View {
                 .lineLimit(1)
         }
         .padding(.horizontal, Theme.Spacing.md)
-        .padding(.vertical, Theme.Spacing.sm)
+        .frame(height: Theme.Size.rowHeight)
         .background(
             RoundedRectangle(cornerRadius: Theme.Radius.row, style: .continuous)
                 .fill(fill)

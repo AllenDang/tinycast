@@ -1,53 +1,77 @@
 import SwiftUI
 
-/// Alpha dissolve at a scroll view's top/bottom edges: rows melt to transparent as they slide
-/// under the floating search header and action bar, which are transparent overlays — the dissolve
-/// *is* the edge, no divider. Rows stay ghosted through the bar's text zone, Raycast-style, and
-/// vanish only past it.
+/// Raycast's scroll-driven edge dissolve, applied to a scroll view that underlaps the palette's
+/// transparent floating bars: at rest there is no fade at all (rows sit below/above the bars);
+/// once content scrolls under a bar it ghosts through a soft alpha ramp whose midpoint slides
+/// inward with scroll distance and whose alpha floors at 15% (top) / 25% (bottom) — rows stay
+/// readable under the bars, sharp but translucent, and vanish only at the window edge.
+/// (Mirrors Raycast v2's `scroll-area` mask math, see docs/raycast-design.md §4.)
 struct EdgeDissolveMask: ViewModifier {
-    /// Band heights match the bars' occupied heights (= the safe-area insets), so at rest the
-    /// first/last rows sit exactly at full alpha and only content sliding under a bar dissolves.
-    /// The top band borrows the list's own top padding so the ramp ends exactly at the first
-    /// at-rest row instead of a few points above it.
-    var topFade: CGFloat = Theme.Size.headerHeight + Theme.Spacing.lg
-    /// Shorter and gentler than the top, like the old bottom blur was.
-    var bottomFade: CGFloat = Theme.Size.bottomBarHeight - Theme.Spacing.md
+    /// Fade zones cover the bars' occupied heights (= the safe-area insets), so the ramp spans
+    /// exactly the region where rows slide beneath a bar.
+    var topFade: CGFloat = Theme.Size.headerHeight
+    var bottomFade: CGFloat = Theme.Size.bottomBarHeight
+    private static let topMinAlpha: CGFloat = 0.15
+    private static let bottomMinAlpha: CGFloat = 0.25
 
-    /// Ramp stops as (fraction of the band from that edge, alpha). Rows stay ghosted through the
-    /// search-text zone (like Raycast) and reach full transparency only above the text line.
-    private static let top: [(CGFloat, CGFloat)] = [
-        (0.00, 0.00), (0.28, 0.01), (0.46, 0.04), (0.60, 0.12),
-        (0.72, 0.30), (0.84, 0.58), (0.93, 0.86), (1.00, 1.00),
-    ]
-    private static let bottom: [(CGFloat, CGFloat)] = [
-        (0.00, 0.00), (0.16, 0.05), (0.28, 0.14), (0.40, 0.30),
-        (0.55, 0.55), (0.70, 0.78), (0.85, 0.93), (1.00, 1.00),
-    ]
+    /// How much content is hidden beyond each edge, 0 when the list rests against it.
+    @State private var topDistance: CGFloat = 0
+    @State private var bottomDistance: CGFloat = 0
+
+    private struct Distances: Equatable {
+        var top: CGFloat
+        var bottom: CGFloat
+    }
 
     func body(content: Content) -> some View {
-        content.mask(
-            // The mask must span the scroll view's *full* frame — the bars' safe-area insets would
-            // otherwise shift the gradient inward, landing the fade bands on at-rest rows and
-            // clipping the underlap regions to black.
-            GeometryReader { geo in
-                LinearGradient(
-                    stops: stops(height: geo.size.height),
-                    startPoint: .top, endPoint: .bottom
+        content
+            .onScrollGeometryChange(for: Distances.self) { geo in
+                Distances(
+                    top: geo.contentOffset.y + geo.contentInsets.top,
+                    bottom: geo.contentSize.height + geo.contentInsets.bottom
+                        - geo.containerSize.height - geo.contentOffset.y
                 )
+            } action: { _, new in
+                topDistance = max(0, new.top)
+                bottomDistance = max(0, new.bottom)
             }
-            .ignoresSafeArea()
-        )
+            .mask(
+                // The mask must span the scroll view's *full* frame — the bars' safe-area insets
+                // would otherwise shift the gradient inward, landing the fade bands on at-rest
+                // rows and clipping the underlap regions to black.
+                GeometryReader { geo in
+                    LinearGradient(
+                        stops: stops(height: geo.size.height),
+                        startPoint: .top, endPoint: .bottom
+                    )
+                }
+                .ignoresSafeArea()
+            )
     }
 
     private func stops(height: CGFloat) -> [Gradient.Stop] {
-        let height = max(height, topFade + bottomFade)
-        var out: [Gradient.Stop] = Self.top.map { (fraction, alpha) in
-            .init(color: .black.opacity(alpha), location: fraction * topFade / height)
+        guard height > 0 else { return [.init(color: .black, location: 0)] }
+        var out: [Gradient.Stop] = []
+        // progress 0 → no fade (opaque to the very edge); progress 1 → transparent edge ramping
+        // through the floored alpha at the sliding midpoint to opaque at the fade height.
+        let topProgress = min(topDistance / topFade, 1)
+        out.append(.init(color: .black.opacity(1 - topProgress), location: 0))
+        if topProgress > 0 {
+            let alpha = 1 - (1 - Self.topMinAlpha) * topProgress
+            out.append(
+                .init(color: .black.opacity(alpha), location: topFade / 2 * topProgress / height))
+            out.append(.init(color: .black, location: topFade / height))
         }
-        out.append(.init(color: .black, location: 1 - bottomFade / height))
-        out += Self.bottom.reversed().map { (fraction, alpha) in
-            .init(color: .black.opacity(alpha), location: 1 - fraction * bottomFade / height)
+        let bottomProgress = min(bottomDistance / bottomFade, 1)
+        if bottomProgress > 0 {
+            let alpha = 1 - (1 - Self.bottomMinAlpha) * bottomProgress
+            out.append(.init(color: .black, location: 1 - bottomFade / height))
+            out.append(
+                .init(
+                    color: .black.opacity(alpha),
+                    location: 1 - bottomFade / 2 * bottomProgress / height))
         }
+        out.append(.init(color: .black.opacity(1 - bottomProgress), location: 1))
         return out
     }
 }

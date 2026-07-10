@@ -19,7 +19,7 @@ final class PalettePanel: NSPanel {
     }
     init<Content: View>(rootView: Content) {
         super.init(
-            contentRect: NSRect(x: 0, y: 0, width: 720, height: 470),
+            contentRect: NSRect(x: 0, y: 0, width: 750, height: 475),
             styleMask: [.borderless, .fullSizeContentView],
             backing: .buffered,
             defer: false

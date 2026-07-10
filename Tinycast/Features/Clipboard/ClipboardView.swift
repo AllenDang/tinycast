@@ -42,7 +42,7 @@ struct ClipboardList: View {
     var body: some View {
         ScrollViewReader { proxy in
             ScrollView {
-                LazyVStack(spacing: 1) {
+                LazyVStack(spacing: 0) {
                     ForEach(rows) { row in
                         switch row {
                         case .header(let title):
@@ -66,7 +66,7 @@ struct ClipboardList: View {
                     }
                 }
                 .padding(.horizontal, Theme.Spacing.md)
-                .padding(.top, Theme.Spacing.xs)
+                .padding(.top, Theme.Spacing.md)
                 .padding(.bottom, Theme.Spacing.md)
                 .hideNativeScrollers()
             }
@@ -185,7 +185,7 @@ private struct ClipboardRow: View {
             Spacer(minLength: 0)
         }
         .padding(.horizontal, Theme.Spacing.md)
-        .padding(.vertical, Theme.Spacing.sm)
+        .frame(height: Theme.Size.rowHeight)
         .background(
             RoundedRectangle(cornerRadius: Theme.Radius.row, style: .continuous)
                 .fill(fill)
@@ -226,11 +226,11 @@ private struct ClipboardRow: View {
     /// image clipboard rows share one consistent thumbnail shape.
     private func glyphTile(_ systemName: String) -> some View {
         RoundedRectangle(cornerRadius: Theme.Radius.thumbnail, style: .continuous)
-            .fill(Color.primary.opacity(0.08))
+            .fill(Theme.Colors.controlSurface)
             .frame(width: Theme.Size.rowIcon, height: Theme.Size.rowIcon)
             .overlay(
                 Image(systemName: systemName)
-                    .font(.system(size: 13))
+                    .font(.system(size: 12))
                     .symbolRenderingMode(.hierarchical)
                     .foregroundStyle(.secondary)
             )

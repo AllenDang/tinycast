@@ -64,10 +64,11 @@ struct RootPaletteView: View {
         let selectedClip = clips.indices.contains(sel) ? clips[sel] : nil
         let selectedHist = hist.indices.contains(sel - offset) ? hist[sel - offset] : nil
 
-        // The results layer fills the whole panel; the header and action bar float over it via
-        // safeAreaInset as fully transparent overlays. Each list's `edgeDissolve` alpha mask melts
-        // rows away as they scroll under the bars — no hard dividers. (The native scroll edge
-        // effect is unusable here: inside a transparent panel it renders a hard-bounded rectangle.)
+        // Raycast layout: the results layer fills the whole panel; the header and action bar float
+        // over it via safeAreaInset as fully transparent overlays — no separators. Each list's
+        // `edgeDissolve` mask ghosts rows as they slide under the bars, Raycast's scroll-driven
+        // fade. (The native scroll edge effect is unusable here: inside a transparent panel it
+        // renders a hard-bounded rectangle.)
         return content(
             apps: apps, clips: clips, hist: hist, calc: calc, selection: sel,
             favoriteCount: favoriteCount, showSections: showSections
@@ -146,6 +147,13 @@ struct RootPaletteView: View {
             core.showSettings()
             return .handled
         }
+        // ⌘K toggles the actions panel for the current selection, Raycast-style.
+        .onKeyPress(keys: ["k"], phases: .down) { press in
+            guard press.modifiers.contains(.command) else { return .ignored }
+            guard resultCount > 0 else { return .handled }
+            withAnimation(Self.menuAnimation) { showActions.toggle() }
+            return .handled
+        }
         // Bare backspace (back out of a sub-screen when the search is empty) is intercepted by
         // PalettePanel.sendEvent — the field editor consumes it before onKeyPress could fire.
         .onKeyPress(keys: [.delete, .deleteForward], phases: .down) { press in
@@ -180,16 +188,18 @@ struct RootPaletteView: View {
                     .symbolRenderingMode(.hierarchical)
                     .foregroundStyle(.secondary)
             }
-            TextField(vm.mode.placeholder, text: $vm.query)
-                .textFieldStyle(.plain)
-                .font(Theme.Typography.searchField)
-                .focused($searchFocused)
-                .onSubmit(activateSelection)
+            TextField(
+                "", text: $vm.query,
+                prompt: Text(vm.mode.placeholder).foregroundStyle(Theme.Colors.textTertiary)
+            )
+            .textFieldStyle(.plain)
+            .font(Theme.Typography.searchField)
+            .focused($searchFocused)
+            .onSubmit(activateSelection)
         }
         // Align the search icon with the list rows and section headers below (list inset + row inset).
         .padding(.horizontal, Theme.Spacing.md * 2)
         .frame(height: Theme.Size.headerHeight)
-        .padding(.top, Theme.Spacing.md)
         .frame(maxWidth: .infinity)
     }
 
@@ -247,7 +257,7 @@ struct RootPaletteView: View {
                     )
                     .frame(width: Theme.Size.clipboardListWidth)
                     Rectangle()
-                        .fill(Color.primary.opacity(0.10))
+                        .fill(Theme.Colors.separator)
                         .frame(width: 1)
                     ClipboardPreview(item: selected)
                 }
@@ -323,12 +333,13 @@ struct RootPaletteView: View {
     }
 
     private var bottomBar: some View {
-        // No bar — just floating glass buttons over the list; the list's edge dissolve melts rows
-        // passing beneath, so the buttons read clearly without any hard-edged strip.
+        // No bar — a transparent strip over the list, Raycast-style: the menu circle at the left
+        // and one glass control group at the right; the list's edge dissolve ghosts rows passing
+        // beneath, so the buttons read clearly without any hard-edged strip.
         HStack(spacing: 0) {
             appMenuButton
             Spacer()
-            actionPill
+            actionGroup
         }
         .padding(.horizontal, Theme.Spacing.md)
         .frame(height: Theme.Size.bottomBarHeight)
@@ -348,6 +359,34 @@ struct RootPaletteView: View {
         }
         .buttonStyle(.plain)
         .frosted(in: Circle())
+    }
+
+    /// Raycast's footer control group: primary action and the Actions toggle sharing one glass
+    /// container, each with its own hover fill and filled keycap chips.
+    private var actionGroup: some View {
+        HStack(spacing: 2) {
+            BarButton(action: activateSelection) {
+                HStack(spacing: Theme.Spacing.sm) {
+                    Text(actionPillLabel)
+                        .font(Theme.Typography.bar)
+                        .foregroundStyle(.primary)
+                    KeyCapChip(text: "↵")
+                }
+            }
+            BarButton(action: { withAnimation(Self.menuAnimation) { showActions.toggle() } }) {
+                HStack(spacing: Theme.Spacing.sm) {
+                    Text("Actions")
+                        .font(Theme.Typography.bar)
+                        .foregroundStyle(.primary)
+                    HStack(spacing: 2) {
+                        KeyCapChip(text: "⌘")
+                        KeyCapChip(text: "K")
+                    }
+                }
+            }
+        }
+        .padding(Theme.Spacing.xs)
+        .frosted(in: RoundedRectangle(cornerRadius: Theme.Radius.card, style: .continuous))
     }
 
     private var appMenu: some View {
@@ -381,22 +420,6 @@ struct RootPaletteView: View {
             default: return "Open Application"
             }
         }
-    }
-
-    private var actionPill: some View {
-        Button(action: activateSelection) {
-            HStack(spacing: Theme.Spacing.sm) {
-                Text(actionPillLabel)
-                Image(systemName: "return")
-            }
-            .font(Theme.Typography.pill)
-            .foregroundStyle(.primary)
-            .padding(.horizontal, Theme.Spacing.xl)
-            .padding(.vertical, Theme.Spacing.lg)
-            .contentShape(.capsule)
-        }
-        .buttonStyle(.plain)
-        .frosted(in: Capsule())
     }
 
     private func closeMenus() {
@@ -470,6 +493,28 @@ struct RootPaletteView: View {
             guard histResults.indices.contains(index) else { return }
             core.copyHistoryEntry(histResults[index])
         }
+    }
+}
+
+/// Flat action-bar button (Raycast footer style): bare label at rest, white-5% rounded fill on hover.
+private struct BarButton<Label: View>: View {
+    let action: () -> Void
+    @ViewBuilder let label: Label
+    @State private var hovered = false
+
+    var body: some View {
+        Button(action: action) {
+            label
+                .padding(.horizontal, Theme.Spacing.md)
+                .frame(height: 28)
+                .contentShape(RoundedRectangle(cornerRadius: Theme.Radius.control))
+                .background(
+                    RoundedRectangle(cornerRadius: Theme.Radius.control, style: .continuous)
+                        .fill(hovered ? Theme.Colors.rowHover : Color.clear)
+                )
+        }
+        .buttonStyle(.plain)
+        .onHover { hovered = $0 }
     }
 }
 

@@ -63,7 +63,7 @@ struct LauncherList: View {
             } else {
                 ScrollViewReader { proxy in
                     ScrollView {
-                        LazyVStack(spacing: 1) {
+                        LazyVStack(spacing: 0) {
                             ForEach(rows) { row in
                                 switch row {
                                 case .header(let title):
@@ -88,7 +88,7 @@ struct LauncherList: View {
                             }
                         }
                         .padding(.horizontal, Theme.Spacing.md)
-                        .padding(.top, Theme.Spacing.xs)
+                        .padding(.top, Theme.Spacing.md)
                         .padding(.bottom, Theme.Spacing.md)
                         .hideNativeScrollers()
                     }
@@ -107,17 +107,17 @@ struct LauncherList: View {
     }
 }
 
-/// Section label above a group of rows, shared by the launcher and clipboard so both lists use one identical header + row layout.
+/// Section label above a group of rows, shared by the launcher and clipboard so both lists use one identical header + row layout (Raycast: 13pt medium at 40% white).
 struct SectionHeader: View {
     let title: String
     var body: some View {
         Text(title)
             .font(Theme.Typography.sectionHeader)
-            .foregroundStyle(.secondary)
+            .foregroundStyle(Theme.Colors.textTertiary)
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.horizontal, Theme.Spacing.md)
-            .padding(.top, Theme.Spacing.xs)
-            .padding(.bottom, Theme.Spacing.xs / 2)
+            .padding(.top, Theme.Spacing.md)
+            .padding(.bottom, Theme.Spacing.xs)
     }
 }
 
@@ -148,7 +148,7 @@ private struct AppRow: View {
     }
 
     var body: some View {
-        HStack(spacing: Theme.Spacing.lg) {
+        HStack(spacing: Theme.Spacing.xl) {
             Image(nsImage: app.icon)
                 .resizable()
                 .frame(width: Theme.Size.rowIcon, height: Theme.Size.rowIcon)
@@ -164,45 +164,24 @@ private struct AppRow: View {
                 .font(Theme.Typography.rowTitle)
                 .lineLimit(1)
             if let caps = shortcutCaps {
-                HStack(spacing: Theme.Spacing.xs) {
+                HStack(spacing: 2) {
                     ForEach(Array(caps.enumerated()), id: \.offset) { _, cap in
-                        KeyCap(text: cap)
+                        KeyCapChip(text: cap, style: .outline)
                     }
                 }
             }
             Spacer()
             Text(app.kindLabel)
                 .font(Theme.Typography.rowTrailing)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(Theme.Colors.textTertiary)
         }
         .padding(.horizontal, Theme.Spacing.md)
-        .padding(.vertical, Theme.Spacing.sm)
+        .frame(height: Theme.Size.rowHeight)
         .background(
             RoundedRectangle(cornerRadius: Theme.Radius.row, style: .continuous)
                 .fill(fill)
         )
         .onHover { hovered = $0 }
-    }
-}
-
-/// A single keycap (one modifier symbol or the key) shown next to an app with a bound hotkey.
-private struct KeyCap: View {
-    let text: String
-
-    var body: some View {
-        Text(text)
-            .font(Theme.Typography.keyCap)
-            .foregroundStyle(.secondary)
-            .padding(.horizontal, Theme.Spacing.xs)
-            .frame(minWidth: 18, minHeight: 18)
-            .background(
-                RoundedRectangle(cornerRadius: Theme.Radius.menu, style: .continuous)
-                    .fill(Color.primary.opacity(0.08))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: Theme.Radius.menu, style: .continuous)
-                            .strokeBorder(Color.primary.opacity(0.10), lineWidth: 1)
-                    )
-            )
     }
 }
 
