@@ -180,14 +180,19 @@ mask-image: linear-gradient(to bottom,
 
 Driving math (all CSS calc, fed by `--top/bottom-fade-scroll-distance` from JS):
 
-- `progress = clamp(0, scrollDistance / fadeHeight, 1)`
+- `progress = clamp(0, scrollDistance / fadeHeight, 1)` — the denominator is the **full band**
 - `top-fade-opacity    = 1 − (1 − 0.15) · progress` → fades **to** 0.15, not to 0
 - `bottom-fade-opacity = 1 − (1 − 0.25) · progress` → min 0.25
-- midpoint slides from the edge to `fadeHeight · 0.5` as progress → 1
+- midpoint slides from the edge to `fadeHeight · 0.5` as progress → 1, **but** it also floors at
+  `safe-area / (fadeHeight · 0.5)` — and every chrome-overlapped list passes a safe-area offset
+  (≈ the bar height) that makes this ≥ 1, so in practice **the midpoint is pinned at band/2**.
 
-So: nothing scrolled = no fade; once content is under the edge, rows dissolve through a
-soft ramp that never goes fully invisible until the very edge. `scroll-padding-top/bottom`
-is set to the fade heights so keyboard selection never lands inside the faded zone.
+Band sizes (`query-keys` JS, presets `fade`/`chrome`): top = `window-header-height + 32px`,
+bottom = `window-footer-height + 28px` — the band overshoots the bar **into the visible list**,
+so the ghost-to-solid ramp finishes ~32px below the header rather than cliffing at its edge.
+The mask applies whenever the list can scroll (edge stop always transparent — this covers
+rubber-band bounces); a list that fits gets no mask. `scroll-padding-top/bottom` keeps keyboard
+selection out of the faded zones.
 
 Static variant for detail panes: `mask-image: linear-gradient(transparent 0%, black 8%–92%, transparent 100%)`.
 
