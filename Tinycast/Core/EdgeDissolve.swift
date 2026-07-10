@@ -9,7 +9,7 @@ struct EdgeDissolveMask: ViewModifier {
     /// first/last rows sit exactly at full alpha and only content sliding under a bar dissolves.
     /// The top band borrows the list's own top padding so the ramp ends exactly at the first
     /// at-rest row instead of a few points above it.
-    var topFade: CGFloat = Theme.Size.headerHeight + Theme.Spacing.md + Theme.Spacing.xs
+    var topFade: CGFloat = Theme.Size.headerHeight + Theme.Spacing.md
     /// Shorter and gentler than the top, like the old bottom blur was.
     var bottomFade: CGFloat = Theme.Size.bottomBarHeight - Theme.Spacing.md
 
