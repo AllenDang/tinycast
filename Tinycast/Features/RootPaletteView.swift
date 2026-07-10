@@ -191,9 +191,6 @@ struct RootPaletteView: View {
         .frame(height: Theme.Size.headerHeight)
         .padding(.top, Theme.Spacing.md)
         .frame(maxWidth: .infinity)
-        // The blur reaches past the dissolve band so rows returning to full alpha keep a whisper
-        // of softness instead of snapping sharp at the band's end.
-        .background(EdgeBlur(edge: .top, reach: Theme.Spacing.xxl))
     }
 
     @ViewBuilder
@@ -336,8 +333,6 @@ struct RootPaletteView: View {
         .padding(.horizontal, Theme.Spacing.md)
         .frame(height: Theme.Size.bottomBarHeight)
         .frame(maxWidth: .infinity)
-        // Gentler than the top but still reaching past the dissolve's shorter bottom band.
-        .background(EdgeBlur(edge: .bottom, radius: 0.1, reach: Theme.Spacing.md))
     }
 
     private var appMenuButton: some View {

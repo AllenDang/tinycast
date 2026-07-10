@@ -1,9 +1,9 @@
 import SwiftUI
 
 /// Alpha dissolve at a scroll view's top/bottom edges: rows melt to transparent as they slide
-/// under the floating search header and action bar, which are transparent overlays (plus a faint
-/// `EdgeBlur` backdrop) — the dissolve *is* the edge, no divider. Rows stay ghosted through the
-/// bar's text zone, Raycast-style, and vanish only past it.
+/// under the floating search header and action bar, which are transparent overlays — the dissolve
+/// *is* the edge, no divider. Rows stay ghosted through the bar's text zone, Raycast-style, and
+/// vanish only past it.
 struct EdgeDissolveMask: ViewModifier {
     /// Band heights match the bars' occupied heights (= the safe-area insets), so at rest the
     /// first/last rows sit exactly at full alpha and only content sliding under a bar dissolves.
