@@ -107,7 +107,7 @@ private struct CalcHistoryRow: View {
     }
 
     var body: some View {
-        HStack(spacing: Theme.Spacing.xl) {
+        HStack(spacing: Theme.Spacing.lg) {
             RoundedRectangle(cornerRadius: Theme.Radius.thumbnail, style: .continuous)
                 .fill(Theme.Colors.controlSurface)
                 .frame(width: Theme.Size.rowIcon, height: Theme.Size.rowIcon)
@@ -128,7 +128,7 @@ private struct CalcHistoryRow: View {
                 .lineLimit(1)
         }
         .padding(.horizontal, Theme.Spacing.md)
-        .frame(height: Theme.Size.rowHeight)
+        .padding(.vertical, Theme.Spacing.sm)
         .background(
             RoundedRectangle(cornerRadius: Theme.Radius.row, style: .continuous)
                 .fill(fill)

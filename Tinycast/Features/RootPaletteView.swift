@@ -346,17 +346,9 @@ struct RootPaletteView: View {
     }
 
     private var appMenuButton: some View {
-        Button {
+        MenuCircleButton {
             withAnimation(Self.menuAnimation) { showAppMenu.toggle() }
-        } label: {
-            Image(systemName: "ellipsis")
-                .font(.title3)
-                .foregroundStyle(Theme.Colors.textSecondary)
-                .frame(width: Theme.Size.menuButton, height: Theme.Size.menuButton)
-                .contentShape(.circle)
         }
-        .buttonStyle(.plain)
-        .frosted(in: Circle())
     }
 
     /// The footer control group: primary action and the Actions toggle sharing one glass capsule.
@@ -374,7 +366,7 @@ struct RootPaletteView: View {
                 HStack(spacing: Theme.Spacing.sm) {
                     Text("Actions")
                         .font(Theme.Typography.bar)
-                        .foregroundStyle(.primary)
+                        .foregroundStyle(Theme.Colors.textSecondary)
                     HStack(spacing: 2) {
                         KeyCapChip(text: "⌘")
                         KeyCapChip(text: "K")
@@ -490,6 +482,26 @@ struct RootPaletteView: View {
             guard histResults.indices.contains(index) else { return }
             core.copyHistoryEntry(histResults[index])
         }
+    }
+}
+
+/// The footer's glass menu circle; hover lives here so a mouse sweep never re-renders the palette body.
+private struct MenuCircleButton: View {
+    let action: () -> Void
+    @State private var hovered = false
+
+    var body: some View {
+        Button(action: action) {
+            Image(systemName: "ellipsis")
+                .font(.title3)
+                .foregroundStyle(Theme.Colors.textSecondary)
+                .frame(width: Theme.Size.menuButton, height: Theme.Size.menuButton)
+                .background(Circle().fill(hovered ? Theme.Colors.rowHover : Color.clear))
+                .contentShape(.circle)
+        }
+        .buttonStyle(.plain)
+        .onHover { hovered = $0 }
+        .frosted(in: Circle())
     }
 }
 

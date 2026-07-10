@@ -148,7 +148,7 @@ private struct AppRow: View {
     }
 
     var body: some View {
-        HStack(spacing: Theme.Spacing.xl) {
+        HStack(spacing: Theme.Spacing.lg) {
             Image(nsImage: app.icon)
                 .resizable()
                 .frame(width: Theme.Size.rowIcon, height: Theme.Size.rowIcon)
@@ -164,7 +164,7 @@ private struct AppRow: View {
                 .font(Theme.Typography.rowTitle)
                 .lineLimit(1)
             if let caps = shortcutCaps {
-                HStack(spacing: 2) {
+                HStack(spacing: Theme.Spacing.xs) {
                     ForEach(Array(caps.enumerated()), id: \.offset) { _, cap in
                         KeyCapChip(text: cap, style: .outline)
                     }
@@ -176,7 +176,7 @@ private struct AppRow: View {
                 .foregroundStyle(Theme.Colors.textTertiary)
         }
         .padding(.horizontal, Theme.Spacing.md)
-        .frame(height: Theme.Size.rowHeight)
+        .padding(.vertical, Theme.Spacing.sm)
         .background(
             RoundedRectangle(cornerRadius: Theme.Radius.row, style: .continuous)
                 .fill(fill)

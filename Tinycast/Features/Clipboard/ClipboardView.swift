@@ -185,7 +185,7 @@ private struct ClipboardRow: View {
             Spacer(minLength: 0)
         }
         .padding(.horizontal, Theme.Spacing.md)
-        .frame(height: Theme.Size.rowHeight)
+        .padding(.vertical, Theme.Spacing.sm)
         .background(
             RoundedRectangle(cornerRadius: Theme.Radius.row, style: .continuous)
                 .fill(fill)

@@ -28,8 +28,7 @@ enum Theme {
         static let panelHeight: CGFloat = 475
         static let headerHeight: CGFloat = 44
         static let bottomBarHeight: CGFloat = 52
-        static let rowHeight: CGFloat = 40
-        static let rowIcon: CGFloat = 22
+        static let rowIcon: CGFloat = 24
         static let keyCap: CGFloat = 20
         static let menuButton: CGFloat = 36
         static let clipboardListWidth: CGFloat = 290
@@ -40,17 +39,18 @@ enum Theme {
         static let settingsRowIcon: CGFloat = 20
     }
 
+    /// System text styles (not hardcoded sizes) so the UI honors Dynamic Type.
     enum Typography {
-        static let searchField = Font.system(size: 18, weight: .regular)
+        static let searchField = Font.system(size: 20, weight: .regular)
         static let headerIcon = Font.system(size: 18, weight: .medium)
-        static let rowTitle = Font.system(size: 13)
-        static let rowTrailing = Font.system(size: 13)
+        static let rowTitle = Font.body
+        static let rowTrailing = Font.callout
         static let sectionHeader = Font.subheadline.weight(.semibold)
-        static let keyCap = Font.system(size: 12)
-        static let bar = Font.system(size: 13)
-        static let menuRow = Font.system(size: 13)
-        static let menuShortcut = Font.system(size: 12)
-        static let menuIcon = Font.system(size: 13)
+        static let keyCap = Font.caption
+        static let bar = Font.callout.weight(.medium)
+        static let menuRow = Font.body
+        static let menuShortcut = Font.callout
+        static let menuIcon = Font.body
     }
 
     enum Colors {
