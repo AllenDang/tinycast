@@ -337,7 +337,7 @@ struct RootPaletteView: View {
         .frame(height: Theme.Size.bottomBarHeight)
         .frame(maxWidth: .infinity)
         // Gentler than the top but still reaching past the dissolve's shorter bottom band.
-        .background(EdgeBlur(edge: .bottom, radius: 1, reach: Theme.Spacing.md))
+        .background(EdgeBlur(edge: .bottom, radius: 0.1, reach: Theme.Spacing.md))
     }
 
     private var appMenuButton: some View {
