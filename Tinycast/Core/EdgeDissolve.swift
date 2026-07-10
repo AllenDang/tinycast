@@ -23,12 +23,16 @@ struct EdgeDissolveMask: ViewModifier {
 
     func body(content: Content) -> some View {
         content.mask(
+            // The mask must span the scroll view's *full* frame — the bars' safe-area insets would
+            // otherwise shift the gradient inward, landing the fade bands on at-rest rows and
+            // clipping the underlap regions to black.
             GeometryReader { geo in
                 LinearGradient(
                     stops: stops(height: geo.size.height),
                     startPoint: .top, endPoint: .bottom
                 )
             }
+            .ignoresSafeArea()
         )
     }
 
