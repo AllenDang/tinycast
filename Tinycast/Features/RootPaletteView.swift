@@ -65,9 +65,9 @@ struct RootPaletteView: View {
         let selectedHist = hist.indices.contains(sel - offset) ? hist[sel - offset] : nil
 
         // The results layer fills the whole panel; the header and action bar float over it via
-        // safeAreaInset with a progressive backdrop blur behind each, so rows melt away as they
-        // scroll under the bars — no hard dividers. (The native scroll edge effect is unusable
-        // here: inside a transparent panel it renders a hard-bounded rectangle.)
+        // safeAreaInset as fully transparent overlays. Each list's `edgeDissolve` alpha mask melts
+        // rows away as they scroll under the bars — no hard dividers. (The native scroll edge
+        // effect is unusable here: inside a transparent panel it renders a hard-bounded rectangle.)
         return content(
             apps: apps, clips: clips, hist: hist, calc: calc, selection: sel,
             favoriteCount: favoriteCount, showSections: showSections
@@ -191,7 +191,6 @@ struct RootPaletteView: View {
         .frame(height: Theme.Size.headerHeight)
         .padding(.top, Theme.Spacing.md)
         .frame(maxWidth: .infinity)
-        .background(ProgressiveEdgeBlur(edge: .top))
     }
 
     @ViewBuilder
@@ -324,8 +323,8 @@ struct RootPaletteView: View {
     }
 
     private var bottomBar: some View {
-        // No bar — just floating glass buttons over the list; the progressive backdrop blur melts
-        // rows passing beneath, so they read clearly without any hard-edged strip.
+        // No bar — just floating glass buttons over the list; the list's edge dissolve melts rows
+        // passing beneath, so the buttons read clearly without any hard-edged strip.
         HStack(spacing: 0) {
             appMenuButton
             Spacer()
@@ -334,14 +333,6 @@ struct RootPaletteView: View {
         .padding(.horizontal, Theme.Spacing.md)
         .frame(height: Theme.Size.bottomBarHeight)
         .frame(maxWidth: .infinity)
-        .background(
-            // Lighter than the header, like Raycast: weaker blur held tight to the bottom edge,
-            // no extra reach into the list, subtler scrim.
-            ProgressiveEdgeBlur(
-                edge: .bottom, radius: 0.5, reach: 12,
-                falloff: [(0.0, 1.0), (0.3, 0.55), (0.65, 0.2), (1.0, 0.0)]
-            )
-        )
     }
 
     private var appMenuButton: some View {

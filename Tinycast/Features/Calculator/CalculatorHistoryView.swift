@@ -81,6 +81,7 @@ struct CalculatorHistoryList: View {
                 .padding(.bottom, Theme.Spacing.md)
                 .hideNativeScrollers()
             }
+            .edgeDissolve()
             .thinScrollbar()
             .onChange(of: scrollToken) {
                 if calcSelected {

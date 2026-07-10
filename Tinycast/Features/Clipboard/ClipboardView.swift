@@ -70,6 +70,7 @@ struct ClipboardList: View {
                 .padding(.bottom, Theme.Spacing.md)
                 .hideNativeScrollers()
             }
+            .edgeDissolve()
             .thinScrollbar()
             .onChange(of: scrollToken) {
                 if let selectedID { proxy.scrollTo(selectedID.uuidString, anchor: .center) }
