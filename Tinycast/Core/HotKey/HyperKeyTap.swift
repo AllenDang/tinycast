@@ -88,8 +88,8 @@ private enum CapsLockRemap {
     }
 }
 
-/// The Hyper Key engine: a modifying `CGEventTap` that turns one physical key (Caps Lock, a
-/// side-specific modifier, or an F-key) into the ⌃⌥(⇧)⌘ chord, system-wide. Carbon
+/// The Hyper Key engine: a modifying `CGEventTap` that turns one physical key (Caps Lock or a
+/// right-side modifier) into the ⌃⌥(⇧)⌘ chord, system-wide. Carbon
 /// `RegisterEventHotKey` can't intercept lone physical keys, so this is a separate layer from
 /// `HotKeyCenter`; rewritten flags flow into Carbon matching, which is how existing Tinycast
 /// hotkeys (and other apps' shortcuts) fire from Hyper+key with no changes to the hotkey stack.
@@ -102,8 +102,8 @@ final class HyperKeyTap: ObservableObject {
     }
 
     /// What the tap callback should do with an event, decided on the actor.
-    /// `asFlagsChanged` converts the event's type in place — how a Hyper F-key press becomes a
-    /// modifier transition downstream instead of a swallowed key.
+    /// `asFlagsChanged` converts the event's type in place — how the remapped Caps Lock's F18
+    /// key events become modifier transitions downstream instead of swallowed keys.
     enum Decision: Sendable {
         case pass
         case suppress
@@ -243,10 +243,10 @@ final class HyperKeyTap: ObservableObject {
         type: CGEventType, flagsRaw: UInt64, isAutorepeat: Bool
     ) -> Decision {
         if key.tapUsesKeyEvents {
-            // F-keys (and Caps Lock via its F18 remap) arrive as keyDown/keyUp. Convert both
-            // ends into Left Control flagsChanged transitions so downstream — apps tracking
-            // modifiers, the recorder's live ✦ preview — sees the Hyper chord move with the key
-            // instead of a swallowed press.
+            // Caps Lock (via its F18 remap) arrives as keyDown/keyUp. Convert both ends into
+            // Left Control flagsChanged transitions so downstream — apps tracking modifiers,
+            // the recorder's live ✦ preview — sees the Hyper chord move with the key instead
+            // of a swallowed press.
             switch type {
             case .keyDown:
                 if isAutorepeat { return .suppress }
@@ -307,11 +307,7 @@ final class HyperKeyTap: ObservableObject {
         case .none:
             break
         case .originalKey:
-            if key == .capsLock {
-                setCapsLockState(!capsLockState())
-            } else if let code = key.keyCode {
-                postKey(CGKeyCode(code))
-            }
+            if key == .capsLock { setCapsLockState(!capsLockState()) }
         case .escape:
             postKey(CGKeyCode(kVK_Escape))
         }

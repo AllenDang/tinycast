@@ -62,12 +62,18 @@ struct GeneralSettingsView: View {
                         Button("Grant Access…") { Permissions.openAccessibilitySettings() }
                             .controlSize(.small)
                     }
-                    HyperKeyDropdown(selection: $settings.hyperKey)
-                        .onChange(of: settings.hyperKey) { _, newKey in
-                            // A Quick Press choice is meaningless for a different key.
-                            settings.hyperKeyQuickPress = .none
-                            if newKey != .none { Permissions.ensureAccessibility() }
+                    Picker("", selection: $settings.hyperKey) {
+                        ForEach(HyperKeyPhysicalKey.allCases) { key in
+                            Text(key.title).tag(key)
                         }
+                    }
+                    .labelsHidden()
+                    .fixedSize()
+                    .onChange(of: settings.hyperKey) { _, newKey in
+                        // A Quick Press choice is meaningless for a different key.
+                        settings.hyperKeyQuickPress = .none
+                        if newKey != .none { Permissions.ensureAccessibility() }
+                    }
                 }
                 if settings.hyperKey.hasOriginalFunction {
                     SettingsDivider()
@@ -142,74 +148,5 @@ struct GeneralSettingsView: View {
                 }
             }
         }
-    }
-}
-
-/// The key chooser: a pull-down opening a height-capped, scrollable list — a native menu can't
-/// cap its height, and 29 flat items fill the screen. Rows follow the app's menu grammar (hover
-/// fill, leading checkmark); the list keeps the native scroller.
-private struct HyperKeyDropdown: View {
-    @Binding var selection: HyperKeyPhysicalKey
-    @State private var isOpen = false
-
-    var body: some View {
-        Button {
-            isOpen = true
-        } label: {
-            HStack(spacing: Theme.Spacing.sm) {
-                Text(selection.title)
-                Image(systemName: "chevron.up.chevron.down")
-                    .font(.system(size: 9, weight: .semibold))
-                    .foregroundStyle(.secondary)
-            }
-        }
-        .popover(isPresented: $isOpen, arrowEdge: .bottom) {
-            ScrollViewReader { proxy in
-                ScrollView {
-                    VStack(spacing: 1) {
-                        ForEach(HyperKeyPhysicalKey.allCases) { key in
-                            HyperKeyDropdownRow(key: key, selected: key == selection) {
-                                selection = key
-                                isOpen = false
-                            }
-                        }
-                    }
-                    .padding(Theme.Spacing.sm)
-                }
-                .frame(width: 220, height: 300)
-                .onAppear { proxy.scrollTo(selection, anchor: .center) }
-            }
-        }
-    }
-}
-
-private struct HyperKeyDropdownRow: View {
-    let key: HyperKeyPhysicalKey
-    let selected: Bool
-    let action: () -> Void
-
-    @State private var hovered = false
-
-    var body: some View {
-        Button(action: action) {
-            HStack(spacing: Theme.Spacing.md) {
-                Image(systemName: "checkmark")
-                    .font(.system(size: 10, weight: .semibold))
-                    .opacity(selected ? 1 : 0)
-                Text(key.title)
-                    .font(Theme.Typography.menuRow)
-                Spacer(minLength: 0)
-            }
-            .padding(.horizontal, Theme.Spacing.md)
-            .padding(.vertical, Theme.Spacing.xs)
-            .background(
-                RoundedRectangle(cornerRadius: Theme.Radius.menu, style: .continuous)
-                    .fill(hovered ? Theme.Colors.menuHover : .clear)
-            )
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-        .onHover { hovered = $0 }
-        .id(key)
     }
 }
