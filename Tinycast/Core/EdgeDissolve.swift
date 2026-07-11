@@ -1,7 +1,7 @@
 import SwiftUI
 
 /// Scroll-driven edge dissolve for a scroll view underlapping the palette's transparent floating
-/// bars, a port of Raycast's scroll-area mask (docs/raycast-design.md §4). The fade band runs
+/// bars, a port of Raycast's scroll-area mask (see `DESIGN.md` → The edge dissolve). The fade band runs
 /// from the window edge to a fixed distance *past* the bar into the visible list, with a pinned
 /// midpoint at half the band: rows soften as they approach a bar, ghost beneath it (alpha floors
 /// at 15% top / 25% bottom once a full band of content is hidden), and vanish only at the window

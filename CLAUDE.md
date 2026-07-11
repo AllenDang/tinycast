@@ -54,9 +54,10 @@ swiftc Tinycast/Core/Calculator/*.swift Tools/calc-test.swift -o /tmp/calc-test 
 
 **Single-owner core.** `AppCore.shared` (`Core/AppCore.swift`) is a `@MainActor` singleton that owns
 every long-lived manager (`AppIndex`, `ClipboardStore`, `ClipboardManager`, `HotKeyManager`,
-`AppSettings`, `FavoritesStore`, `RunningAppsMonitor`, `PaletteViewModel`) plus the window controllers.
-`AppDelegate.applicationDidFinishLaunching` calls `AppCore.shared.start()` and nothing else; that's the
-one wiring point. All palette/paste/launch actions are methods on `AppCore` that the SwiftUI views call.
+`AppSettings`, `FavoritesStore`, `VisibilityStore`, `CalculatorHistoryStore`, `RunningAppsMonitor`,
+`PaletteViewModel`) plus the window controllers. `AppDelegate.applicationDidFinishLaunching` calls
+`AppCore.shared.start()` and nothing else; that's the one wiring point. All palette/paste/launch actions
+are methods on `AppCore` that the SwiftUI views call.
 
 **Two entry points, mostly AppKit windows.** `TinycastApp` (`@main`) declares only a `MenuBarExtra`
 scene; everything visible is driven imperatively from AppKit. The command palette is a borderless
@@ -68,8 +69,24 @@ material is tuned for a dark surface only.
 
 **Palette state flow.** `PaletteViewModel` (mode/query/selection/`focusToken`) is the bridge between the
 panel and `AppCore`. Showing the palette calls `prepare(mode:)`, which resets state and bumps
-`focusToken` (a UUID) so the SwiftUI search field re-focuses. `RootPaletteView` switches between
-`LauncherView` and `ClipboardView` on `mode`. The panel auto-dismisses on `windowDidResignKey`.
+`focusToken` (a UUID) so the SwiftUI search field re-focuses. `RootPaletteView` switches its content on
+`mode` (`.launcher` → `LauncherList`, `.clipboard` → `ClipboardList` + preview, `.calculatorHistory` →
+`CalculatorHistoryList`); Clipboard and Calculator History are sub-screens reached from the launcher
+(Tab, a command, or a hotkey) and back out to it. The panel auto-dismisses on `windowDidResignKey`. The
+flat `selection` index is the single source of truth for highlight/activation and must always match the
+visible row order, including the inline calculator card at index 0 when present (see below).
+
+**Inline calculator.** `Core/Calculator/` is a Foundation-only engine (parser → evaluator → formatter,
+with unit conversion) fronted by `CalcMemo`, a one-deep memo mirroring `AppIndex`'s. When the launcher
+or Calculator History query evaluates to a result, a `CalculatorCard` is pinned at the top of the list
+(flat selection index 0, shifting rows by one) and Enter copies the answer + records it to
+`CalculatorHistoryStore`. Keep the engine AppKit/SwiftUI-free so the `calc-test.swift` harness can
+compile the real sources.
+
+**Visual design.** The palette/settings look — forced-dark, white-alpha ramp, floating transparent
+bars, scroll-driven edge dissolve, Liquid Glass only on floating controls — is documented in
+`DESIGN.md` at the repo root. `Core/Theme.swift` is the single token source; read `DESIGN.md` before
+any restyle or new view.
 
 **Focus restoration is load-bearing.** `PaletteWindowController` records `previousApp` (the frontmost
 app) on show. Paste then targets that app: `Paster.paste` activates it and posts a synthetic ⌘V via
@@ -101,10 +118,11 @@ while all Carbon registrations are paused.
 
 ## Layout
 
-- `Tinycast/Core/` — managers, stores, windows, AppKit glue (no view bodies beyond hosting).
-- `Tinycast/Features/` — SwiftUI views: `RootPaletteView`, `Launcher/`, `Clipboard/`, `Settings/`, `About/`.
+- `Tinycast/Core/` — managers, stores, windows, AppKit glue (no view bodies beyond hosting); `Core/Calculator/` is the Foundation-only calc engine, `Core/Theme.swift` the design tokens.
+- `Tinycast/Features/` — SwiftUI views: `RootPaletteView`, `Launcher/`, `Clipboard/`, `Calculator/`, `Settings/`, `About/`, plus shared `PopoverMenu`.
 - `Tinycast/App/` — `@main` app + delegate.
 - `Packaging/` — `make-app.sh` (bundle assembly + signing), `build-dmg.sh`, `dev-cert.sh`.
+- `DESIGN.md` (repo root) — the visual design system: tokens, panel chrome, edge dissolve, rules for restyles.
 
 ## Concurrency
 

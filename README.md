@@ -53,7 +53,7 @@ Security → Accessibility**.
 ## Building from source
 
 See **[docs/DEVELOPMENT.md](docs/DEVELOPMENT.md)** for the toolchain, build, packaging, release,
-and website workflows.
+and website workflows, and **[DESIGN.md](DESIGN.md)** for the UI design system.
 
 ## License
 
