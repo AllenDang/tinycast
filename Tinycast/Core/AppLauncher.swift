@@ -24,16 +24,25 @@ enum AppLauncher {
     @MainActor
     static func toggle(bundleID: String) {
         let running = NSRunningApplication.runningApplications(withBundleIdentifier: bundleID)
-        if let app = running.first {
-            if app.isActive {
-                app.hide()
-            } else {
-                app.unhide()
-                app.activate()
-            }
-        } else if let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundleID) {
+            .first
+        if let running, running.isActive {
+            running.hide()
+            return
+        }
+        if let url = running?.bundleURL
+            ?? NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundleID)
+        {
+            // Dock-click semantics for running apps too: activates and raises, unhides, and
+            // sends the reopen event that restores a window when none is open. A bare
+            // `NSRunningApplication.activate()` can't be relied on for any of that under
+            // cooperative activation (macOS 14+): from a background app it can hand the target
+            // the menu bar without raising a single window.
             NSWorkspace.shared.openApplication(
                 at: url, configuration: NSWorkspace.OpenConfiguration())
+        } else if let running {
+            // Running app whose bundle URL can't be resolved (moved or deleted since launch).
+            running.unhide()
+            running.activate()
         }
     }
 }
