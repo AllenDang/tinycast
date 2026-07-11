@@ -16,16 +16,6 @@ enum HyperKeyPhysicalKey: String, CaseIterable, Identifiable, Sendable {
     /// The single glyph Hyper shortcuts collapse to, Raycast-style.
     static let hyperGlyph = "✦"
 
-    /// Picker sections: the eight side-specific modifiers, then the function keys.
-    static let modifierChoices: [HyperKeyPhysicalKey] = [
-        .leftControl, .leftShift, .leftOption, .leftCommand,
-        .rightControl, .rightShift, .rightOption, .rightCommand,
-    ]
-    static let functionChoices: [HyperKeyPhysicalKey] = [
-        .f1, .f2, .f3, .f4, .f5, .f6, .f7, .f8, .f9, .f10,
-        .f11, .f12, .f13, .f14, .f15, .f16, .f17, .f18, .f19,
-    ]
-
     var title: String {
         switch self {
         case .none: return "None"
@@ -77,10 +67,18 @@ enum HyperKeyPhysicalKey: String, CaseIterable, Identifiable, Sendable {
         }
     }
 
-    var isFunctionKey: Bool { Self.functionChoices.contains(self) }
+    var isFunctionKey: Bool { functionNumber != nil }
 
-    /// Caps Lock and the modifiers report presses as `flagsChanged`; F-keys as keyDown/keyUp.
-    var isModifierLike: Bool { self != .none && !isFunctionKey }
+    /// The keycode the event tap actually watches for this key. Caps Lock is remapped to F18 at
+    /// the HID level while it serves as Hyper (its lock-state toggle is applied below every
+    /// CGEventTap — see `HyperKeyTap.CapsLockRemap`), so the tap intercepts F18 in its place.
+    var tapKeyCode: Int? {
+        self == .capsLock ? kVK_F18 : keyCode
+    }
+
+    /// Whether the tap sees presses as keyDown/keyUp (F-keys, and Caps Lock via its F18 remap)
+    /// or as `flagsChanged` transitions (the real modifier keys).
+    var tapUsesKeyEvents: Bool { self == .capsLock || isFunctionKey }
 
     /// Keys that do something on their own when not remapped — these get the Quick Press row.
     var hasOriginalFunction: Bool { self == .capsLock || isFunctionKey }
@@ -106,9 +104,10 @@ enum HyperKeyPhysicalKey: String, CaseIterable, Identifiable, Sendable {
         }
     }
 
+    /// 1…19 for the F-key cases (their raw values are "f1"…"f19"), `nil` for everything else.
     private var functionNumber: Int? {
-        guard let index = Self.functionChoices.firstIndex(of: self) else { return nil }
-        return index + 1
+        guard rawValue.first == "f" else { return nil }
+        return Int(rawValue.dropFirst())
     }
 }
 
