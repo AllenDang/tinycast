@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		05561CD36EF1A0775A282165 /* ShortcutsSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF5AE919A2699E6EB8BF7DC8 /* ShortcutsSettingsView.swift */; };
+		14712478C37E6E8760CA47EC /* HyperKey.swift in Sources */ = {isa = PBXBuildFile; fileRef = C6DC5A4706854493D23FD18A /* HyperKey.swift */; };
 		14A5A5ACD35A572EE906769F /* CalcEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3B976C84AFE60E357A346224 /* CalcEngine.swift */; };
 		1D0C2F452B3801503B70EA9E /* GeneralSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4F63A3610C275E4961D60C7E /* GeneralSettingsView.swift */; };
 		1F39D145DBE2290532C93614 /* ClipboardSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 849FF3D93960B75F341D867C /* ClipboardSettingsView.swift */; };
@@ -54,6 +55,7 @@
 		F25D58ED6EF3308D38D01732 /* PaletteWindowController.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5447AEAD87BFE0E2D979B39 /* PaletteWindowController.swift */; };
 		F2B68DBA258D85DD5C6DC1CC /* Paster.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6185011A02366B30B48B5B6C /* Paster.swift */; };
 		F5F3381FF70997223F8888B0 /* KeyShortcut.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2C3EB07C07902C53BFD3B08B /* KeyShortcut.swift */; };
+		F6B79728FF2D37A60FED72AF /* HyperKeyTap.swift in Sources */ = {isa = PBXBuildFile; fileRef = 919AC64DE9C9DC3A973A0B4E /* HyperKeyTap.swift */; };
 		FE6A9C75F87C3495F413E66E /* CalculatorHistoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 68BD5E61831CB92150C62E1F /* CalculatorHistoryView.swift */; };
 		FEA05585E8AA58506D378CAF /* AppSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = B275099E59BD2531A838F7D8 /* AppSettings.swift */; };
 /* End PBXBuildFile section */
@@ -90,6 +92,7 @@
 		7FC5F0D4ECE8F3888DEB7642 /* NotificationToken.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationToken.swift; sourceTree = "<group>"; };
 		825AC18CE5DAFBEDA0CF3209 /* VisibilityStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VisibilityStore.swift; sourceTree = "<group>"; };
 		849FF3D93960B75F341D867C /* ClipboardSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClipboardSettingsView.swift; sourceTree = "<group>"; };
+		919AC64DE9C9DC3A973A0B4E /* HyperKeyTap.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HyperKeyTap.swift; sourceTree = "<group>"; };
 		93E9ACD504E016DFF6FE6C1B /* RightClick.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RightClick.swift; sourceTree = "<group>"; };
 		98B7211D27EDF764EC477A0F /* PopoverMenu.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PopoverMenu.swift; sourceTree = "<group>"; };
 		99945F0952ADADBBEB9B8388 /* ImageThumbnail.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageThumbnail.swift; sourceTree = "<group>"; };
@@ -104,6 +107,7 @@
 		BDC43CFF6777C11BB880F398 /* ClipboardStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClipboardStore.swift; sourceTree = "<group>"; };
 		C45190564C9D9F1722E83943 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		C64C87569634E26E1BE99A91 /* CalculatorCardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalculatorCardView.swift; sourceTree = "<group>"; };
+		C6DC5A4706854493D23FD18A /* HyperKey.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HyperKey.swift; sourceTree = "<group>"; };
 		C722D73D270A3A6CED4023F7 /* SettingsPaneScanner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsPaneScanner.swift; sourceTree = "<group>"; };
 		D37B6D29E8E23C6136EBFB38 /* HotKeyManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HotKeyManager.swift; sourceTree = "<group>"; };
 		D3FA43AD7C6FB00F555C52C2 /* Bundle+AppName.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Bundle+AppName.swift"; sourceTree = "<group>"; };
@@ -230,6 +234,8 @@
 			isa = PBXGroup;
 			children = (
 				1DB0D6E17E2B2D6F2CB47E0D /* HotKeyCenter.swift */,
+				C6DC5A4706854493D23FD18A /* HyperKey.swift */,
+				919AC64DE9C9DC3A973A0B4E /* HyperKeyTap.swift */,
 				2C3EB07C07902C53BFD3B08B /* KeyShortcut.swift */,
 			);
 			path = HotKey;
@@ -363,6 +369,8 @@
 				1D0C2F452B3801503B70EA9E /* GeneralSettingsView.swift in Sources */,
 				DEC660F280699E43AA028E8A /* HotKeyCenter.swift in Sources */,
 				903E82F78D3FCEF3A1AF3752 /* HotKeyManager.swift in Sources */,
+				14712478C37E6E8760CA47EC /* HyperKey.swift in Sources */,
+				F6B79728FF2D37A60FED72AF /* HyperKeyTap.swift in Sources */,
 				E5072CA7D34BA877D97DF392 /* ImageThumbnail.swift in Sources */,
 				F5F3381FF70997223F8888B0 /* KeyShortcut.swift in Sources */,
 				A0DB31CA35D9A980CA984EDE /* LaunchAtLogin.swift in Sources */,

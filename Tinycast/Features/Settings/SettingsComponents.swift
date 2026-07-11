@@ -94,6 +94,8 @@ struct SettingsRow<Trailing: View>: View {
     var subtitle: String? = nil
     var systemImage: String? = nil
     var tint: Color = .secondary
+    /// Optional state indicator rendered after the title (green = active, orange = attention).
+    var statusDot: Color? = nil
     @ViewBuilder var trailing: Trailing
 
     var body: some View {
@@ -105,8 +107,15 @@ struct SettingsRow<Trailing: View>: View {
                     .frame(width: Theme.Size.settingsRowIcon)
             }
             VStack(alignment: .leading, spacing: Theme.Spacing.xs / 2) {
-                Text(title)
-                    .font(.body)
+                HStack(spacing: Theme.Spacing.sm) {
+                    Text(title)
+                        .font(.body)
+                    if let statusDot {
+                        Circle()
+                            .fill(statusDot)
+                            .frame(width: Theme.Size.statusDot, height: Theme.Size.statusDot)
+                    }
+                }
                 if let subtitle {
                     Text(subtitle)
                         .font(.caption)

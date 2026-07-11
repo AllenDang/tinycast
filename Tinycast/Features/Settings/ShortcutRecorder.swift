@@ -7,6 +7,9 @@ struct ShortcutRecorder: View {
     let action: HotKeyAction
 
     @ObservedObject private var hotKeys: HotKeyManager = AppCore.shared.hotKeys
+    /// Observed so bound chips re-render when the Hyper Key display settings (✦ collapse,
+    /// Include Shift) change how `keycaps` renders.
+    @ObservedObject private var settings = AppCore.shared.settings
     @StateObject private var session = CaptureSession()
     @State private var hovered = false
 
@@ -64,7 +67,8 @@ struct ShortcutRecorder: View {
                 Text("Used by \(owner)")
                     .foregroundStyle(.orange)
             } else if !session.heldModifiers.isEmpty {
-                Text(KeyShortcut.modifierSymbols(from: session.heldModifiers).joined())
+                // Collapsed so holding the Hyper key previews as "✦" while recording.
+                Text(KeyShortcut.collapsedModifierSymbols(from: session.heldModifiers).joined())
                     .foregroundStyle(.primary)
             } else {
                 Text("Type shortcut…")

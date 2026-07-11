@@ -56,6 +56,7 @@ final class AppCore: ObservableObject {
     let clipboardStore = ClipboardStore()
     let clipboardManager: ClipboardManager
     let hotKeys = HotKeyManager()
+    let hyperKeyTap = HyperKeyTap()
     let settings = AppSettings()
     let favorites = FavoritesStore()
     let visibility = VisibilityStore()
@@ -84,6 +85,9 @@ final class AppCore: ObservableObject {
         hotKeys.onTogglePalette = { [weak self] in self?.togglePalette() }
         hotKeys.onToggleClipboard = { [weak self] in self?.toggleClipboard() }
         hotKeys.start()
+        // Deliberately keeps running while `hotKeys.recordingAction` pauses Carbon: the recorder
+        // relies on the tap's rewritten flags to capture Hyper shortcuts.
+        hyperKeyTap.start(settings: settings)
     }
 
     // MARK: - Palette control

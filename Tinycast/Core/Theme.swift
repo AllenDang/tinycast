@@ -37,6 +37,8 @@ enum Theme {
         /// Settings window: sidebar column width and the small icon used in setting rows.
         static let settingsSidebar: CGFloat = 184
         static let settingsRowIcon: CGFloat = 20
+        /// Little state indicator dot next to a settings row title (Hyper Key active/needs-permission).
+        static let statusDot: CGFloat = 6
     }
 
     /// System text styles (not hardcoded sizes) so the UI honors Dynamic Type.

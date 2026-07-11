@@ -131,6 +131,9 @@ private struct AppRow: View {
     /// Observed so a hotkey set/cleared in Settings re-renders the row and updates its keycaps
     /// immediately — the persisted palette tree wouldn't otherwise re-read the shortcut.
     @EnvironmentObject private var hotKeys: HotKeyManager
+    /// Observed for the same reason: the Hyper Key display settings (✦ collapse, Include Shift)
+    /// change how `keycaps` renders.
+    @ObservedObject private var settings = AppCore.shared.settings
 
     /// Selection wins over hover when a row is both; otherwise hover shows its fainter layer.
     private var fill: Color {
