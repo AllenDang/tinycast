@@ -8,14 +8,11 @@ struct KeyShortcut: Hashable, Sendable {
 
     init(carbonKeyCode: Int, carbonModifiers: Int) {
         self.carbonKeyCode = carbonKeyCode
-        // Mask to the four real modifiers so equality (and thus conflict detection) is never
-        // thrown off by device-dependent bits that may have been stored by older builds.
+        // Mask to the four real modifiers so equality (and conflict detection) isn't thrown off by device-dependent bits older builds may have stored.
         self.carbonModifiers = carbonModifiers & Self.allModifiers
     }
 
-    /// Captures a shortcut from a key-down event's parts, or `nil` if the combo isn't
-    /// bindable: a global hotkey needs at least one of ⌘⌥⌃ (⇧ alone would shadow plain
-    /// typing), except function keys, which are fine standalone.
+    /// Captures a shortcut from a key-down event, or `nil` if unbindable: a global hotkey needs one of ⌘⌥⌃ (⇧ alone shadows typing), except function keys which are fine standalone.
     init?(keyCode: Int, modifierFlags: NSEvent.ModifierFlags) {
         let flags = modifierFlags.intersection([.command, .option, .control, .shift])
         let hasCommandingModifier = !flags.isDisjoint(with: [.command, .option, .control])
@@ -25,7 +22,7 @@ struct KeyShortcut: Hashable, Sendable {
 
     /// One string per keycap in canonical macOS order (⌃⌥⇧⌘) with the key glyph last, feeding the launcher rows and settings recorder.
     @MainActor var keycaps: [String] {
-        Self.modifierSymbols(from: modifierFlags) + [keyGlyph]
+        Self.collapsedModifierSymbols(from: modifierFlags) + [keyGlyph]
     }
 
     var modifierFlags: NSEvent.ModifierFlags {
@@ -46,6 +43,21 @@ struct KeyShortcut: Hashable, Sendable {
         return carbon
     }
 
+    /// `modifierSymbols` with the configured Hyper set collapsed into a single "✦"; keyed on configuration (not tap health) so glyphs never flicker, leftover modifiers keep canonical order after the ✦.
+    @MainActor
+    static func collapsedModifierSymbols(from flags: NSEvent.ModifierFlags) -> [String] {
+        let settings = AppCore.shared.settings
+        guard settings.hyperKey != .none, settings.hyperKeyReplacesGlyph else {
+            return modifierSymbols(from: flags)
+        }
+        let hyperSet: NSEvent.ModifierFlags =
+            settings.hyperKeyIncludesShift
+            ? [.control, .option, .shift, .command]
+            : [.control, .option, .command]
+        guard flags.isSuperset(of: hyperSet) else { return modifierSymbols(from: flags) }
+        return [HyperKeyPhysicalKey.hyperGlyph] + modifierSymbols(from: flags.subtracting(hyperSet))
+    }
+
     /// Modifier symbols in the fixed ⌃⌥⇧⌘ order every macOS surface uses.
     static func modifierSymbols(from flags: NSEvent.ModifierFlags) -> [String] {
         var symbols: [String] = []
@@ -64,9 +76,7 @@ struct KeyShortcut: Hashable, Sendable {
 
     // MARK: - Key glyph
 
-    /// Display string for the key itself: a fixed table for keys without a typed character,
-    /// otherwise translated through the current keyboard layout so e.g. AZERTY shows the
-    /// label actually printed on the user's key.
+    /// Display string for the key: a fixed table for keys without a typed character, else translated through the current layout so e.g. AZERTY shows the printed label.
     @MainActor private var keyGlyph: String {
         if let special = Self.specialKeyGlyphs[carbonKeyCode] { return special }
         if let name = Self.functionKeyNames[carbonKeyCode] { return name }
@@ -120,8 +130,7 @@ struct KeyShortcut: Hashable, Sendable {
     }
 }
 
-// Decoding routes through the masking initializer; the encoded shape stays byte-compatible
-// with the legacy `{"carbonKeyCode":N,"carbonModifiers":N}` records.
+// Decoding routes through the masking initializer; the encoded shape stays byte-compatible with the legacy `{"carbonKeyCode":N,"carbonModifiers":N}` records.
 extension KeyShortcut: Codable {
     private enum CodingKeys: String, CodingKey {
         case carbonKeyCode, carbonModifiers

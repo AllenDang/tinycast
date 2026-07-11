@@ -1,8 +1,6 @@
 import SwiftUI
 
-/// Central design tokens for the palette UI, so visual tweaks happen in one place.
-/// Color values follow the dark design system in `DESIGN.md`; the app forces
-/// `.darkAqua`, so they are literal white/black alphas rather than adaptive colors.
+/// Central design tokens for the palette UI (dark design system per `DESIGN.md`; the app forces `.darkAqua`, so colors are literal white/black alphas).
 enum Theme {
     enum Spacing {
         static let xs: CGFloat = 4
@@ -37,6 +35,8 @@ enum Theme {
         /// Settings window: sidebar column width and the small icon used in setting rows.
         static let settingsSidebar: CGFloat = 184
         static let settingsRowIcon: CGFloat = 20
+        /// Little state indicator dot next to a settings row title (Hyper Key active/needs-permission).
+        static let statusDot: CGFloat = 6
     }
 
     /// System text styles (not hardcoded sizes) so the UI honors Dynamic Type.

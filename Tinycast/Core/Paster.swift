@@ -2,8 +2,7 @@ import AppKit
 import Carbon.HIToolbox
 
 enum Paster {
-    /// Write the item onto the system pasteboard and paste it into `previousApp` via a synthetic
-    /// ⌘V, activating that app so the keystroke lands there.
+    /// Write the item onto the pasteboard and paste it into `previousApp` via a synthetic ⌘V, activating that app so the keystroke lands there.
     @MainActor
     static func paste(
         _ item: ClipboardItem, store: ClipboardStore, previousApp: NSRunningApplication?

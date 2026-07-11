@@ -4,11 +4,9 @@ import SwiftUI
 struct CalculatorHistoryList: View {
     let results: [CalcHistoryEntry]
     let selectedID: CalcHistoryEntry.ID?
-    /// Changes only when the list should scroll to follow the selection (keyboard nav / reset), so
-    /// mouse selection never yanks the scroll position.
+    /// Changes only when the list should scroll to follow the selection (keyboard nav / reset), so mouse selection never yanks the scroll position.
     let scrollToken: UUID
-    /// Live answer for a calculation typed into the history search — same card and flat-index-0
-    /// contract as the launcher (`LauncherList.calc`).
+    /// Live answer for a calculation typed into the history search — same card and flat-index-0 contract as the launcher (`LauncherList.calc`).
     var calc: CalcResult?
     var calcSelected = false
     var onActivateCalc: () -> Void = {}

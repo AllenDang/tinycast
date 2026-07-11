@@ -1,7 +1,6 @@
 import Foundation
 
-/// Owns all global shortcut bindings: persistence, Carbon registration (via `HotKeyCenter`),
-/// conflict lookup for the settings recorder, and dispatch to the actual actions.
+/// Owns all global shortcut bindings: persistence, Carbon registration (via `HotKeyCenter`), conflict lookup, and dispatch.
 @MainActor
 final class HotKeyManager: ObservableObject {
     var onTogglePalette: (() -> Void)?
@@ -23,8 +22,7 @@ final class HotKeyManager: ObservableObject {
         for bundleID in boundPaneBundleIDs { register(.settingsPane(bundleID: bundleID)) }
     }
 
-    /// Bundle IDs that currently have a per-app hotkey — the index that lets `start()` know
-    /// which `appHotkey.*` records to load and lets the launcher rows show keycaps.
+    /// Bundle IDs that currently have a per-app hotkey — lets `start()` know which records to load and lets launcher rows show keycaps.
     var boundBundleIDs: [String] {
         UserDefaults.standard.stringArray(forKey: boundKey) ?? []
     }

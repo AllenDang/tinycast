@@ -5,11 +5,9 @@ struct LauncherList: View {
     let selectedID: AppEntry.ID?
     let favoriteCount: Int
     let showSections: Bool
-    /// Changes only when the list should scroll to follow the selection (keyboard nav / reset), so
-    /// mouse selection never yanks the scroll position.
+    /// Changes only when the list should scroll to follow the selection (keyboard nav / reset), so mouse selection never yanks the scroll position.
     let scrollToken: UUID
-    /// Inline calculator answer for the current query; occupies flat selection index 0 when
-    /// present (calc requires a non-empty query, so it never coexists with the sectioned view).
+    /// Inline calculator answer; occupies flat selection index 0 when present (requires a non-empty query, so it never coexists with the sectioned view).
     var calc: CalcResult?
     var calcSelected = false
     var onActivateCalc: () -> Void = {}
@@ -40,8 +38,7 @@ struct LauncherList: View {
         var rows: [Row] = calcRows
         let favorites = results.prefix(favoriteCount)
         let rest = results.dropFirst(favoriteCount)
-        // `rest` is apps-then-panes-then-commands by the AppIndex sort invariant, so filtering by
-        // kind keeps row order identical to `results` order and the flat selection index stays valid.
+        // `rest` is apps-then-panes-then-commands by the AppIndex sort invariant, so filtering by kind keeps row order identical and the flat selection index valid.
         let apps = rest.filter { $0.kind == .application }
         let panes = rest.filter { $0.kind == .systemSettings }
         let commands = rest.filter { $0.kind == .command }
@@ -125,12 +122,12 @@ private struct AppRow: View {
     let app: AppEntry
     let selected: Bool
     let running: Bool
-    /// Hover lives on the row itself, so moving the mouse repaints only the rows entering/leaving —
-    /// it never invalidates the parent list body (which would rebuild every row on each sweep).
+    /// Hover lives on the row itself, so a mouse sweep repaints only the rows entering/leaving, never the parent list body.
     @State private var hovered = false
-    /// Observed so a hotkey set/cleared in Settings re-renders the row and updates its keycaps
-    /// immediately — the persisted palette tree wouldn't otherwise re-read the shortcut.
+    /// Observed so a hotkey set/cleared in Settings re-renders the row's keycaps immediately.
     @EnvironmentObject private var hotKeys: HotKeyManager
+    /// Observed for the same reason: the Hyper Key display settings (✦ collapse, Include Shift) change how `keycaps` renders.
+    @ObservedObject private var settings = AppCore.shared.settings
 
     /// Selection wins over hover when a row is both; otherwise hover shows its fainter layer.
     private var fill: Color {

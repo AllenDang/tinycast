@@ -11,8 +11,7 @@ enum CalcToken: Equatable, Sendable {
 }
 
 enum CalcTokenizer {
-    /// nil on any character that can't be part of calculator input — the caller treats that as
-    /// "not a calculation", never as an error.
+    /// nil on any character that can't be calculator input — the caller treats that as "not a calculation", never an error.
     static func tokenize(_ input: String) -> [CalcToken]? {
         let chars = Array(input)
         var tokens: [CalcToken] = []
@@ -27,8 +26,7 @@ enum CalcTokenizer {
                 continue
             }
 
-            // Radix literals: 0x… / 0b… / 0o… (needs at least one digit after the prefix,
-            // otherwise fall through so "0" parses as a plain number).
+            // Radix literals: 0x… / 0b… / 0o… — needs ≥1 digit after the prefix, else fall through so "0" parses as a plain number.
             if ch == "0", i + 2 < chars.count,
                 let radix = ["x": 16, "b": 2, "o": 8][String(chars[i + 1]).lowercased()]
             {
@@ -126,8 +124,7 @@ enum CalcParser {
     static func isFunction(_ name: String) -> Bool { functions[name] != nil }
     static func isConstant(_ name: String) -> Bool { constants[name] != nil }
 
-    // Capture-free closures (not bare C function references) so every entry is inferred
-    // `@Sendable` under both language modes — the harness still compiles this file in Swift 5.
+    // Capture-free closures (not bare C function references) so every entry infers `@Sendable` under both language modes — the harness compiles this in Swift 5.
     fileprivate static let functions: [String: @Sendable (Double) -> Double] = [
         "sqrt": { sqrt($0) }, "log": { log10($0) }, "ln": { log($0) }, "sin": { sin($0) },
         "cos": { cos($0) }, "tan": { tan($0) }, "abs": { abs($0) }, "floor": { floor($0) },
@@ -138,8 +135,7 @@ enum CalcParser {
 }
 
 private struct Parser {
-    /// A value that may still be a "percent" (`20%`), resolved when it meets an operator:
-    /// additive ops treat it as a relative change, everything else as value/100.
+    /// A value that may still be a "percent" (`20%`): additive ops treat it as a relative change, everything else as value/100.
     struct Value {
         var value: Double
         var isPercent = false
@@ -154,8 +150,7 @@ private struct Parser {
     var isAtEnd: Bool { pos == tokens.count }
     private var current: CalcToken? { pos < tokens.count ? tokens[pos] : nil }
 
-    // Binding powers: additive 10, multiplicative (incl. "of") 20, unary minus 25,
-    // power 30 (right-assoc), postfix ! % deg tightest (applied unconditionally in parseOperand).
+    // Binding powers: additive 10, multiplicative (incl. "of") 20, unary minus 25, power 30 (right-assoc), postfix ! % deg tightest.
     private static let unaryBP = 25
 
     mutating func parseExpression(minBP: Int) -> Value? {
@@ -256,8 +251,7 @@ private struct Parser {
                     guard case .op(")") = current else { return nil }
                     pos += 1
                 } else {
-                    // Bare application: `sqrt 64`, `sin 30deg` — the argument is one operand,
-                    // so `sqrt 64 + 36` is sqrt(64) + 36.
+                    // Bare application: `sqrt 64`, `sin 30deg` — the argument is one operand, so `sqrt 64 + 36` is sqrt(64) + 36.
                     argument = parseOperand()
                 }
                 guard let argument else { return nil }

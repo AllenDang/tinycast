@@ -4,8 +4,7 @@ import SwiftUI
 struct ClipboardList: View {
     let results: [ClipboardItem]
     let selectedID: ClipboardItem.ID?
-    /// Changes only when the list should scroll to follow the selection (keyboard nav / reset), so
-    /// mouse selection never yanks the scroll position.
+    /// Changes only when the list should scroll to follow the selection (keyboard nav / reset), so mouse selection never yanks the scroll position.
     let scrollToken: UUID
     let onSelect: (ClipboardItem) -> Void
     let onActivate: () -> Void
@@ -23,8 +22,7 @@ struct ClipboardList: View {
         }
     }
 
-    /// Items are newest-first, so grouping is just a walk that emits a date header whenever the
-    /// bucket changes — mirrors the launcher's Favorites/Applications sectioning.
+    /// Items are newest-first, so grouping walks and emits a date header whenever the bucket changes — mirrors the launcher's sectioning.
     private var rows: [Row] {
         var rows: [Row] = []
         var currentBucket: DateBucket?
@@ -118,8 +116,7 @@ struct ClipboardActionsMenu: View {
     private var headerText: String {
         switch item.kind {
         case .text:
-            // Collapse all whitespace/newlines to single spaces so a multi-line copy stays a clean
-            // one-line title.
+            // Collapse whitespace/newlines to single spaces so a multi-line copy stays a clean one-line title.
             let oneLine = (item.text ?? "").split(whereSeparator: \.isWhitespace).joined(
                 separator: " ")
             return String(oneLine.prefix(40))
@@ -222,8 +219,7 @@ private struct ClipboardRow: View {
         }
     }
 
-    /// An SF Symbol centered on a rounded tile, sized to match the launcher's app icon so text and
-    /// image clipboard rows share one consistent thumbnail shape.
+    /// An SF Symbol centered on a rounded tile, sized to match the launcher's app icon so text and image rows share one thumbnail shape.
     private func glyphTile(_ systemName: String) -> some View {
         RoundedRectangle(cornerRadius: Theme.Radius.thumbnail, style: .continuous)
             .fill(Theme.Colors.controlSurface)
@@ -270,8 +266,7 @@ private struct AsyncThumbnail<Content: View, Placeholder: View>: View {
 }
 
 struct ClipboardPreview: View {
-    /// The preview pane is ~460pt wide (panel 750 − list 290); 900px keeps it crisp at 2× Retina
-    /// without over-decoding — 1200px would allocate ~1.8× the pixels it can ever display.
+    /// The preview pane is ~460pt wide (panel 750 − list 290); 900px keeps it crisp at 2× Retina without over-decoding.
     private static let previewMaxPixel: CGFloat = 900
 
     let item: ClipboardItem?
@@ -435,8 +430,7 @@ private struct ClipboardInfoSection: View {
         }.value
     }
 
-    /// Single pass over scalars — `split(whereSeparator:)` would allocate a substring per word,
-    /// which matters when a multi-MB copy lands here.
+    /// Single pass over scalars — `split(whereSeparator:)` would allocate a substring per word, which matters for a multi-MB copy.
     private nonisolated static func wordCount(_ text: String) -> Int {
         var count = 0
         var inWord = false

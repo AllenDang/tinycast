@@ -1,5 +1,4 @@
-// Standalone test for the launcher matcher. Run: swift Tools/fuzz-test.swift
-// Keep this matcher in sync with Tinycast/Core/AppIndex.swift (FuzzyMatch).
+// Standalone test for the launcher matcher (run: swift Tools/fuzz-test.swift); keep in sync with FuzzyMatch in Tinycast/Core/AppIndex.swift.
 
 import Foundation
 

@@ -1,10 +1,6 @@
 import SwiftUI
 
-/// Settings → Shortcuts: everything the launcher can open, split into one tab per category
-/// (Applications / System Settings / Commands) so each list gets the pane's full height. The
-/// active tab has a "show this category in the launcher" switch; each row has a visibility
-/// checkbox and a hotkey recorder. Search is scoped to the active tab. This pane never applies
-/// the visibility filter itself — hidden rows must stay visible here so they can be re-checked.
+/// Settings → Shortcuts: everything the launcher can open, one tab per category (Applications / System Settings / Commands), each row with a visibility checkbox and hotkey recorder; never applies the visibility filter itself, so hidden rows stay re-checkable here.
 struct ShortcutsSettingsView: View {
     @EnvironmentObject private var appIndex: AppIndex
     @State private var tab: AppEntry.Kind = .application
@@ -17,8 +13,7 @@ struct ShortcutsSettingsView: View {
     }
 
     var body: some View {
-        // Same insets as `SettingsPane`: ignore the transparent-titlebar safe area and use one
-        // fixed `xxl` inset on every side.
+        // Same insets as `SettingsPane`: ignore the transparent-titlebar safe area and use one fixed `xxl` inset every side.
         VStack(alignment: .leading, spacing: Theme.Spacing.xxl) {
             SettingsHeader(
                 title: "Shortcuts",
@@ -79,9 +74,7 @@ struct ShortcutsSettingsView: View {
     }
 }
 
-/// The active tab's card: a header row with the "show this category in the launcher" switch,
-/// then the item rows filling the remaining pane height. Rows dim when the category is off but
-/// stay interactive.
+/// The active tab's card: a header row with the "show in launcher" switch, then the item rows; rows dim when the category is off but stay interactive.
 private struct CategoryCard: View {
     let kind: AppEntry.Kind
     let entries: [AppEntry]
@@ -103,8 +96,7 @@ private struct CategoryCard: View {
             }
             .padding(.horizontal, Theme.Spacing.xs)
 
-            // Native scroller kept (unlike the palette's overlay list) — this is a plain
-            // windowed settings list.
+            // Native scroller kept (unlike the palette's overlay list) — this is a plain windowed settings list.
             ScrollView {
                 LazyVStack(spacing: 1) {
                     ForEach(entries) { entry in

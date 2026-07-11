@@ -102,10 +102,7 @@ struct ClipboardSettingsView: View {
     }
 }
 
-/// One excluded app: icon + display name + remove button. The stored value is just a bundle ID, so
-/// name/icon are resolved on the fly — via the app index when possible, else LaunchServices
-/// (Keychain Access lives in /System/Library/CoreServices/Applications, which the index doesn't
-/// scan), else a generic placeholder for apps no longer installed.
+/// One excluded app (icon + name + remove button); the stored value is just a bundle ID, so name/icon resolve on the fly via the app index, else LaunchServices, else a placeholder for uninstalled apps.
 private struct DisabledAppRow: View {
     let bundleID: String
     let onRemove: () -> Void
