@@ -431,14 +431,7 @@ final class HyperKeyTap: ObservableObject {
         } else if let tapPort, !CGEvent.tapIsEnabled(tap: tapPort) {
             CGEvent.tapEnable(tap: tapPort, enable: true)
         }
-        // Backstop for a missed release event on the flagsChanged path (the session key state
-        // is fine as a slow corroborator — it's only the per-event read that races). Key-event
-        // holds resolve via their own keyUp or reenable().
-        if hyperActive, !key.tapUsesKeyEvents, let code = key.tapKeyCode,
-            !CGEventSource.keyState(.combinedSessionState, key: CGKeyCode(code))
-        {
-            cancelHold()
-        }
+
     }
 
     private func sessionDidResign() {
