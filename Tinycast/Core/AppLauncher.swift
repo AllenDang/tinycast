@@ -19,8 +19,7 @@ enum AppLauncher {
         NSWorkspace.shared.open(url)
     }
 
-    /// Toggle behaviour: focus the app if it is not frontmost, hide it if it is,
-    /// launch it if it isn't running.
+    /// Focus the app if it isn't frontmost, hide it if it is, launch it if it isn't running.
     @MainActor
     static func toggle(bundleID: String) {
         let running = NSRunningApplication.runningApplications(withBundleIdentifier: bundleID)
@@ -32,11 +31,7 @@ enum AppLauncher {
         if let url = running?.bundleURL
             ?? NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundleID)
         {
-            // Dock-click semantics for running apps too: activates and raises, unhides, and
-            // sends the reopen event that restores a window when none is open. A bare
-            // `NSRunningApplication.activate()` can't be relied on for any of that under
-            // cooperative activation (macOS 14+): from a background app it can hand the target
-            // the menu bar without raising a single window.
+            // Dock-click semantics: activates, raises, unhides, and reopens a window — none of which a bare `activate()` reliably does under cooperative activation (macOS 14+).
             NSWorkspace.shared.openApplication(
                 at: url, configuration: NSWorkspace.OpenConfiguration())
         } else if let running {

@@ -1,8 +1,6 @@
 import SwiftUI
 
-/// One-deep memo over `CalcEngine.evaluate`, mirroring `AppIndex.matchCache`: the palette body
-/// re-renders on hover/selection changes with the same query, and this keeps those renders from
-/// re-running the evaluator.
+/// One-deep memo over `CalcEngine.evaluate`, mirroring `AppIndex.matchCache`, so hover/selection re-renders with the same query don't re-run the evaluator.
 @MainActor
 enum CalcMemo {
     private static var cache: (query: String, result: CalcResult?)?
@@ -72,8 +70,7 @@ struct CalculatorCard: View {
     }
 }
 
-/// Actions popover for the calculator card — only answers can be copied, so an error card
-/// gets no menu (the caller passes `calc` only for value payloads).
+/// Actions popover for the calculator card — only answers can be copied, so an error card gets no menu (the caller passes `calc` only for value payloads).
 struct CalcActionsMenu: View {
     let result: CalcResult
     let dismiss: () -> Void

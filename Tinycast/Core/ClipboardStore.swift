@@ -127,8 +127,7 @@ final class ClipboardStore: ObservableObject {
         }
     }
 
-    // Isolated so teardown may touch the main-actor statement/db pointers; the store is only ever
-    // released on the main actor (AppCore owns it), so the deinit runs there with no hop.
+    // Isolated so teardown may touch the main-actor statement/db pointers; AppCore only ever releases the store on the main actor, so no hop.
     isolated deinit {
         closeDatabase()
     }
@@ -190,8 +189,7 @@ final class ClipboardStore: ObservableObject {
     func search(_ query: String) -> [ClipboardItem] {
         let q = query.trimmingCharacters(in: .whitespaces)
         guard !q.isEmpty else { return items }
-        // Trigram FTS needs at least 3 characters; shorter queries (and the no-database degrade
-        // path) fall back to filtering the in-memory window.
+        // Trigram FTS needs ≥3 characters; shorter queries (and the no-database path) fall back to filtering the in-memory window.
         guard let stmt = searchStmt, q.count >= 3 else { return fallbackSearch(q) }
         let match = "\"" + q.replacingOccurrences(of: "\"", with: "\"\"") + "\""
         sqlite3_bind_text(stmt, 1, match, -1, SQLITE_TRANSIENT)

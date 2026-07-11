@@ -7,8 +7,7 @@ struct ShortcutRecorder: View {
     let action: HotKeyAction
 
     @ObservedObject private var hotKeys: HotKeyManager = AppCore.shared.hotKeys
-    /// Observed so bound chips re-render when the Hyper Key display settings (✦ collapse,
-    /// Include Shift) change how `keycaps` renders.
+    /// Observed so bound chips re-render when the Hyper Key display settings (✦ collapse, Include Shift) change how `keycaps` renders.
     @ObservedObject private var settings = AppCore.shared.settings
     @StateObject private var session = CaptureSession()
     @State private var hovered = false
@@ -39,8 +38,7 @@ struct ShortcutRecorder: View {
                     session.stop()
                 }
             }
-            // Rows in the app-hotkeys list are lazy: a recording row scrolled out of existence
-            // must release its monitors and unpause the global hotkeys.
+            // Rows in the app-hotkeys list are lazy: a recording row scrolled out of existence must release its monitors and unpause the global hotkeys.
             .onDisappear {
                 if isRecording { hotKeys.recordingAction = nil }
                 session.stop()
@@ -152,8 +150,7 @@ private final class CaptureSession: ObservableObject {
             monitors.append(monitor)
         }
 
-        // A click anywhere ends the recording, then travels on — so a click on another
-        // recorder both cancels this one and starts that one, in a single click.
+        // A click anywhere ends the recording, then travels on — so a click on another recorder cancels this one and starts that one in a single click.
         if let monitor = NSEvent.addLocalMonitorForEvents(
             matching: [.leftMouseDown, .rightMouseDown],
             handler: { [weak hotKeys] event in
@@ -164,8 +161,7 @@ private final class CaptureSession: ObservableObject {
             monitors.append(monitor)
         }
 
-        // Local monitors go quiet when the settings window resigns key — treat it as a cancel
-        // so the paused global hotkeys come back.
+        // Local monitors go quiet when the settings window resigns key — treat it as a cancel so the paused global hotkeys come back.
         resignObserver = NotificationCenter.default.addObserver(
             forName: NSWindow.didResignKeyNotification, object: nil, queue: .main
         ) { [weak hotKeys] _ in

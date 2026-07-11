@@ -3,11 +3,9 @@ import Foundation
 /// A single evaluated calculator answer for the launcher's inline card.
 struct CalcResult: Equatable, Sendable {
     enum Payload: Equatable, Sendable {
-        /// `display` is the grouped, human-facing string ("1,234,567" / "6.213711922 mi");
-        /// `copyText` is the same answer without grouping, suitable for pasting onwards.
+        /// `display` is grouped and human-facing ("1,234,567"); `copyText` is the same answer without grouping, for pasting onwards.
         case value(display: String, copyText: String)
-        /// A friendly, intentional error ("Cannot convert Weight to Time.") — only produced when
-        /// the input clearly *is* a conversion attempt, never for half-typed expressions.
+        /// A friendly error ("Cannot convert Weight to Time.") — only for a clear conversion attempt, never a half-typed expression.
         case error(message: String)
     }
 
@@ -107,8 +105,7 @@ enum CalcEngine {
                 display: output, copyText: output.replacingOccurrences(of: ",", with: "")))
     }
 
-    /// Light cleanup of the typed expression for the card: collapse whitespace and use the pretty
-    /// operator glyphs, but otherwise keep what the user wrote.
+    /// Light cleanup of the typed expression for the card: collapse whitespace and use pretty operator glyphs, otherwise keep what the user wrote.
     private static func prettyExpression(_ query: String) -> String {
         query.split(whereSeparator: \.isWhitespace).joined(separator: " ")
             .replacingOccurrences(of: "*", with: "×")

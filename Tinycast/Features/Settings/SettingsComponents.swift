@@ -1,12 +1,10 @@
 import SwiftUI
 
-/// Reusable building blocks for the Settings window. All metrics come from `Theme` so Settings
-/// shares one spacing/radius/color vocabulary with the palette.
+/// Reusable building blocks for the Settings window; all metrics come from `Theme` so Settings shares one vocabulary with the palette.
 
 // MARK: - Pane scaffold
 
-/// Standard layout for a settings pane: a large title + subtitle header, then scrollable content.
-/// Every pane uses this so headers, insets and scroll behaviour stay identical across the app.
+/// Standard layout for a settings pane (title + subtitle header, then scrollable content) so headers, insets and scroll behaviour stay identical across the app.
 struct SettingsPane<Content: View>: View {
     let title: String
     let subtitle: String
@@ -18,9 +16,7 @@ struct SettingsPane<Content: View>: View {
                 SettingsHeader(title: title, subtitle: subtitle)
                 content
             }
-            // Content ignores the transparent-titlebar safe area and uses one fixed `xxl` inset on
-            // every side instead — the titlebar band alone is taller than the rhythm we want, and
-            // the traffic lights sit over the sidebar, so nothing collides.
+            // Ignore the transparent-titlebar safe area and use one fixed `xxl` inset every side instead (the titlebar band is taller than the rhythm we want; traffic lights sit over the sidebar, so nothing collides).
             .padding(Theme.Spacing.xxl)
             .frame(maxWidth: .infinity, alignment: .leading)
             .hideNativeScrollers()
@@ -48,8 +44,7 @@ struct SettingsHeader: View {
 
 // MARK: - Grouped card
 
-/// A rounded, hairline-bordered container that groups related rows — the macOS System Settings
-/// "card". Rows are separated by inset dividers via `SettingsRow`/`SettingsDivider`.
+/// A rounded, hairline-bordered container grouping related rows — the macOS System Settings "card" (rows split by inset dividers via `SettingsRow`/`SettingsDivider`).
 struct SettingsCard<Content: View>: View {
     var header: String? = nil
     @ViewBuilder var content: Content
@@ -87,8 +82,7 @@ struct SettingsDivider: View {
 
 // MARK: - Row
 
-/// A single settings line: optional SF Symbol, a title with optional subtitle, and a trailing
-/// control. Fixed vertical rhythm keeps every card looking aligned regardless of the control.
+/// A single settings line (optional SF Symbol, title with optional subtitle, trailing control); fixed vertical rhythm keeps every card aligned regardless of the control.
 struct SettingsRow<Trailing: View>: View {
     let title: String
     var subtitle: String? = nil

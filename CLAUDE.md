@@ -134,3 +134,9 @@ edges: block-observer lifetimes go through the RAII `NotificationToken` (`Core/N
 instead of removal in a `deinit`; `ClipboardStore` uses `isolated deinit` for its SQLite teardown;
 raw Carbon/C pointers get decoded to plain values before crossing into actor code (see
 `hotKeyCarbonEventHandler`).
+
+## Comments
+
+Keep comments to a **single line** — no stacked/multi-line comment blocks. Condense a multi-line
+explanation into one line, or drop it. Don't write comments that restate the code; only comment the
+non-obvious (a `why`, a gotcha, a load-bearing invariant).

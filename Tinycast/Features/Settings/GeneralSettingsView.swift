@@ -3,8 +3,7 @@ import SwiftUI
 struct GeneralSettingsView: View {
     @ObservedObject private var settings = AppCore.shared.settings
     @ObservedObject private var hyperTap = AppCore.shared.hyperKeyTap
-    // Same UserDefaults key the `App` binds its `MenuBarExtra(isInserted:)` to — toggling here
-    // updates the menu-bar icon live, with no shared observable object between them.
+    // Same UserDefaults key the `App` binds its `MenuBarExtra(isInserted:)` to — toggling here updates the menu-bar icon live, with no shared observable between them.
     @AppStorage(SettingsKey.showInMenuBar) private var showInMenuBar = true
 
     /// The Hyper modifier chord as prose glyphs, tracking the Include Shift toggle.

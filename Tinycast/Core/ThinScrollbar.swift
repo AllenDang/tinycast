@@ -224,8 +224,7 @@ private struct NativeScrollerHider: NSViewRepresentable {
 
         func applyOverlayStyle() {
             guard let scrollView = enclosingScrollView else {
-                // Not yet spliced into the scroll view's hierarchy; retry next tick, bounded so a
-                // view that never lands in a scroll view can't busy-loop the main thread.
+                // Not yet spliced into the scroll view's hierarchy; retry next tick, bounded so a view that never lands in one can't busy-loop the main thread.
                 guard retriesLeft > 0 else { return }
                 retriesLeft -= 1
                 DispatchQueue.main.async { [weak self] in self?.applyOverlayStyle() }

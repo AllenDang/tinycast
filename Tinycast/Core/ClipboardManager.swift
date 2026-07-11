@@ -5,8 +5,7 @@ final class ClipboardManager {
     /// Marker we attach to the pasteboard when *we* write to it, so polling ignores our own pastes.
     static let internalType = NSPasteboard.PasteboardType("com.tinycast.internal")
 
-    /// Longest text we capture into history. Bigger copies are skipped outright — truncating
-    /// would make a paste from history silently drop the tail.
+    /// Longest text we capture into history; bigger copies are skipped outright (truncating would silently drop the tail on paste).
     static let maxTextLength = 32_000
 
     private let store: ClipboardStore
@@ -35,8 +34,7 @@ final class ClipboardManager {
 
         if pb.types?.contains(Self.internalType) == true { return }
 
-        // The pasteboard doesn't carry its source, so attribute the change to the frontmost app —
-        // the copy that bumped changeCount happened within the last poll interval (0.5s).
+        // The pasteboard doesn't carry its source, so attribute the change to the frontmost app (the copy happened within the last 0.5s poll).
         let sourceBundleID = NSWorkspace.shared.frontmostApplication?.bundleIdentifier
         if let sourceBundleID, settings.clipboardDisabledApps.contains(sourceBundleID) { return }
 

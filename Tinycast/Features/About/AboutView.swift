@@ -96,8 +96,7 @@ final class AuxWindowController: NSObject, NSWindowDelegate {
                 defer: false
             )
             window.title = title
-            // Let the content (e.g. the Settings sidebar) run edge-to-edge under a transparent
-            // titlebar so the window reads as one continuous surface — the modern inspector look.
+            // Let the content run edge-to-edge under a transparent titlebar so the window reads as one continuous surface — the modern inspector look.
             if seamlessTitleBar {
                 window.titlebarAppearsTransparent = true
                 window.titleVisibility = .hidden

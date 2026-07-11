@@ -1,6 +1,5 @@
 import AppKit
-// `kAXTrustedCheckOptionPrompt` is imported as a mutable C global; the AX module predates
-// Sendable annotations, so downgrade its concurrency diagnostics (the value is process-constant).
+// `@preconcurrency` downgrades AX concurrency diagnostics: `kAXTrustedCheckOptionPrompt` is a mutable C global but process-constant.
 @preconcurrency import ApplicationServices
 
 enum Permissions {

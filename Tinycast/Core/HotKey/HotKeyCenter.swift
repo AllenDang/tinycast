@@ -30,16 +30,14 @@ final class HotKeyCenter {
         var ref: EventHotKeyRef?
     }
 
-    /// Live registrations keyed by the caller's stable id, plus the reverse lookup the
-    /// Carbon callback needs (it only gets back the numeric `EventHotKeyID`).
+    /// Live registrations keyed by the caller's stable id, plus the reverse lookup the Carbon callback needs (it only gets the numeric `EventHotKeyID`).
     private var entries: [String: Entry] = [:]
     private var idToKey: [UInt32: String] = [:]
     private var nextCarbonID: UInt32 = 0
     private var eventHandler: EventHandlerRef?
     private let signature: OSType = 0x5459_4354  // FourCC "TYCT"
 
-    /// While `true` every hotkey is soft-unregistered (the entries stay, the system
-    /// registrations go), so a recorder can capture combos without triggering them.
+    /// While `true` every hotkey is soft-unregistered (entries stay, system registrations go), so a recorder can capture combos without triggering them.
     var isPaused = false {
         didSet {
             guard isPaused != oldValue else { return }
@@ -77,8 +75,7 @@ final class HotKeyCenter {
             0,
             &ref
         )
-        // Registration can fail if another app owns the combo system-wide; the binding then
-        // stays visible in settings but simply doesn't fire — same as the old package.
+        // Registration can fail if another app owns the combo system-wide; the binding stays visible in settings but doesn't fire — same as the old package.
         guard error == noErr, let ref else {
             NSLog("Tinycast: could not register hotkey for %@ (OSStatus %d)", id, error)
             return

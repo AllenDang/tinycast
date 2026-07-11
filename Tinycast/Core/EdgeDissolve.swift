@@ -1,15 +1,8 @@
 import SwiftUI
 
-/// Scroll-driven edge dissolve for a scroll view underlapping the palette's transparent floating
-/// bars, a port of Raycast's scroll-area mask (see `DESIGN.md` → The edge dissolve). The fade band runs
-/// from the window edge to a fixed distance *past* the bar into the visible list, with a pinned
-/// midpoint at half the band: rows soften as they approach a bar, ghost beneath it (alpha floors
-/// at 15% top / 25% bottom once a full band of content is hidden), and vanish only at the window
-/// edge. While the list is scrollable the edge stop stays transparent — this also keeps rows
-/// dissolving correctly through rubber-band bounces — and a list that fits gets no mask at all.
+/// Scroll-driven edge dissolve for a scroll view underlapping the palette's floating bars, a port of Raycast's scroll-area mask (see `DESIGN.md` → The edge dissolve).
 struct EdgeDissolveMask: ViewModifier {
-    /// Band lengths: the bar's occupied height plus Raycast's overshoot into the list
-    /// (32px below the header, 28px above the footer).
+    /// Band lengths: the bar's occupied height plus Raycast's overshoot into the list (32px below the header, 28px above the footer).
     var topFade: CGFloat = Theme.Size.headerHeight + Theme.Spacing.md + 32
     var bottomFade: CGFloat = Theme.Size.bottomBarHeight + 28
     private static let topMinAlpha: CGFloat = 0.15
@@ -44,9 +37,7 @@ struct EdgeDissolveMask: ViewModifier {
                 canScroll = new.canScroll
             }
             .mask(
-                // The mask must span the scroll view's *full* frame — the bars' safe-area insets
-                // would otherwise shift the gradient inward, landing the fade bands on at-rest
-                // rows and clipping the underlap regions to black.
+                // Must span the scroll view's *full* frame — the bars' safe-area insets would otherwise shift the gradient inward, clipping the underlap regions to black.
                 GeometryReader { geo in
                     LinearGradient(
                         stops: stops(height: geo.size.height),
@@ -59,8 +50,7 @@ struct EdgeDissolveMask: ViewModifier {
 
     private func stops(height: CGFloat) -> [Gradient.Stop] {
         guard canScroll, height > 0 else { return [.init(color: .black, location: 0)] }
-        // Midpoint alpha eases from 1 toward the floor as a full band of content scrolls past
-        // (Raycast: opacity = 1 − (1 − min) · clamp(scrollDistance / fadeHeight, 0, 1)).
+        // Midpoint alpha eases from 1 toward the floor as a full band of content scrolls past (Raycast: opacity = 1 − (1 − min) · clamp(scrollDistance / fadeHeight, 0, 1)).
         let topAlpha = 1 - (1 - Self.topMinAlpha) * min(topDistance / topFade, 1)
         let bottomAlpha = 1 - (1 - Self.bottomMinAlpha) * min(bottomDistance / bottomFade, 1)
         return [
@@ -75,8 +65,7 @@ struct EdgeDissolveMask: ViewModifier {
 }
 
 extension View {
-    /// Attach to a `ScrollView` that underlaps the palette's floating bars (before `thinScrollbar`,
-    /// so the scrollbar overlay stays unmasked).
+    /// Attach to a `ScrollView` that underlaps the palette's floating bars (before `thinScrollbar`, so the scrollbar overlay stays unmasked).
     func edgeDissolve() -> some View {
         modifier(EdgeDissolveMask())
     }

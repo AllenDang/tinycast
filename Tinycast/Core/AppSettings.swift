@@ -1,7 +1,6 @@
 import SwiftUI
 
-/// UserDefaults keys shared between `@AppStorage` call sites (scene state that isn't part of the
-/// `AppSettings` model), so the App and the Settings UI bind to the same key.
+/// UserDefaults keys shared between `@AppStorage` call sites so the App and the Settings UI bind to the same key.
 enum SettingsKey {
     /// Menu-bar icon visibility — read by `MenuBarExtra(isInserted:)` and the Settings toggle.
     static let showInMenuBar = "showInMenuBar"
@@ -56,8 +55,7 @@ final class AppSettings: ObservableObject {
         clipboardRetention =
             ClipboardRetention(rawValue: defaults.integer(forKey: Key.clipboardRetention))
             ?? .threeMonths
-        // Password managers are excluded out of the box; the defaults apply only until the user
-        // first edits the list.
+        // Password managers are excluded out of the box; the defaults apply only until the user first edits the list.
         clipboardDisabledApps =
             defaults.stringArray(forKey: Key.clipboardDisabledApps)
             ?? ["com.apple.keychainaccess", "com.apple.Passwords"]

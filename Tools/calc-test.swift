@@ -1,7 +1,4 @@
-// Standalone test for the calculator engine. Unlike fuzz-test.swift this compiles the *real*
-// engine sources (they are Foundation-only by design), so there is no copy to keep in sync:
-//
-//   swiftc Tinycast/Core/Calculator/*.swift Tools/calc-test.swift -o /tmp/calc-test && /tmp/calc-test
+// Standalone test for the calculator engine — compiles the *real* Foundation-only engine sources (no copy to sync): swiftc Tinycast/Core/Calculator/*.swift Tools/calc-test.swift -o /tmp/calc-test && /tmp/calc-test
 
 import Foundation
 

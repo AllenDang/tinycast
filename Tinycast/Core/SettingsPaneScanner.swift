@@ -63,8 +63,7 @@ enum SettingsPaneScanner {
         let url = appexURL.appendingPathComponent("Contents/Resources/InfoPlist.loctable")
         guard let table = plist(at: url) else { return nil }
         var codes = Locale.preferredLanguages.flatMap { tag -> [String] in
-            // The loctable keys use underscores ("en_AU") where language tags use hyphens
-            // ("en-AU"); try the underscored tag, then the bare language code ("en").
+            // loctable keys use underscores ("en_AU") where language tags use hyphens ("en-AU"); try the underscored tag, then the bare code ("en").
             let underscored = tag.replacingOccurrences(of: "-", with: "_")
             let bare = tag.split(separator: "-").first.map(String.init)
             return ([underscored, bare].compactMap { $0 }).filter { !$0.isEmpty }

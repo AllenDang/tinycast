@@ -18,8 +18,7 @@ struct RootPaletteView: View {
 
     /// Ordered launcher results (the single source of truth for list, selection and activation): empty query pins favorites to the top, otherwise plain ranked matches.
     private var appResults: [AppEntry] {
-        // Visibility filtering stays downstream of `matches` so its one-deep memo cache is
-        // never keyed on hidden state; hidden favorites drop out here too.
+        // Visibility filtering stays downstream of `matches` so its one-deep memo cache is never keyed on hidden state; hidden favorites drop out here too.
         let base = appIndex.matches(vm.query).filter(visibility.isVisible)
         guard isQueryEmpty, !favorites.keys.isEmpty else { return base }
         let split = favorites.ordered(base)
@@ -41,8 +40,7 @@ struct RootPaletteView: View {
         case .calculatorHistory: return histResults.count + calcCount
         }
     }
-    /// Selection clamped into the current results — the single source of truth for highlight,
-    /// preview and activation so the list and preview can never disagree.
+    /// Selection clamped into the current results — the single source of truth for highlight, preview and activation so the list and preview can never disagree.
     private var selection: Int { resultCount == 0 ? 0 : min(max(vm.selection, 0), resultCount - 1) }
 
     var body: some View {
@@ -50,8 +48,7 @@ struct RootPaletteView: View {
         let apps = vm.mode == .launcher ? appResults : []
         let clips = vm.mode == .clipboard ? clipResults : []
         let hist = vm.mode == .calculatorHistory ? histResults : []
-        // Every count/selection below derives from this one calc/offset pair — the flat selection
-        // index must always match the visible row order, calc card included.
+        // Every count/selection below derives from this one calc/offset pair — the flat selection index must always match the visible row order, calc card included.
         let calc = calcResult
         let offset = calc == nil ? 0 : 1
         let count = apps.count + offset + clips.count + hist.count  // only the active mode is non-empty
@@ -64,18 +61,14 @@ struct RootPaletteView: View {
         let selectedClip = clips.indices.contains(sel) ? clips[sel] : nil
         let selectedHist = hist.indices.contains(sel - offset) ? hist[sel - offset] : nil
 
-        // The results layer fills the whole panel; the header and action bar float over it via
-        // safeAreaInset as fully transparent overlays. Each list's `edgeDissolve` mask ghosts
-        // rows as they scroll under the bars — no hard dividers. (The native scroll edge effect
-        // is unusable here: inside a transparent panel it renders a hard-bounded rectangle.)
+        // Results fill the panel; header and action bar float over it as transparent safeAreaInset overlays, each list's `edgeDissolve` ghosting rows under the bars (the native scroll edge effect renders a hard rectangle inside a transparent panel).
         return content(
             apps: apps, clips: clips, hist: hist, calc: calc, selection: sel,
             favoriteCount: favoriteCount, showSections: showSections
         )
         .safeAreaInset(edge: .top, spacing: 0) { header }
         .safeAreaInset(edge: .bottom, spacing: 0) { bottomBar }
-        // Menus are in-window overlays anchored to a bottom corner, so they stay clipped inside the
-        // panel and sit over the bottom bar — never a system popover spilling outside the window.
+        // Menus are in-window overlays anchored to a bottom corner, so they stay clipped inside the panel — never a system popover spilling outside the window.
         .overlay {
             if showAppMenu || showActions {
                 Color.black.opacity(0.001)
@@ -104,8 +97,7 @@ struct RootPaletteView: View {
         .background(Color.black.opacity(Theme.Colors.panelDimming))
         .background(VisualEffectView())
         .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.panel, style: .continuous))
-        // Every show bumps focusToken — refocus search and drop any menu left open from last time
-        // (e.g. when the palette was dismissed by clicking away while a context menu was up).
+        // Every show bumps focusToken — refocus search and drop any menu left open from last time (e.g. dismissed by clicking away with a context menu up).
         .onChange(of: vm.focusToken) {
             searchFocused = true
             showActions = false
@@ -153,8 +145,7 @@ struct RootPaletteView: View {
             withAnimation(Self.menuAnimation) { showActions.toggle() }
             return .handled
         }
-        // Bare backspace (back out of a sub-screen when the search is empty) is intercepted by
-        // PalettePanel.sendEvent — the field editor consumes it before onKeyPress could fire.
+        // Bare backspace (back out of a sub-screen when the search is empty) is intercepted by PalettePanel.sendEvent — the field editor consumes it before onKeyPress could fire.
         .onKeyPress(keys: [.delete, .deleteForward], phases: .down) { press in
             guard press.modifiers.contains(.command) else { return .ignored }
             switch vm.mode {
@@ -237,8 +228,7 @@ struct RootPaletteView: View {
                 }
             )
         case .clipboard:
-            // Empty history: center one message across the whole panel rather than wedging it into
-            // the narrow list column beside a blank preview.
+            // Empty history: center one message across the whole panel rather than wedging it into the narrow list column beside a blank preview.
             if clips.isEmpty {
                 EmptyResults(text: "Clipboard history is empty")
             } else {
@@ -333,8 +323,7 @@ struct RootPaletteView: View {
     }
 
     private var bottomBar: some View {
-        // No bar — just floating glass controls over the list; the list's edge dissolve ghosts
-        // rows passing beneath, so the buttons read clearly without any hard-edged strip.
+        // No bar — just floating glass controls over the list; the edge dissolve ghosts rows passing beneath, so the buttons read clearly without a hard-edged strip.
         HStack(spacing: 0) {
             appMenuButton
             Spacer()
@@ -445,14 +434,12 @@ struct RootPaletteView: View {
         scrollToken = UUID()
     }
 
-    /// Tab flips launcher↔clipboard; Calculator History (entered via its command) exits back to
-    /// the launcher rather than joining the cycle.
+    /// Tab flips launcher↔clipboard; Calculator History (entered via its command) exits back to the launcher rather than joining the cycle.
     private func toggleMode() {
         vm.mode = vm.mode == .launcher ? .clipboard : .launcher
     }
 
-    /// Back out of Calculator History to a fresh root search — `prepare` is the same reset used
-    /// when the palette is shown (clears query/selection, bumps focusToken to refocus the field).
+    /// Back out to a fresh root search — `prepare` is the same reset used when the palette is shown (clears query/selection, bumps focusToken to refocus the field).
     private func exitToLauncher() {
         vm.prepare(mode: .launcher)
     }
@@ -473,8 +460,7 @@ struct RootPaletteView: View {
             core.paste(clipResults[selection])
         case .calculatorHistory:
             if let calcResult, selection == 0 {
-                // A fresh calculation typed into the history search: copy + record like the
-                // launcher card (error cards no-op).
+                // A fresh calculation typed into the history search: copy + record like the launcher card (error cards no-op).
                 core.copyCalculatorResult(calcResult)
                 return
             }

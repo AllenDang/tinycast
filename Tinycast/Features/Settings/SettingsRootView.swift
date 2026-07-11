@@ -96,8 +96,7 @@ struct SettingsRootView: View {
     }
 }
 
-/// One sidebar entry: a colored icon tile + label, with an accent highlight when selected and a
-/// subtle hover state otherwise.
+/// One sidebar entry: a colored icon tile + label, with an accent highlight when selected and a subtle hover state otherwise.
 private struct SidebarRow: View {
     let title: String
     let systemImage: String
@@ -135,8 +134,7 @@ private struct SidebarRow: View {
         .onHover { hovering = $0 }
     }
 
-    // Match the launcher list: a soft neutral selection fill (not a saturated accent block), with a
-    // fainter hover layer.
+    // Match the launcher list: a soft neutral selection fill (not a saturated accent block), with a fainter hover layer.
     private var background: Color {
         if isSelected { return Theme.Colors.selection }
         if hovering { return Theme.Colors.rowHover }
