@@ -63,7 +63,7 @@ struct LauncherList: View {
             } else {
                 ScrollViewReader { proxy in
                     ScrollView {
-                        LazyVStack(spacing: 1) {
+                        LazyVStack(spacing: 0) {
                             ForEach(rows) { row in
                                 switch row {
                                 case .header(let title):
@@ -166,14 +166,14 @@ private struct AppRow: View {
             if let caps = shortcutCaps {
                 HStack(spacing: Theme.Spacing.xs) {
                     ForEach(Array(caps.enumerated()), id: \.offset) { _, cap in
-                        KeyCap(text: cap)
+                        KeyCapChip(text: cap, style: .outline)
                     }
                 }
             }
             Spacer()
             Text(app.kindLabel)
                 .font(Theme.Typography.rowTrailing)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(Theme.Colors.textTertiary)
         }
         .padding(.horizontal, Theme.Spacing.md)
         .padding(.vertical, Theme.Spacing.sm)
@@ -182,27 +182,6 @@ private struct AppRow: View {
                 .fill(fill)
         )
         .onHover { hovered = $0 }
-    }
-}
-
-/// A single keycap (one modifier symbol or the key) shown next to an app with a bound hotkey.
-private struct KeyCap: View {
-    let text: String
-
-    var body: some View {
-        Text(text)
-            .font(Theme.Typography.keyCap)
-            .foregroundStyle(.secondary)
-            .padding(.horizontal, Theme.Spacing.xs)
-            .frame(minWidth: 18, minHeight: 18)
-            .background(
-                RoundedRectangle(cornerRadius: Theme.Radius.menu, style: .continuous)
-                    .fill(Color.primary.opacity(0.08))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: Theme.Radius.menu, style: .continuous)
-                            .strokeBorder(Color.primary.opacity(0.10), lineWidth: 1)
-                    )
-            )
     }
 }
 

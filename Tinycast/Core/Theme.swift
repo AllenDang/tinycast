@@ -1,6 +1,8 @@
 import SwiftUI
 
 /// Central design tokens for the palette UI, so visual tweaks happen in one place.
+/// Color values follow the dark design system in `DESIGN.md`; the app forces
+/// `.darkAqua`, so they are literal white/black alphas rather than adaptive colors.
 enum Theme {
     enum Spacing {
         static let xs: CGFloat = 4
@@ -12,20 +14,22 @@ enum Theme {
     }
 
     enum Radius {
-        static let panel: CGFloat = 24
-        static let row: CGFloat = 8
+        static let panel: CGFloat = 26
+        static let row: CGFloat = 10
         static let menu: CGFloat = 6
-        static let menuPanel: CGFloat = 14
+        static let menuPanel: CGFloat = 12
         static let thumbnail: CGFloat = 6
         static let card: CGFloat = 10
+        static let keyCap: CGFloat = 5
     }
 
     enum Size {
         static let panelWidth: CGFloat = 750
-        static let panelHeight: CGFloat = 480
+        static let panelHeight: CGFloat = 475
         static let headerHeight: CGFloat = 44
         static let bottomBarHeight: CGFloat = 52
         static let rowIcon: CGFloat = 24
+        static let keyCap: CGFloat = 20
         static let menuButton: CGFloat = 36
         static let clipboardListWidth: CGFloat = 290
         static let menuWidth: CGFloat = 240
@@ -43,7 +47,7 @@ enum Theme {
         static let rowTrailing = Font.callout
         static let sectionHeader = Font.subheadline.weight(.semibold)
         static let keyCap = Font.caption
-        static let pill = Font.body.weight(.medium)
+        static let bar = Font.callout.weight(.medium)
         static let menuRow = Font.body
         static let menuShortcut = Font.callout
         static let menuIcon = Font.body
@@ -53,18 +57,51 @@ enum Theme {
         /// Black opacity of the panel's surface tint over the behind-window material.
         static let panelDimming: CGFloat = 0.4
         /// Selection fill: a soft neutral translucent layer shared by launcher and clipboard so both lists look identical.
-        static let selection = Color.primary.opacity(0.12)
+        static let selection = Color.white.opacity(0.10)
         /// Mouse hover — a fainter layer that follows the cursor, visually distinct from selection.
-        static let rowHover = Color.primary.opacity(0.06)
-        static let menuHover = Color.primary.opacity(0.10)
+        static let rowHover = Color.white.opacity(0.05)
+        static let menuHover = Color.white.opacity(0.10)
+        static let separator = Color.white.opacity(0.10)
+        /// Small control surfaces: kbd chips, glyph tiles.
+        static let controlSurface = Color.white.opacity(0.10)
+        /// Control borders: outlined kbd chips.
+        static let border = Color.white.opacity(0.20)
+        static let textSecondary = Color.white.opacity(0.60)
+        static let textTertiary = Color.white.opacity(0.40)
         /// Settings grouped "card": a faint raised surface whose hairline border doubles as the inset row divider.
-        static let cardFill = Color.primary.opacity(0.04)
-        static let cardStroke = Color.primary.opacity(0.08)
+        static let cardFill = Color.white.opacity(0.05)
+        static let cardStroke = Color.white.opacity(0.10)
+    }
+}
+
+/// A single keycap chip: `.outline` for hotkey hints on rows, `.filled` for footer shortcuts.
+struct KeyCapChip: View {
+    enum Style {
+        case outline
+        case filled
+    }
+
+    let text: String
+    var style: Style = .filled
+
+    var body: some View {
+        let shape = RoundedRectangle(cornerRadius: Theme.Radius.keyCap, style: .continuous)
+        Text(text)
+            .font(Theme.Typography.keyCap)
+            .foregroundStyle(Theme.Colors.textSecondary)
+            .padding(.horizontal, Theme.Spacing.xs)
+            .frame(minWidth: Theme.Size.keyCap, minHeight: Theme.Size.keyCap)
+            .background {
+                switch style {
+                case .filled: shape.fill(Theme.Colors.controlSurface)
+                case .outline: shape.strokeBorder(Theme.Colors.border, lineWidth: 1)
+                }
+            }
     }
 }
 
 extension View {
-    /// A floating Liquid Glass control surface (action pill + menu button), interactive for native lensing and untinted via `.tint(.clear)`.
+    /// A floating Liquid Glass control surface (action group + menu button), interactive for native lensing and untinted via `.tint(.clear)`.
     func frosted(in shape: some Shape) -> some View {
         glassEffect(.regular.interactive(), in: shape)
             .tint(.clear)

@@ -1,54 +1,76 @@
 import SwiftUI
 
-/// Alpha dissolve at a scroll view's top/bottom edges: rows melt to transparent as they slide
-/// under the floating search header and action bar, which are transparent overlays — the dissolve
-/// *is* the edge, no divider. Rows stay ghosted through the bar's text zone, Raycast-style, and
-/// vanish only past it.
+/// Scroll-driven edge dissolve for a scroll view underlapping the palette's transparent floating
+/// bars, a port of Raycast's scroll-area mask (see `DESIGN.md` → The edge dissolve). The fade band runs
+/// from the window edge to a fixed distance *past* the bar into the visible list, with a pinned
+/// midpoint at half the band: rows soften as they approach a bar, ghost beneath it (alpha floors
+/// at 15% top / 25% bottom once a full band of content is hidden), and vanish only at the window
+/// edge. While the list is scrollable the edge stop stays transparent — this also keeps rows
+/// dissolving correctly through rubber-band bounces — and a list that fits gets no mask at all.
 struct EdgeDissolveMask: ViewModifier {
-    /// Band heights match the bars' occupied heights (= the safe-area insets), so at rest the
-    /// first/last rows sit exactly at full alpha and only content sliding under a bar dissolves.
-    /// The top band borrows the list's own top padding so the ramp ends exactly at the first
-    /// at-rest row instead of a few points above it.
-    var topFade: CGFloat = Theme.Size.headerHeight + Theme.Spacing.lg
-    /// Shorter and gentler than the top, like the old bottom blur was.
-    var bottomFade: CGFloat = Theme.Size.bottomBarHeight - Theme.Spacing.md
+    /// Band lengths: the bar's occupied height plus Raycast's overshoot into the list
+    /// (32px below the header, 28px above the footer).
+    var topFade: CGFloat = Theme.Size.headerHeight + Theme.Spacing.md + 32
+    var bottomFade: CGFloat = Theme.Size.bottomBarHeight + 28
+    private static let topMinAlpha: CGFloat = 0.15
+    private static let bottomMinAlpha: CGFloat = 0.25
 
-    /// Ramp stops as (fraction of the band from that edge, alpha). Rows stay ghosted through the
-    /// search-text zone (like Raycast) and reach full transparency only above the text line.
-    private static let top: [(CGFloat, CGFloat)] = [
-        (0.00, 0.00), (0.28, 0.01), (0.46, 0.04), (0.60, 0.12),
-        (0.72, 0.30), (0.84, 0.58), (0.93, 0.86), (1.00, 1.00),
-    ]
-    private static let bottom: [(CGFloat, CGFloat)] = [
-        (0.00, 0.00), (0.16, 0.05), (0.28, 0.14), (0.40, 0.30),
-        (0.55, 0.55), (0.70, 0.78), (0.85, 0.93), (1.00, 1.00),
-    ]
+    /// How much content is hidden beyond each edge, 0 when the list rests against it.
+    @State private var topDistance: CGFloat = 0
+    @State private var bottomDistance: CGFloat = 0
+    @State private var canScroll = false
+
+    private struct ScrollState: Equatable {
+        var top: CGFloat
+        var bottom: CGFloat
+        var canScroll: Bool
+    }
 
     func body(content: Content) -> some View {
-        content.mask(
-            // The mask must span the scroll view's *full* frame — the bars' safe-area insets would
-            // otherwise shift the gradient inward, landing the fade bands on at-rest rows and
-            // clipping the underlap regions to black.
-            GeometryReader { geo in
-                LinearGradient(
-                    stops: stops(height: geo.size.height),
-                    startPoint: .top, endPoint: .bottom
+        content
+            .onScrollGeometryChange(for: ScrollState.self) { geo in
+                let visible =
+                    geo.containerSize.height - geo.contentInsets.top
+                    - geo.contentInsets.bottom
+                return ScrollState(
+                    top: geo.contentOffset.y + geo.contentInsets.top,
+                    bottom: geo.contentSize.height + geo.contentInsets.bottom
+                        - geo.containerSize.height - geo.contentOffset.y,
+                    canScroll: geo.contentSize.height > visible
                 )
+            } action: { _, new in
+                topDistance = max(0, new.top)
+                bottomDistance = max(0, new.bottom)
+                canScroll = new.canScroll
             }
-            .ignoresSafeArea()
-        )
+            .mask(
+                // The mask must span the scroll view's *full* frame — the bars' safe-area insets
+                // would otherwise shift the gradient inward, landing the fade bands on at-rest
+                // rows and clipping the underlap regions to black.
+                GeometryReader { geo in
+                    LinearGradient(
+                        stops: stops(height: geo.size.height),
+                        startPoint: .top, endPoint: .bottom
+                    )
+                }
+                .ignoresSafeArea()
+            )
     }
 
     private func stops(height: CGFloat) -> [Gradient.Stop] {
-        let height = max(height, topFade + bottomFade)
-        var out: [Gradient.Stop] = Self.top.map { (fraction, alpha) in
-            .init(color: .black.opacity(alpha), location: fraction * topFade / height)
-        }
-        out.append(.init(color: .black, location: 1 - bottomFade / height))
-        out += Self.bottom.reversed().map { (fraction, alpha) in
-            .init(color: .black.opacity(alpha), location: 1 - fraction * bottomFade / height)
-        }
-        return out
+        guard canScroll, height > 0 else { return [.init(color: .black, location: 0)] }
+        // Midpoint alpha eases from 1 toward the floor as a full band of content scrolls past
+        // (Raycast: opacity = 1 − (1 − min) · clamp(scrollDistance / fadeHeight, 0, 1)).
+        let topAlpha = 1 - (1 - Self.topMinAlpha) * min(topDistance / topFade, 1)
+        let bottomAlpha = 1 - (1 - Self.bottomMinAlpha) * min(bottomDistance / bottomFade, 1)
+        return [
+            .init(color: .black.opacity(0), location: 0),
+            .init(color: .black.opacity(topAlpha), location: topFade / 2 / height),
+            .init(color: .black, location: topFade / height),
+            .init(color: .black, location: 1 - bottomFade / height),
+            .init(color: .black.opacity(bottomAlpha), location: 1 - bottomFade / 2 / height),
+            .init(color: .black.opacity(0), location: 1),
+        ]
     }
 }
 
