@@ -45,7 +45,7 @@ enum Theme {
         static let headerIcon = Font.system(size: 18, weight: .medium)
         static let rowTitle = Font.body
         static let rowTrailing = Font.callout
-        static let sectionHeader = Font.subheadline.weight(.semibold)
+        static let sectionHeader = Font.subheadline.weight(.medium)
         static let keyCap = Font.caption
         static let bar = Font.callout.weight(.medium)
         static let menuRow = Font.body

@@ -348,7 +348,7 @@ struct RootPaletteView: View {
                     Text(actionPillLabel)
                         .font(Theme.Typography.bar)
                         .foregroundStyle(.primary)
-                    KeyCapChip(text: "↵")
+                    KeyCapChip(text: "↵", style: .outline)
                 }
             }
             BarButton(action: { withAnimation(Self.menuAnimation) { showActions.toggle() } }) {
@@ -357,8 +357,8 @@ struct RootPaletteView: View {
                         .font(Theme.Typography.bar)
                         .foregroundStyle(Theme.Colors.textSecondary)
                     HStack(spacing: 2) {
-                        KeyCapChip(text: "⌘")
-                        KeyCapChip(text: "K")
+                        KeyCapChip(text: "⌘", style: .outline)
+                        KeyCapChip(text: "K", style: .outline)
                     }
                 }
             }
