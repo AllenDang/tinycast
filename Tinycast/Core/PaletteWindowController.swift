@@ -26,6 +26,8 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
         panel?.orderOut(nil)
         // Drop the multi-MB clipboard preview bitmaps now the window is gone, so idle RAM returns near baseline (row thumbnails stay cached).
         ImageThumbnail.purgePreviews()
+        // Reset to a fresh launcher so the hidden panel releases the heavy sub-screens (a fully scrolled emoji grid is ~2k realized views); every show path re-prepares anyway.
+        core.palette.prepare(mode: .launcher)
         if restoreFocus { previousApp?.activate() }
     }
 

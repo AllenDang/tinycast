@@ -81,7 +81,7 @@ struct RootPaletteView: View {
             selection: sel, favoriteCount: favoriteCount, showSections: showSections
         )
         .safeAreaInset(edge: .top, spacing: 0) { header }
-        .safeAreaInset(edge: .bottom, spacing: 0) { bottomBar(selectedEmoji: selectedEmoji) }
+        .safeAreaInset(edge: .bottom, spacing: 0) { bottomBar }
         // Menus are in-window overlays anchored to a bottom corner, so they stay clipped inside the panel — never a system popover spilling outside the window.
         .overlay {
             if showAppMenu || showActions {
@@ -388,23 +388,10 @@ struct RootPaletteView: View {
         }
     }
 
-    private func bottomBar(selectedEmoji: EmojiEntry?) -> some View {
+    private var bottomBar: some View {
         // No bar — just floating glass controls over the list; the edge dissolve ghosts rows passing beneath, so the buttons read clearly without a hard-edged strip.
-        HStack(spacing: Theme.Spacing.md) {
+        HStack(spacing: 0) {
             appMenuButton
-            if let selectedEmoji {
-                // Raycast-style readout of the selected cell, since grid cells have no room for a label.
-                HStack(spacing: Theme.Spacing.sm) {
-                    Text(selectedEmoji.display(tone: settings.emojiSkinTone))
-                    Text(selectedEmoji.displayName)
-                        .font(Theme.Typography.bar)
-                        .foregroundStyle(Theme.Colors.textSecondary)
-                        .lineLimit(1)
-                }
-                .padding(.horizontal, Theme.Spacing.md)
-                .frame(height: 28)
-                .frosted(in: Capsule())
-            }
             Spacer()
             actionGroup
         }

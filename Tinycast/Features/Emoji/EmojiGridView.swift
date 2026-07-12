@@ -47,9 +47,6 @@ struct EmojiGridView: View {
     let onActivate: () -> Void
     let onActions: (Int) -> Void
 
-    private static let gridColumns = Array(
-        repeating: GridItem(.flexible(), spacing: 0), count: EmojiGrid.columns)
-
     /// Scroll target for the current selection; IDs are section-namespaced because a frequent emoji repeats inside its category section.
     private var selectedCellID: String? {
         guard let section = sections.last(where: { selection >= $0.start }),
@@ -64,24 +61,10 @@ struct EmojiGridView: View {
                 LazyVStack(spacing: 0) {
                     ForEach(sections) { section in
                         SectionHeader(title: section.title)
-                        LazyVGrid(columns: Self.gridColumns, spacing: 0) {
-                            ForEach(Array(section.entries.enumerated()), id: \.element.id) {
-                                offset, entry in
-                                let flat = section.start + offset
-                                EmojiCell(
-                                    glyph: entry.display(tone: tone), selected: flat == selection
-                                )
-                                .id(section.id + "-" + entry.id)
-                                .onTapGesture { onSelect(flat) }
-                                .simultaneousGesture(
-                                    TapGesture(count: 2).onEnded {
-                                        onSelect(flat)
-                                        onActivate()
-                                    }
-                                )
-                                .onRightClick { onActions(flat) }
-                            }
-                        }
+                        EmojiSectionGrid(
+                            section: section, selection: selection, tone: tone,
+                            onSelect: onSelect, onActivate: onActivate, onActions: onActions
+                        )
                     }
                 }
                 .padding(.horizontal, Theme.Spacing.md)
@@ -98,11 +81,77 @@ struct EmojiGridView: View {
     }
 }
 
+/// One section's grid. All interaction (tap, double-tap, right-click, hover) lives here — once per section, not per cell — because a fast scroll realizes every cell and per-cell gesture/tracking machinery at ~2k cells costs ~100 MB that lazy containers never release.
+private struct EmojiSectionGrid: View {
+    let section: EmojiGridSection
+    let selection: Int
+    let tone: EmojiSkinTone
+    let onSelect: (Int) -> Void
+    let onActivate: () -> Void
+    let onActions: (Int) -> Void
+
+    @State private var hoveredIndex: Int?
+    @State private var width: CGFloat = 0
+
+    private static let gridColumns = Array(
+        repeating: GridItem(.flexible(), spacing: 0), count: EmojiGrid.columns)
+
+    var body: some View {
+        LazyVGrid(columns: Self.gridColumns, spacing: 0) {
+            ForEach(Array(section.entries.enumerated()), id: \.element.id) { offset, entry in
+                EmojiCell(
+                    glyph: entry.display(tone: tone),
+                    selected: section.start + offset == selection,
+                    hovered: offset == hoveredIndex
+                )
+                .id(section.id + "-" + entry.id)
+            }
+        }
+        .contentShape(Rectangle())
+        .onGeometryChange(for: CGFloat.self) {
+            $0.size.width
+        } action: {
+            width = $0
+        }
+        // Single tap selects immediately; the double-tap paste rides along as a simultaneous gesture (the list rows' pattern).
+        .gesture(
+            SpatialTapGesture().onEnded { value in
+                if let local = localIndex(at: value.location) { onSelect(section.start + local) }
+            }
+        )
+        .simultaneousGesture(
+            SpatialTapGesture(count: 2).onEnded { value in
+                guard let local = localIndex(at: value.location) else { return }
+                onSelect(section.start + local)
+                onActivate()
+            }
+        )
+        .onRightClick { point in
+            if let local = localIndex(at: point) { onActions(section.start + local) }
+        }
+        .onContinuousHover(coordinateSpace: .local) { phase in
+            switch phase {
+            case .active(let point): hoveredIndex = localIndex(at: point)
+            case .ended: hoveredIndex = nil
+            }
+        }
+    }
+
+    /// Point → cell, exact because columns split the width evenly with zero spacing and rows are `Theme.Size.emojiCell` tall; empty trailing cells of a partial last row resolve to nil.
+    private func localIndex(at point: CGPoint) -> Int? {
+        guard width > 0, point.y >= 0, point.x >= 0, point.x < width else { return nil }
+        let column = min(
+            Int(point.x / (width / CGFloat(EmojiGrid.columns))), EmojiGrid.columns - 1)
+        let local = Int(point.y / Theme.Size.emojiCell) * EmojiGrid.columns + column
+        return local < section.entries.count ? local : nil
+    }
+}
+
+/// Pure content — no gestures, overlays or hover tracking; interaction is handled by `EmojiSectionGrid` so realized cells stay cheap.
 private struct EmojiCell: View {
     let glyph: String
     let selected: Bool
-    /// Hover lives on the cell itself so a mouse sweep repaints only the cells entering/leaving, mirroring `AppRow`.
-    @State private var hovered = false
+    let hovered: Bool
 
     private var fill: Color {
         if selected { return Theme.Colors.selection }
@@ -119,8 +168,6 @@ private struct EmojiCell: View {
                 RoundedRectangle(cornerRadius: Theme.Radius.row, style: .continuous)
                     .fill(fill)
             )
-            .contentShape(Rectangle())
-            .onHover { hovered = $0 }
     }
 }
 
@@ -136,11 +183,11 @@ struct EmojiActionsMenu: View {
                 core.pasteEmoji(entry)
                 dismiss()
             }
-            PopoverMenuRow(title: "Copy to Clipboard", systemImage: "doc.on.doc", shortcut: "⌘↵") {
+            PopoverMenuRow(title: "Copy to Clipboard", systemImage: "doc.on.doc") {
                 core.copyEmoji(entry)
                 dismiss()
             }
-            PopoverMenuRow(title: "Paste & Keep Window Open", systemImage: "pin", shortcut: "⌥↵") {
+            PopoverMenuRow(title: "Paste & Keep Window Open", systemImage: "pin") {
                 core.pasteEmojiKeepingWindowOpen(entry)
                 dismiss()
             }
