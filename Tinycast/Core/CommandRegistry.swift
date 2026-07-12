@@ -4,6 +4,7 @@ import Foundation
 enum CommandID: String, CaseIterable, Sendable {
     case calculatorHistory = "command:calculator-history"
     case clipboardHistory = "command:clipboard-history"
+    case searchEmoji = "command:search-emoji"
     case settings = "command:settings"
     case about = "command:about"
     case quit = "command:quit"
@@ -12,6 +13,7 @@ enum CommandID: String, CaseIterable, Sendable {
         switch self {
         case .calculatorHistory: return "Calculator History"
         case .clipboardHistory: return "Clipboard History"
+        case .searchEmoji: return "Search Emoji & Symbols"
         case .settings: return "Settings"
         case .about: return "About Tinycast"
         case .quit: return "Quit Tinycast"
@@ -22,6 +24,7 @@ enum CommandID: String, CaseIterable, Sendable {
         switch self {
         case .calculatorHistory: return "plus.forwardslash.minus"
         case .clipboardHistory: return "doc.on.clipboard"
+        case .searchEmoji: return "face.smiling"
         case .settings: return "gearshape"
         case .about: return "info.circle"
         case .quit: return "power"

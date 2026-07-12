@@ -30,6 +30,7 @@ enum Theme {
         static let keyCap: CGFloat = 20
         static let menuButton: CGFloat = 36
         static let clipboardListWidth: CGFloat = 290
+        static let emojiCell: CGFloat = 56
         static let menuWidth: CGFloat = 240
         static let menuIcon: CGFloat = 16
         /// Settings window: sidebar column width and the small icon used in setting rows.

@@ -16,6 +16,7 @@ final class AppSettings: ObservableObject {
         static let hyperKeyIncludesShift = "hyperKeyIncludesShift"
         static let hyperKeyQuickPress = "hyperKeyQuickPress"
         static let hyperKeyReplacesGlyph = "hyperKeyReplacesGlyph"
+        static let emojiSkinTone = "emojiSkinTone"
     }
 
     @Published var clipboardRetention: ClipboardRetention {
@@ -50,6 +51,11 @@ final class AppSettings: ObservableObject {
         didSet { defaults.set(hyperKeyReplacesGlyph, forKey: Key.hyperKeyReplacesGlyph) }
     }
 
+    /// Preferred skin tone applied to modifier-capable emoji at render and copy time.
+    @Published var emojiSkinTone: EmojiSkinTone {
+        didSet { defaults.set(emojiSkinTone.rawValue, forKey: Key.emojiSkinTone) }
+    }
+
     init() {
         // integer(forKey:) returns 0 when unset, which no case matches — falls through to 3 Months.
         clipboardRetention =
@@ -72,5 +78,7 @@ final class AppSettings: ObservableObject {
         hyperKeyReplacesGlyph =
             defaults.object(forKey: Key.hyperKeyReplacesGlyph) == nil
             || defaults.bool(forKey: Key.hyperKeyReplacesGlyph)
+        emojiSkinTone =
+            defaults.string(forKey: Key.emojiSkinTone).flatMap(EmojiSkinTone.init) ?? .none
     }
 }

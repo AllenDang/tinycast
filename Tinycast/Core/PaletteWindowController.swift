@@ -34,6 +34,11 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
         Paster.pasteInPlace(item, store: store, into: previousApp)
     }
 
+    /// String flavor of the above, for emoji/symbol pastes.
+    func pasteStringKeepingWindowOpen(_ text: String) {
+        Paster.pasteStringInPlace(text, into: previousApp)
+    }
+
     // MARK: - NSWindowDelegate
 
     /// Dismiss when the palette loses key status (click-away, ⌘-Tab, app switch).
@@ -59,6 +64,8 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
             .environmentObject(core.favorites)
             .environmentObject(core.visibility)
             .environmentObject(core.calcHistory)
+            .environmentObject(core.emojiIndex)
+            .environmentObject(core.frequentEmoji)
             .environmentObject(core.runningApps)
             .environmentObject(core.hotKeys)
         let panel = PalettePanel(rootView: root)
