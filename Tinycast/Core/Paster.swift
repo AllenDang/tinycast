@@ -29,6 +29,41 @@ enum Paster {
         pb.setString(text, forType: .string)
     }
 
+    /// String counterpart of `paste(_:store:previousApp:)` — marker-stamped so pasted emoji don't re-enter clipboard history.
+    @MainActor
+    static func pasteString(_ text: String, previousApp: NSRunningApplication?) {
+        writeString(text)
+        previousApp?.activate()
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.08) {
+            postCommandV()
+        }
+    }
+
+    /// String counterpart of `copy(_:store:)`.
+    @MainActor
+    static func copyString(_ text: String) {
+        writeString(text)
+    }
+
+    /// String counterpart of `pasteInPlace(_:store:into:)` — ⌘V delivered to the target's process, palette stays frontmost.
+    @MainActor
+    static func pasteStringInPlace(_ text: String, into app: NSRunningApplication?) {
+        writeString(text)
+        guard let pid = app?.processIdentifier else { return }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+            postCommandV(toPid: pid)
+        }
+    }
+
+    @MainActor
+    private static func writeString(_ text: String) {
+        let pb = NSPasteboard.general
+        pb.clearContents()
+        pb.declareTypes([.string, ClipboardManager.internalType], owner: nil)
+        pb.setString(text, forType: .string)
+        pb.setData(Data(), forType: ClipboardManager.internalType)
+    }
+
     /// Paste into `app` *without* activating it (⌘V delivered straight to its process), leaving Tinycast frontmost so the palette stays open.
     @MainActor
     static func pasteInPlace(

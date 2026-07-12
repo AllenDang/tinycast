@@ -26,12 +26,19 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
         panel?.orderOut(nil)
         // Drop the multi-MB clipboard preview bitmaps now the window is gone, so idle RAM returns near baseline (row thumbnails stay cached).
         ImageThumbnail.purgePreviews()
+        // Reset to a fresh launcher so the hidden panel releases the heavy sub-screens (a fully scrolled emoji grid is ~2k realized views); every show path re-prepares anyway.
+        core.palette.prepare(mode: .launcher)
         if restoreFocus { previousApp?.activate() }
     }
 
     /// Paste into the previously focused app while leaving the palette frontmost (keystroke delivered straight to that app's process).
     func pasteKeepingWindowOpen(_ item: ClipboardItem, store: ClipboardStore) {
         Paster.pasteInPlace(item, store: store, into: previousApp)
+    }
+
+    /// String flavor of the above, for emoji/symbol pastes.
+    func pasteStringKeepingWindowOpen(_ text: String) {
+        Paster.pasteStringInPlace(text, into: previousApp)
     }
 
     // MARK: - NSWindowDelegate
@@ -59,6 +66,8 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
             .environmentObject(core.favorites)
             .environmentObject(core.visibility)
             .environmentObject(core.calcHistory)
+            .environmentObject(core.emojiIndex)
+            .environmentObject(core.frequentEmoji)
             .environmentObject(core.runningApps)
             .environmentObject(core.hotKeys)
         let panel = PalettePanel(rootView: root)

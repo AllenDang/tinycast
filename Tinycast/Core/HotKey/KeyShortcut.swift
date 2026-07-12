@@ -149,6 +149,7 @@ extension KeyShortcut: Codable {
 enum HotKeyAction: Hashable, Sendable {
     case togglePalette
     case toggleClipboard
+    case toggleEmoji
     case app(bundleID: String)
     case settingsPane(bundleID: String)
 
@@ -157,6 +158,7 @@ enum HotKeyAction: Hashable, Sendable {
         switch self {
         case .togglePalette: "KeyboardShortcuts_togglePalette"
         case .toggleClipboard: "KeyboardShortcuts_toggleClipboard"
+        case .toggleEmoji: "KeyboardShortcuts_toggleEmoji"
         case .app(let bundleID): "KeyboardShortcuts_appHotkey." + bundleID
         case .settingsPane(let bundleID): "KeyboardShortcuts_paneHotkey." + bundleID
         }

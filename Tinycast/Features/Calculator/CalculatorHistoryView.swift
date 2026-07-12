@@ -148,7 +148,9 @@ struct CalcHistoryActionsMenu: View {
                 core.copyHistoryEntry(entry)
                 dismiss()
             }
-            PopoverMenuRow(title: "Copy Expression", systemImage: "doc.on.doc.fill") {
+            PopoverMenuRow(
+                title: "Copy Expression", systemImage: "doc.on.doc.fill", shortcut: "⌘↵"
+            ) {
                 core.copyHistoryExpression(entry)
                 dismiss()
             }

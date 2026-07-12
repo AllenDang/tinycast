@@ -5,13 +5,14 @@ extension Notification.Name {
 }
 
 private enum SettingsTab: Int, CaseIterable, Identifiable {
-    case general, clipboard, permissions, shortcuts
+    case general, clipboard, emoji, permissions, shortcuts
     var id: Int { rawValue }
 
     var title: String {
         switch self {
         case .general: return "General"
         case .clipboard: return "Clipboard"
+        case .emoji: return "Emoji & Symbols"
         case .permissions: return "Permissions"
         case .shortcuts: return "Shortcuts"
         }
@@ -21,6 +22,7 @@ private enum SettingsTab: Int, CaseIterable, Identifiable {
         switch self {
         case .general: return "switch.2"
         case .clipboard: return "doc.on.clipboard"
+        case .emoji: return "face.smiling"
         case .permissions: return "lock.shield"
         case .shortcuts: return "keyboard"
         }
@@ -31,6 +33,7 @@ private enum SettingsTab: Int, CaseIterable, Identifiable {
         switch self {
         case .general: return .gray
         case .clipboard: return .orange
+        case .emoji: return .yellow
         case .permissions: return .blue
         case .shortcuts: return .indigo
         }
@@ -49,6 +52,7 @@ struct SettingsRootView: View {
                 switch tab {
                 case .general: GeneralSettingsView()
                 case .clipboard: ClipboardSettingsView()
+                case .emoji: EmojiSettingsView()
                 case .permissions: PermissionsSettingsView()
                 case .shortcuts: ShortcutsSettingsView()
                 }

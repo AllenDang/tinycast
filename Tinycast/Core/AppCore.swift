@@ -5,6 +5,7 @@ enum PaletteMode: String, CaseIterable, Identifiable {
     case launcher
     case clipboard
     case calculatorHistory
+    case emoji
 
     var id: String { rawValue }
     var title: String {
@@ -12,6 +13,7 @@ enum PaletteMode: String, CaseIterable, Identifiable {
         case .launcher: return "Apps"
         case .clipboard: return "Clipboard"
         case .calculatorHistory: return "Calculator History"
+        case .emoji: return "Emoji & Symbols"
         }
     }
     var systemImage: String {
@@ -19,6 +21,7 @@ enum PaletteMode: String, CaseIterable, Identifiable {
         case .launcher: return "magnifyingglass"
         case .clipboard: return "doc.on.doc"
         case .calculatorHistory: return "plus.forwardslash.minus"
+        case .emoji: return "face.smiling"
         }
     }
     var placeholder: String {
@@ -26,6 +29,7 @@ enum PaletteMode: String, CaseIterable, Identifiable {
         case .launcher: return "Search for apps and commands…"
         case .clipboard: return "Type to filter entries…"
         case .calculatorHistory: return "Do math, convert units, or search your past calculations…"
+        case .emoji: return "Search emoji and symbols…"
         }
     }
 }
@@ -61,6 +65,8 @@ final class AppCore: ObservableObject {
     let favorites = FavoritesStore()
     let visibility = VisibilityStore()
     let calcHistory = CalculatorHistoryStore()
+    let emojiIndex = EmojiIndex()
+    let frequentEmoji = FrequentEmojiStore()
     let runningApps = RunningAppsMonitor()
     let palette = PaletteViewModel()
 
@@ -81,9 +87,11 @@ final class AppCore: ObservableObject {
         clipboardManager.start()
 
         Task { await appIndex.refresh() }
+        Task { await emojiIndex.load() }
 
         hotKeys.onTogglePalette = { [weak self] in self?.togglePalette() }
         hotKeys.onToggleClipboard = { [weak self] in self?.toggleClipboard() }
+        hotKeys.onToggleEmoji = { [weak self] in self?.toggleEmoji() }
         hotKeys.start()
         // Deliberately keeps running while `hotKeys.recordingAction` pauses Carbon: the recorder relies on the tap's rewritten flags to capture Hyper shortcuts.
         hyperKeyTap.start(settings: settings)
@@ -104,6 +112,14 @@ final class AppCore: ObservableObject {
             hidePalette()
         } else {
             showPalette(mode: .clipboard)
+        }
+    }
+
+    func toggleEmoji() {
+        if windowController.isVisible, palette.mode == .emoji {
+            hidePalette()
+        } else {
+            showPalette(mode: .emoji)
         }
     }
 
@@ -161,6 +177,8 @@ final class AppCore: ObservableObject {
             showPalette(mode: .calculatorHistory)
         case .clipboardHistory:
             showPalette(mode: .clipboard)
+        case .searchEmoji:
+            showPalette(mode: .emoji)
         case .settings:
             hidePalette(restoreFocus: false)
             showSettings()
@@ -217,5 +235,25 @@ final class AppCore: ObservableObject {
         guard let url = clipboardStore.imageURL(for: item) else { return }
         hidePalette(restoreFocus: false)
         AppLauncher.showInFinder(url)
+    }
+
+    // MARK: - Emoji actions (frequency is tallied on the base glyph; the configured tone is applied at copy time)
+
+    func pasteEmoji(_ entry: EmojiEntry) {
+        frequentEmoji.record(entry.glyph)
+        let previous = windowController.previousApp
+        hidePalette(restoreFocus: false)
+        Paster.pasteString(entry.display(tone: settings.emojiSkinTone), previousApp: previous)
+    }
+
+    func copyEmoji(_ entry: EmojiEntry) {
+        frequentEmoji.record(entry.glyph)
+        hidePalette(restoreFocus: false)
+        Paster.copyString(entry.display(tone: settings.emojiSkinTone))
+    }
+
+    func pasteEmojiKeepingWindowOpen(_ entry: EmojiEntry) {
+        frequentEmoji.record(entry.glyph)
+        windowController.pasteStringKeepingWindowOpen(entry.display(tone: settings.emojiSkinTone))
     }
 }

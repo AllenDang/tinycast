@@ -30,6 +30,7 @@ enum Theme {
         static let keyCap: CGFloat = 20
         static let menuButton: CGFloat = 36
         static let clipboardListWidth: CGFloat = 290
+        static let emojiCell: CGFloat = 56
         static let menuWidth: CGFloat = 240
         static let menuIcon: CGFloat = 16
         /// Settings window: sidebar column width and the small icon used in setting rows.
@@ -45,7 +46,7 @@ enum Theme {
         static let headerIcon = Font.system(size: 18, weight: .medium)
         static let rowTitle = Font.body
         static let rowTrailing = Font.callout
-        static let sectionHeader = Font.subheadline.weight(.semibold)
+        static let sectionHeader = Font.subheadline.weight(.medium)
         static let keyCap = Font.caption
         static let bar = Font.callout.weight(.medium)
         static let menuRow = Font.body

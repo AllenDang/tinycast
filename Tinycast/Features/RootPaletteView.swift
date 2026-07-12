@@ -8,6 +8,10 @@ struct RootPaletteView: View {
     @EnvironmentObject private var favorites: FavoritesStore
     @EnvironmentObject private var visibility: VisibilityStore
     @EnvironmentObject private var calcHistory: CalculatorHistoryStore
+    @EnvironmentObject private var emojiIndex: EmojiIndex
+    @EnvironmentObject private var frequentEmoji: FrequentEmojiStore
+    /// Observed so a skin tone changed in Settings re-renders the grid glyphs immediately.
+    @ObservedObject private var settings = AppCore.shared.settings
     @FocusState private var searchFocused: Bool
     @State private var showActions = false
     @State private var showAppMenu = false
@@ -26,10 +30,15 @@ struct RootPaletteView: View {
     }
     private var clipResults: [ClipboardItem] { store.search(vm.query) }
     private var histResults: [CalcHistoryEntry] { calcHistory.search(vm.query) }
+    private var emojiSections: [EmojiGridSection] {
+        EmojiGrid.sections(query: vm.query, index: emojiIndex, frequent: frequentEmoji)
+    }
+    /// Flat grid order across sections — what `vm.selection` indexes in emoji mode.
+    private var emojiResults: [EmojiEntry] { emojiSections.flatMap(\.entries) }
 
     /// Inline calculator answer for the current query, live in both the launcher and Calculator History search; when present it occupies flat selection index 0 so rows shift by `calcCount`.
     private var calcResult: CalcResult? {
-        vm.mode != .clipboard ? CalcMemo.evaluate(vm.query) : nil
+        vm.mode == .launcher || vm.mode == .calculatorHistory ? CalcMemo.evaluate(vm.query) : nil
     }
     private var calcCount: Int { calcResult == nil ? 0 : 1 }
 
@@ -38,6 +47,7 @@ struct RootPaletteView: View {
         case .launcher: return appResults.count + calcCount
         case .clipboard: return clipResults.count
         case .calculatorHistory: return histResults.count + calcCount
+        case .emoji: return emojiResults.count
         }
     }
     /// Selection clamped into the current results — the single source of truth for highlight, preview and activation so the list and preview can never disagree.
@@ -48,10 +58,13 @@ struct RootPaletteView: View {
         let apps = vm.mode == .launcher ? appResults : []
         let clips = vm.mode == .clipboard ? clipResults : []
         let hist = vm.mode == .calculatorHistory ? histResults : []
+        let emojiSections = vm.mode == .emoji ? emojiSections : []
+        let emojis = emojiSections.flatMap(\.entries)
         // Every count/selection below derives from this one calc/offset pair — the flat selection index must always match the visible row order, calc card included.
         let calc = calcResult
         let offset = calc == nil ? 0 : 1
-        let count = apps.count + offset + clips.count + hist.count  // only the active mode is non-empty
+        // Only the active mode is non-empty.
+        let count = apps.count + offset + clips.count + hist.count + emojis.count
         let sel = count == 0 ? 0 : min(max(vm.selection, 0), count - 1)
         let calcSelected = calc != nil && sel == 0
         let showSections = vm.mode == .launcher && isQueryEmpty
@@ -60,11 +73,12 @@ struct RootPaletteView: View {
         let selectedApp = apps.indices.contains(sel - offset) ? apps[sel - offset] : nil
         let selectedClip = clips.indices.contains(sel) ? clips[sel] : nil
         let selectedHist = hist.indices.contains(sel - offset) ? hist[sel - offset] : nil
+        let selectedEmoji = emojis.indices.contains(sel) ? emojis[sel] : nil
 
         // Results fill the panel; header and action bar float over it as transparent safeAreaInset overlays, each list's `edgeDissolve` ghosting rows under the bars (the native scroll edge effect renders a hard rectangle inside a transparent panel).
         return content(
-            apps: apps, clips: clips, hist: hist, calc: calc, selection: sel,
-            favoriteCount: favoriteCount, showSections: showSections
+            apps: apps, clips: clips, hist: hist, emojiSections: emojiSections, calc: calc,
+            selection: sel, favoriteCount: favoriteCount, showSections: showSections
         )
         .safeAreaInset(edge: .top, spacing: 0) { header }
         .safeAreaInset(edge: .bottom, spacing: 0) { bottomBar }
@@ -87,7 +101,7 @@ struct RootPaletteView: View {
             if showActions {
                 actionsMenu(
                     app: selectedApp, clip: selectedClip, hist: selectedHist,
-                    calc: calcSelected ? calc : nil
+                    emoji: selectedEmoji, calc: calcSelected ? calc : nil
                 )
                 .padding(Self.menuInset)
                 .transition(Self.menuTransition(.bottomTrailing))
@@ -114,11 +128,48 @@ struct RootPaletteView: View {
         }
         .onAppear { searchFocused = true }
         .onKeyPress(.downArrow) {
-            move(1)
+            if vm.mode == .emoji { moveEmojiRow(1) } else { move(1) }
             return .handled
         }
         .onKeyPress(.upArrow) {
+            if vm.mode == .emoji { moveEmojiRow(-1) } else { move(-1) }
+            return .handled
+        }
+        // Horizontal arrows step the emoji grid; everywhere else they stay with the field editor's caret.
+        .onKeyPress(.leftArrow) {
+            guard vm.mode == .emoji else { return .ignored }
             move(-1)
+            return .handled
+        }
+        .onKeyPress(.rightArrow) {
+            guard vm.mode == .emoji else { return .ignored }
+            move(1)
+            return .handled
+        }
+        // ⌘↵ runs the selection's secondary copy action (each menu advertises it); ⌥↵ pastes an emoji in place. Plain ↵ falls through to the field's onSubmit.
+        .onKeyPress(keys: [.return], phases: .down) { press in
+            let command = press.modifiers.contains(.command)
+            let option = press.modifiers.contains(.option)
+            guard command || option else { return .ignored }
+            switch vm.mode {
+            case .emoji:
+                guard emojiResults.indices.contains(selection) else { return .ignored }
+                if command {
+                    core.copyEmoji(emojiResults[selection])
+                } else {
+                    core.pasteEmojiKeepingWindowOpen(emojiResults[selection])
+                }
+            case .clipboard:
+                guard command, clipResults.indices.contains(selection) else { return .ignored }
+                core.copyToClipboard(clipResults[selection])
+            case .calculatorHistory:
+                // The inline calc card (index 0 when present) has no secondary action; only stored entries respond.
+                let index = selection - calcCount
+                guard command, histResults.indices.contains(index) else { return .ignored }
+                core.copyHistoryExpression(histResults[index])
+            case .launcher:
+                return .ignored
+            }
             return .handled
         }
         .onKeyPress(.escape) {
@@ -153,7 +204,7 @@ struct RootPaletteView: View {
                 deleteSelectedClip()
             case .calculatorHistory:
                 deleteSelectedHistoryEntry()
-            case .launcher:
+            case .launcher, .emoji:
                 return .ignored
             }
             return .handled
@@ -196,7 +247,8 @@ struct RootPaletteView: View {
 
     @ViewBuilder
     private func content(
-        apps: [AppEntry], clips: [ClipboardItem], hist: [CalcHistoryEntry], calc: CalcResult?,
+        apps: [AppEntry], clips: [ClipboardItem], hist: [CalcHistoryEntry],
+        emojiSections: [EmojiGridSection], calc: CalcResult?,
         selection: Int, favoriteCount: Int, showSections: Bool
     ) -> some View {
         switch vm.mode {
@@ -286,13 +338,33 @@ struct RootPaletteView: View {
                     }
                 )
             }
+        case .emoji:
+            if !emojiIndex.isLoaded {
+                EmptyResults(text: "Loading emoji…")
+            } else if emojiSections.isEmpty {
+                EmptyResults(text: "No emoji found")
+            } else {
+                EmojiGridView(
+                    sections: emojiSections,
+                    selection: selection,
+                    tone: settings.emojiSkinTone,
+                    scrollToken: scrollToken,
+                    onSelect: { vm.selection = $0 },
+                    onActivate: activateSelection,
+                    onActions: { flat in
+                        vm.selection = flat
+                        withAnimation(Self.menuAnimation) { showActions = true }
+                    }
+                )
+            }
         }
     }
 
     /// The bottom-right actions popover for the current mode's selection.
     @ViewBuilder
     private func actionsMenu(
-        app: AppEntry?, clip: ClipboardItem?, hist: CalcHistoryEntry?, calc: CalcResult?
+        app: AppEntry?, clip: ClipboardItem?, hist: CalcHistoryEntry?, emoji: EmojiEntry?,
+        calc: CalcResult?
     ) -> some View {
         switch vm.mode {
         case .launcher:
@@ -318,6 +390,11 @@ struct RootPaletteView: View {
                 CalcHistoryActionsMenu(entry: hist) { closeMenus() }
                     .environmentObject(core)
                     .environmentObject(calcHistory)
+            }
+        case .emoji:
+            if let emoji {
+                EmojiActionsMenu(entry: emoji) { closeMenus() }
+                    .environmentObject(core)
             }
         }
     }
@@ -348,7 +425,7 @@ struct RootPaletteView: View {
                     Text(actionPillLabel)
                         .font(Theme.Typography.bar)
                         .foregroundStyle(.primary)
-                    KeyCapChip(text: "↵")
+                    KeyCapChip(text: "↵", style: .outline)
                 }
             }
             BarButton(action: { withAnimation(Self.menuAnimation) { showActions.toggle() } }) {
@@ -357,8 +434,8 @@ struct RootPaletteView: View {
                         .font(Theme.Typography.bar)
                         .foregroundStyle(Theme.Colors.textSecondary)
                     HStack(spacing: 2) {
-                        KeyCapChip(text: "⌘")
-                        KeyCapChip(text: "K")
+                        KeyCapChip(text: "⌘", style: .outline)
+                        KeyCapChip(text: "K", style: .outline)
                     }
                 }
             }
@@ -383,7 +460,7 @@ struct RootPaletteView: View {
     /// Pill label for the current selection; reads the memoized `appResults`, so the extra render lookup is cheap.
     private var actionPillLabel: String {
         switch vm.mode {
-        case .clipboard:
+        case .clipboard, .emoji:
             return "Paste"
         case .calculatorHistory:
             return "Copy Answer"
@@ -434,6 +511,15 @@ struct RootPaletteView: View {
         scrollToken = UUID()
     }
 
+    /// Vertical grid move: one visual row within a section, spilling into the neighbor while keeping the column.
+    private func moveEmojiRow(_ delta: Int) {
+        let geometry = EmojiGridGeometry(
+            counts: emojiSections.map(\.entries.count), columns: EmojiGrid.columns)
+        guard resultCount > 0 else { return }
+        vm.selection = delta > 0 ? geometry.down(from: selection) : geometry.up(from: selection)
+        scrollToken = UUID()
+    }
+
     /// Tab flips launcher↔clipboard; Calculator History (entered via its command) exits back to the launcher rather than joining the cycle.
     private func toggleMode() {
         vm.mode = vm.mode == .launcher ? .clipboard : .launcher
@@ -467,6 +553,9 @@ struct RootPaletteView: View {
             let index = selection - calcCount
             guard histResults.indices.contains(index) else { return }
             core.copyHistoryEntry(histResults[index])
+        case .emoji:
+            guard emojiResults.indices.contains(selection) else { return }
+            core.pasteEmoji(emojiResults[selection])
         }
     }
 }

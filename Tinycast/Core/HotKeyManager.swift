@@ -5,6 +5,7 @@ import Foundation
 final class HotKeyManager: ObservableObject {
     var onTogglePalette: (() -> Void)?
     var onToggleClipboard: (() -> Void)?
+    var onToggleEmoji: (() -> Void)?
 
     /// The recorder currently capturing keystrokes, or `nil`; keeping this as plain app state makes recorders glitch-free, and any active recorder pauses Carbon so the typed combo can't fire a hotkey.
     @Published var recordingAction: HotKeyAction? {
@@ -18,6 +19,7 @@ final class HotKeyManager: ObservableObject {
     func start() {
         register(.togglePalette)
         register(.toggleClipboard)
+        register(.toggleEmoji)
         for bundleID in boundBundleIDs { register(.app(bundleID: bundleID)) }
         for bundleID in boundPaneBundleIDs { register(.settingsPane(bundleID: bundleID)) }
     }
@@ -63,14 +65,14 @@ final class HotKeyManager: ObservableObject {
             var set = Set(boundPaneBundleIDs)
             if shortcut == nil { set.remove(bundleID) } else { set.insert(bundleID) }
             UserDefaults.standard.set(Array(set), forKey: boundPaneKey)
-        case .togglePalette, .toggleClipboard:
+        case .togglePalette, .toggleClipboard, .toggleEmoji:
             break
         }
     }
 
     /// The display name of whatever else `shortcut` is bound to (or `nil` if free), driving the recorder's "Used by …" message.
     func conflictOwner(of shortcut: KeyShortcut, excluding action: HotKeyAction) -> String? {
-        var candidates: [HotKeyAction] = [.togglePalette, .toggleClipboard]
+        var candidates: [HotKeyAction] = [.togglePalette, .toggleClipboard, .toggleEmoji]
         candidates += boundBundleIDs.map { .app(bundleID: $0) }
         candidates += boundPaneBundleIDs.map { .settingsPane(bundleID: $0) }
         for candidate in candidates
@@ -86,6 +88,8 @@ final class HotKeyManager: ObservableObject {
             return "App Launcher"
         case .toggleClipboard:
             return "Clipboard History"
+        case .toggleEmoji:
+            return "Emoji & Symbols"
         case .app(let bundleID):
             let apps = AppCore.shared.appIndex.apps
             return apps.first { $0.kind == .application && $0.bundleID == bundleID }?.name
@@ -108,6 +112,7 @@ final class HotKeyManager: ObservableObject {
         switch action {
         case .togglePalette: onTogglePalette?()
         case .toggleClipboard: onToggleClipboard?()
+        case .toggleEmoji: onToggleEmoji?()
         case .app(let bundleID): AppLauncher.toggle(bundleID: bundleID)
         case .settingsPane(let bundleID): AppLauncher.openSettingsPane(bundleID: bundleID)
         }

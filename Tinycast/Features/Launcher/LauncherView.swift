@@ -170,7 +170,7 @@ private struct AppRow: View {
             Spacer()
             Text(app.kindLabel)
                 .font(Theme.Typography.rowTrailing)
-                .foregroundStyle(Theme.Colors.textTertiary)
+                .foregroundStyle(.secondary)
         }
         .padding(.horizontal, Theme.Spacing.md)
         .padding(.vertical, Theme.Spacing.sm)
