@@ -51,7 +51,7 @@ swiftc Tinycast/Core/Calculator/*.swift Tools/calc-test.swift -o /tmp/calc-test 
 ```
 
 The emoji catalog/grid harness works the same way (the tested `Core/Emoji/` files stay AppKit/SwiftUI-free;
-`EmojiData.generated.swift` is emitted by `Tools/gen-emoji.py`, never edited by hand):
+`EmojiData.generated.swift` is emitted by `node Tools/gen-emoji.js` (Node 18+ for global `fetch`), never edited by hand):
 
 ```sh
 swiftc Tinycast/Core/Emoji/EmojiCatalog.swift Tinycast/Core/Emoji/EmojiGridGeometry.swift \
