@@ -146,20 +146,31 @@ struct RootPaletteView: View {
             move(1)
             return .handled
         }
-        // ⌘↵ copies / ⌥↵ pastes-in-place the selected emoji; plain ↵ falls through to the field's onSubmit.
+        // ⌘↵ runs the selection's secondary copy action (each menu advertises it); ⌥↵ pastes an emoji in place. Plain ↵ falls through to the field's onSubmit.
         .onKeyPress(keys: [.return], phases: .down) { press in
-            guard vm.mode == .emoji, emojiResults.indices.contains(selection) else {
+            let command = press.modifiers.contains(.command)
+            let option = press.modifiers.contains(.option)
+            guard command || option else { return .ignored }
+            switch vm.mode {
+            case .emoji:
+                guard emojiResults.indices.contains(selection) else { return .ignored }
+                if command {
+                    core.copyEmoji(emojiResults[selection])
+                } else {
+                    core.pasteEmojiKeepingWindowOpen(emojiResults[selection])
+                }
+            case .clipboard:
+                guard command, clipResults.indices.contains(selection) else { return .ignored }
+                core.copyToClipboard(clipResults[selection])
+            case .calculatorHistory:
+                // The inline calc card (index 0 when present) has no secondary action; only stored entries respond.
+                let index = selection - calcCount
+                guard command, histResults.indices.contains(index) else { return .ignored }
+                core.copyHistoryExpression(histResults[index])
+            case .launcher:
                 return .ignored
             }
-            if press.modifiers.contains(.command) {
-                core.copyEmoji(emojiResults[selection])
-                return .handled
-            }
-            if press.modifiers.contains(.option) {
-                core.pasteEmojiKeepingWindowOpen(emojiResults[selection])
-                return .handled
-            }
-            return .ignored
+            return .handled
         }
         .onKeyPress(.escape) {
             if showActions || showAppMenu {

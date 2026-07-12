@@ -183,7 +183,7 @@ struct EmojiActionsMenu: View {
                 core.pasteEmoji(entry)
                 dismiss()
             }
-            PopoverMenuRow(title: "Copy to Clipboard", systemImage: "doc.on.doc") {
+            PopoverMenuRow(title: "Copy to Clipboard", systemImage: "doc.on.doc", shortcut: "⌘↵") {
                 core.copyEmoji(entry)
                 dismiss()
             }

@@ -130,7 +130,7 @@ struct ClipboardActionsMenu: View {
                 core.paste(item)
                 dismiss()
             }
-            PopoverMenuRow(title: "Copy to Clipboard", systemImage: "doc.on.doc") {
+            PopoverMenuRow(title: "Copy to Clipboard", systemImage: "doc.on.doc", shortcut: "⌘↵") {
                 core.copyToClipboard(item)
                 dismiss()
             }
