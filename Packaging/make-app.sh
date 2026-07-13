@@ -102,14 +102,20 @@ PLIST
 # Prefer a stable, self-signed identity so the Accessibility (TCC) grant survives rebuilds.
 # Falls back to ad-hoc if it hasn't been created yet (run Packaging/dev-cert.sh once).
 SIGN_IDENTITY="Tinycast Self-Signed"
-# Note: no `-v` — the cert is self-signed (untrusted) but codesign still signs with it, and the
-# stable cert identity is what keeps the TCC grant alive across rebuilds.
 if security find-identity -p codesigning 2>/dev/null | grep -q "$SIGN_IDENTITY"; then
     echo "▸ Signing with stable identity ($SIGN_IDENTITY)…"
-    codesign --force --deep --sign "$SIGN_IDENTITY" "$APP"
+    SIGN_AS="$SIGN_IDENTITY"
 else
     echo "▸ Ad-hoc signing (run Packaging/dev-cert.sh once for a persistent Accessibility grant)…"
-    codesign --force --deep --sign - "$APP"
+    SIGN_AS="-"
 fi
+# Sign nested code (SwiftPM resource bundles) first, then the app last — `--deep` is deprecated
+# and can't sign inner bundles correctly for anything but the simplest layouts.
+shopt -s nullglob
+for bundle in "$APP"/Contents/Resources/*.bundle; do
+    codesign --force --sign "$SIGN_AS" "$bundle"
+done
+shopt -u nullglob
+codesign --force --sign "$SIGN_AS" "$APP"
 
 echo "✓ Built $APP"
