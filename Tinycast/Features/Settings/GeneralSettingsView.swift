@@ -145,6 +145,16 @@ struct GeneralSettingsView: View {
                         .toggleStyle(.switch)
                         .controlSize(.small)
                 }
+                SettingsDivider()
+                SettingsRow(
+                    title: "Welcome Guide",
+                    subtitle: "Re-run the first-launch setup: shortcut, permissions, and Raycast import.",
+                    systemImage: "sparkles",
+                    tint: .yellow
+                ) {
+                    Button("Show…") { AppCore.shared.showOnboarding() }
+                        .controlSize(.small)
+                }
             }
         }
     }

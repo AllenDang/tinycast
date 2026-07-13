@@ -103,14 +103,9 @@ struct BackupSettingsView: View {
     }
 
     private func chooseRaycastFile() {
-        let panel = NSOpenPanel()
-        panel.allowsMultipleSelection = false
-        panel.canChooseDirectories = false
-        NSApp.activate(ignoringOtherApps: true)
-        if panel.runModal() == .OK {
-            raycastFile = panel.url
-            status = nil
-        }
+        guard let url = BackupActions.pickRaycastFile() else { return }
+        raycastFile = url
+        status = nil
     }
 
     private func runRaycastImport() {

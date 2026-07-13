@@ -56,6 +56,15 @@ enum BackupActions {
             summary: summary, clipboardImported: imported, missingImages: result.missingImages)
     }
 
+    /// Shared `.rayconfig` file picker used by the Backup pane and onboarding.
+    static func pickRaycastFile() -> URL? {
+        let panel = NSOpenPanel()
+        panel.allowsMultipleSelection = false
+        panel.canChooseDirectories = false
+        NSApp.activate(ignoringOtherApps: true)
+        return panel.runModal() == .OK ? panel.url : nil
+    }
+
     // MARK: - Helpers
 
     static func summaryText(_ s: SettingsBackup.ApplySummary) -> String {

@@ -4,6 +4,8 @@ import SwiftUI
 enum SettingsKey {
     /// Menu-bar icon visibility — read by `MenuBarExtra(isInserted:)` and the Settings toggle.
     static let showInMenuBar = "showInMenuBar"
+    /// Set the first time the onboarding window is shown, so first-run guidance appears exactly once.
+    static let didCompleteOnboarding = "didCompleteOnboarding"
 }
 
 @MainActor

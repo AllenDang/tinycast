@@ -114,7 +114,10 @@ final class AuxWindowController: NSObject, NSWindowDelegate {
                 window.isMovableByWindowBackground = true
             }
             window.isReleasedWhenClosed = false
-            window.contentView = NSHostingView(rootView: content())
+            let hosting = NSHostingView(rootView: content())
+            // Let the window keep its requested size instead of resizing to the SwiftUI fitting size (an unconstrained fill would otherwise blow the window up); the content fills the fixed frame.
+            hosting.sizingOptions = []
+            window.contentView = hosting
             window.delegate = self
             window.center()
             windows[id] = window
@@ -126,6 +129,11 @@ final class AuxWindowController: NSObject, NSWindowDelegate {
         DispatchQueue.main.async {
             window.makeKeyAndOrderFront(nil)
         }
+    }
+
+    /// Close a window programmatically; `windowWillClose` handles the dict/teardown so the SwiftUI tree deallocates.
+    func close(id: String) {
+        windows[id]?.close()
     }
 
     func windowWillClose(_ notification: Notification) {
