@@ -30,7 +30,8 @@ struct BackupSettingsView: View {
                 SettingsDivider()
                 SettingsRow(
                     title: "Import Settings",
-                    subtitle: "Restore from a Tinycast backup. Only values in the file are changed.",
+                    subtitle:
+                        "Restore from a Tinycast backup. Only values in the file are changed.",
                     systemImage: "square.and.arrow.down",
                     tint: .green
                 ) {
@@ -66,7 +67,7 @@ struct BackupSettingsView: View {
                 SettingsRow(
                     title: "Import",
                     subtitle:
-                        "Maps the palette hotkey, launch-at-login, emoji skin tone, and clipboard history into Tinycast.",
+                        "Imports what Tinycast supports: palette, clipboard, emoji, and per-app launch hotkeys; favorite apps; emoji skin tone; launch-at-login; menu-bar visibility; and clipboard history.",
                     systemImage: "arrow.down.circle",
                     tint: .indigo
                 ) {
@@ -119,7 +120,8 @@ struct BackupSettingsView: View {
         Task {
             defer { importing = false }
             do {
-                let outcome = try await BackupActions.importRaycast(file: file, passphrase: passphrase)
+                let outcome = try await BackupActions.importRaycast(
+                    file: file, passphrase: passphrase)
                 var message = BackupActions.summaryText(outcome.summary)
                 if outcome.clipboardImported > 0 {
                     message += " Imported \(outcome.clipboardImported) clipboard entries."

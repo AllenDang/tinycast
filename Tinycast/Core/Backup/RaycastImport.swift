@@ -65,6 +65,7 @@ enum RaycastImport {
         var backup = SettingsBackup()
         backup.settings = mapSettings(json)
         backup.hotkeys = mapHotkeys(json)
+        backup.favoriteApps = mapFavorites(json)
         let (clipboard, missing) = mapClipboard(json)
         return Result(backup: backup, clipboard: clipboard, missingImages: missing)
     }
@@ -79,6 +80,10 @@ enum RaycastImport {
         }
         if let includeShift = general?["hyperKeyIncludeShift"] as? Bool {
             data.hyperKeyIncludesShift = includeShift
+            mapped = true
+        }
+        if let showInMenuBar = general?["showInMenuBar"] as? Bool {
+            data.showInMenuBar = showInMenuBar
             mapped = true
         }
         if let tone = mapSkinTone(json) {
@@ -147,6 +152,25 @@ enum RaycastImport {
         }
         return KeyShortcut(
             carbonKeyCode: code, carbonModifiers: KeyShortcut.carbonModifiers(from: flags))
+    }
+
+    /// Raycast marks favorited items with `favoriteOrder` (0-based). Only app favorites map to Tinycast, keyed by bundle ID (the same key `FavoritesStore` uses), preserving Raycast's order.
+    private static func mapFavorites(_ json: [String: Any]) -> [String]? {
+        guard let commands = (json["settings"] as? [String: Any])?["commands"] as? [[String: Any]]
+        else { return nil }
+        let favorites =
+            commands
+            .compactMap { command -> (order: Int, bundleID: String)? in
+                guard let order = command["favoriteOrder"] as? Int,
+                    command["extensionId"] as? String == "e:r:applications",
+                    let path = appPath(fromCommandID: command["id"] as? String),
+                    let bundleID = Bundle(url: URL(fileURLWithPath: path))?.bundleIdentifier
+                else { return nil }
+                return (order, bundleID)
+            }
+            .sorted { $0.order < $1.order }
+            .map(\.bundleID)
+        return favorites.isEmpty ? nil : favorites
     }
 
     /// The launched app's path is the tail of an applications command id: `c:r:applications::*::application::=::/Applications/Ghostty.app`.
