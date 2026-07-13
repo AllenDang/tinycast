@@ -273,8 +273,10 @@ final class ClipboardStore: ObservableObject {
                 == SQLITE_OK,
             sqlite3_exec(db, Self.schema, nil, nil, nil) == SQLITE_OK
         else { return false }
-        // Migrates pre-source_app databases; fails harmlessly ("duplicate column") on current ones.
-        sqlite3_exec(db, "ALTER TABLE items ADD COLUMN source_app TEXT", nil, nil, nil)
+        // Migrates pre-source_app databases; guarded so current ones don't log "duplicate column".
+        if !columnExists("source_app", in: "items") {
+            sqlite3_exec(db, "ALTER TABLE items ADD COLUMN source_app TEXT", nil, nil, nil)
+        }
         insertStmt = prepare(
             "INSERT INTO items(id, kind, text, image_file, created_at, source_app) VALUES(?,?,?,?,?,?)"
         )
@@ -300,6 +302,15 @@ final class ClipboardStore: ObservableObject {
         var stmt: OpaquePointer?
         guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else { return nil }
         return stmt
+    }
+
+    private func columnExists(_ column: String, in table: String) -> Bool {
+        guard let stmt = prepare("PRAGMA table_info(\(table))") else { return false }
+        defer { sqlite3_finalize(stmt) }
+        while sqlite3_step(stmt) == SQLITE_ROW {
+            if let c = sqlite3_column_text(stmt, 1), String(cString: c) == column { return true }
+        }
+        return false
     }
 
     private func closeDatabase() {
