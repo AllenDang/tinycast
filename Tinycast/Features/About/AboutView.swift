@@ -8,12 +8,23 @@ struct AboutView: View {
         return "Version \(short) (\(build))"
     }
 
+    // Read the bundled .icns directly: NSApp.applicationIconImage returns the generic
+    // placeholder until LaunchServices registers the app, which it hasn't when run from build/.
+    private var appIcon: NSImage {
+        if let name = Bundle.main.infoDictionary?["CFBundleIconFile"] as? String,
+            let url = Bundle.main.url(forResource: name, withExtension: "icns"),
+            let image = NSImage(contentsOf: url) {
+            return image
+        }
+        return NSApp.applicationIconImage
+    }
+
     private static let repoURL = URL(string: "https://github.com/abue-ammar/tinycast")!
     private static let developerURL = URL(string: "https://github.com/abue-ammar")!
 
     var body: some View {
         VStack(spacing: Theme.Spacing.xl) {
-            Image(nsImage: NSApp.applicationIconImage)
+            Image(nsImage: appIcon)
                 .resizable()
                 .frame(width: 72, height: 72)
 

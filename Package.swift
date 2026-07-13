@@ -8,7 +8,7 @@ let package = Package(
         .executableTarget(
             name: "Tinycast",
             path: "Tinycast",
-            exclude: ["Info.plist", "Tinycast.entitlements", "Assets.xcassets"]
+            exclude: ["Info.plist", "Tinycast.entitlements", "Assets.xcassets", "tinycast.icon"]
         )
     ]
 )
