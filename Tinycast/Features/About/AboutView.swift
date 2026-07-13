@@ -8,12 +8,23 @@ struct AboutView: View {
         return "Version \(short) (\(build))"
     }
 
+    // Read the bundled .icns directly: NSApp.applicationIconImage returns the generic
+    // placeholder until LaunchServices registers the app, which it hasn't when run from build/.
+    private var appIcon: NSImage {
+        if let name = Bundle.main.infoDictionary?["CFBundleIconFile"] as? String,
+            let url = Bundle.main.url(forResource: name, withExtension: "icns"),
+            let image = NSImage(contentsOf: url) {
+            return image
+        }
+        return NSApp.applicationIconImage
+    }
+
     private static let repoURL = URL(string: "https://github.com/abue-ammar/tinycast")!
     private static let developerURL = URL(string: "https://github.com/abue-ammar")!
 
     var body: some View {
         VStack(spacing: Theme.Spacing.xl) {
-            Image(nsImage: NSApp.applicationIconImage)
+            Image(nsImage: appIcon)
                 .resizable()
                 .frame(width: 72, height: 72)
 
@@ -103,7 +114,10 @@ final class AuxWindowController: NSObject, NSWindowDelegate {
                 window.isMovableByWindowBackground = true
             }
             window.isReleasedWhenClosed = false
-            window.contentView = NSHostingView(rootView: content())
+            let hosting = NSHostingView(rootView: content())
+            // Let the window keep its requested size instead of resizing to the SwiftUI fitting size (an unconstrained fill would otherwise blow the window up); the content fills the fixed frame.
+            hosting.sizingOptions = []
+            window.contentView = hosting
             window.delegate = self
             window.center()
             windows[id] = window
@@ -115,6 +129,11 @@ final class AuxWindowController: NSObject, NSWindowDelegate {
         DispatchQueue.main.async {
             window.makeKeyAndOrderFront(nil)
         }
+    }
+
+    /// Close a window programmatically; `windowWillClose` handles the dict/teardown so the SwiftUI tree deallocates.
+    func close(id: String) {
+        windows[id]?.close()
     }
 
     func windowWillClose(_ notification: Notification) {

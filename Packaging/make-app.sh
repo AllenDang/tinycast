@@ -10,12 +10,16 @@ CONFIG="${1:-release}"
 # ship as distinct, side-by-side apps.
 EXECUTABLE_NAME="Tinycast"
 BUNDLE_ID="${BUNDLE_ID:-com.tinycast.app}"
-VERSION="${VERSION:-0.1.0}"
 BUILD_NUMBER="${BUILD_NUMBER:-1}"
 DISPLAY_NAME="${DISPLAY_NAME:-Tinycast}"
+CATEGORY="${CATEGORY:-public.app-category.productivity}"
 MIN_OS="26.0"
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+# Single source of truth for the marketing version: the root VERSION file. An explicit
+# VERSION env var still wins (used by channel/release builds); keep project.yml in sync for the IDE.
+VERSION="${VERSION:-$(tr -d '[:space:]' < "$ROOT/VERSION" 2>/dev/null)}"
+VERSION="${VERSION:-0.1.0}"
 export DEVELOPER_DIR="${DEVELOPER_DIR:-/Applications/Xcode.app/Contents/Developer}"
 cd "$ROOT"
 
@@ -39,10 +43,24 @@ for bundle in "$BIN_DIR"/*.bundle; do
 done
 shopt -u nullglob
 
+# App icon: compile the Icon Composer .icon (Liquid Glass) via actool into
+# Assets.car + a fallback .icns. SwiftPM never processes .icon files, so this is the
+# only place the icon is built; skipping it ships the app with no icon.
 ICON_KEY=""
-if [ -f "$ROOT/Packaging/AppIcon.icns" ]; then
-    cp "$ROOT/Packaging/AppIcon.icns" "$APP/Contents/Resources/AppIcon.icns"
-    ICON_KEY=$'\t<key>CFBundleIconFile</key>\n\t<string>AppIcon</string>'
+ICON_SRC="$(ls -d "$ROOT"/Tinycast/*.icon 2>/dev/null | head -1 || true)"
+if [ -n "$ICON_SRC" ]; then
+    ICON_NAME="$(basename "$ICON_SRC" .icon)"
+    echo "▸ Compiling app icon ($ICON_NAME.icon)…"
+    ICON_TMP="$(mktemp -d)"
+    xcrun actool \
+        --app-icon "$ICON_NAME" \
+        --output-partial-info-plist "$ICON_TMP/icon.plist" \
+        --platform macosx \
+        --minimum-deployment-target "$MIN_OS" \
+        --compile "$APP/Contents/Resources" \
+        "$ICON_SRC" >/dev/null
+    rm -rf "$ICON_TMP"
+    ICON_KEY=$'\t<key>CFBundleIconFile</key>\n\t<string>'"$ICON_NAME"$'</string>\n\t<key>CFBundleIconName</key>\n\t<string>'"$ICON_NAME"$'</string>'
 fi
 
 cat > "$APP/Contents/Info.plist" <<PLIST
@@ -60,6 +78,8 @@ cat > "$APP/Contents/Info.plist" <<PLIST
 	<string>$BUNDLE_ID</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
+	<key>LSApplicationCategoryType</key>
+	<string>$CATEGORY</string>
 	<key>CFBundleShortVersionString</key>
 	<string>$VERSION</string>
 	<key>CFBundleVersion</key>
@@ -82,14 +102,20 @@ PLIST
 # Prefer a stable, self-signed identity so the Accessibility (TCC) grant survives rebuilds.
 # Falls back to ad-hoc if it hasn't been created yet (run Packaging/dev-cert.sh once).
 SIGN_IDENTITY="Tinycast Self-Signed"
-# Note: no `-v` — the cert is self-signed (untrusted) but codesign still signs with it, and the
-# stable cert identity is what keeps the TCC grant alive across rebuilds.
 if security find-identity -p codesigning 2>/dev/null | grep -q "$SIGN_IDENTITY"; then
     echo "▸ Signing with stable identity ($SIGN_IDENTITY)…"
-    codesign --force --deep --sign "$SIGN_IDENTITY" "$APP"
+    SIGN_AS="$SIGN_IDENTITY"
 else
     echo "▸ Ad-hoc signing (run Packaging/dev-cert.sh once for a persistent Accessibility grant)…"
-    codesign --force --deep --sign - "$APP"
+    SIGN_AS="-"
 fi
+# Sign nested code (SwiftPM resource bundles) first, then the app last — `--deep` is deprecated
+# and can't sign inner bundles correctly for anything but the simplest layouts.
+shopt -s nullglob
+for bundle in "$APP"/Contents/Resources/*.bundle; do
+    codesign --force --sign "$SIGN_AS" "$bundle"
+done
+shopt -u nullglob
+codesign --force --sign "$SIGN_AS" "$APP"
 
 echo "✓ Built $APP"

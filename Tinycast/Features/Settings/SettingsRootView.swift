@@ -2,10 +2,11 @@ import SwiftUI
 
 extension Notification.Name {
     static let tinycastShowSettings = Notification.Name("TinycastShowSettings")
+    static let tinycastShowBackupSettings = Notification.Name("TinycastShowBackupSettings")
 }
 
 private enum SettingsTab: Int, CaseIterable, Identifiable {
-    case general, clipboard, emoji, permissions, shortcuts
+    case general, clipboard, emoji, permissions, shortcuts, backup
     var id: Int { rawValue }
 
     var title: String {
@@ -15,6 +16,7 @@ private enum SettingsTab: Int, CaseIterable, Identifiable {
         case .emoji: return "Emoji & Symbols"
         case .permissions: return "Permissions"
         case .shortcuts: return "Shortcuts"
+        case .backup: return "Backup"
         }
     }
 
@@ -25,6 +27,7 @@ private enum SettingsTab: Int, CaseIterable, Identifiable {
         case .emoji: return "face.smiling"
         case .permissions: return "lock.shield"
         case .shortcuts: return "keyboard"
+        case .backup: return "arrow.up.arrow.down.circle"
         }
     }
 
@@ -36,6 +39,7 @@ private enum SettingsTab: Int, CaseIterable, Identifiable {
         case .emoji: return .yellow
         case .permissions: return .blue
         case .shortcuts: return .indigo
+        case .backup: return .teal
         }
     }
 }
@@ -55,6 +59,7 @@ struct SettingsRootView: View {
                 case .emoji: EmojiSettingsView()
                 case .permissions: PermissionsSettingsView()
                 case .shortcuts: ShortcutsSettingsView()
+                case .backup: BackupSettingsView()
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -67,6 +72,9 @@ struct SettingsRootView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .onReceive(NotificationCenter.default.publisher(for: .tinycastShowSettings)) { _ in
             tab = .general
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .tinycastShowBackupSettings)) { _ in
+            tab = .backup
         }
     }
 

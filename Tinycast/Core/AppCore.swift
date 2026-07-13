@@ -95,6 +95,12 @@ final class AppCore: ObservableObject {
         hotKeys.start()
         // Deliberately keeps running while `hotKeys.recordingAction` pauses Carbon: the recorder relies on the tap's rewritten flags to capture Hyper shortcuts.
         hyperKeyTap.start(settings: settings)
+
+        // First launch has no palette hotkey bound and shows nothing but the menu-bar icon; guide the user once. Flag is set at show-time so it stays one-time even if they Cmd-Q mid-flow.
+        if !UserDefaults.standard.bool(forKey: SettingsKey.didCompleteOnboarding) {
+            UserDefaults.standard.set(true, forKey: SettingsKey.didCompleteOnboarding)
+            showOnboarding()
+        }
     }
 
     // MARK: - Palette control
@@ -135,7 +141,7 @@ final class AppCore: ObservableObject {
     /// Settings runs in its own window (the SwiftUI `Settings` scene is unreliable for accessory apps), raised via the same controller as About.
     func showSettings() {
         auxWindows.show(
-            id: "settings", title: "Settings", size: CGSize(width: 720, height: 560),
+            id: "settings", title: "Settings", size: CGSize(width: 720, height: 600),
             seamlessTitleBar: true
         ) {
             SettingsRootView()
@@ -144,11 +150,36 @@ final class AppCore: ObservableObject {
         }
     }
 
+    /// Open Settings on the Backup pane (used by the "Import from Raycast" command, which needs the passphrase field).
+    func showBackupSettings() {
+        showSettings()
+        // Post on the next runloop so the freshly-mounted pane's observer is already listening.
+        DispatchQueue.main.async {
+            NotificationCenter.default.post(name: .tinycastShowBackupSettings, object: nil)
+        }
+    }
+
     func showAbout() {
         auxWindows.show(id: "about", title: "About Tinycast", size: CGSize(width: 320, height: 320))
         {
             AboutView()
         }
+    }
+
+    /// The first-run wizard: palette shortcut, Accessibility, Raycast import. Also re-runnable from Settings.
+    func showOnboarding() {
+        auxWindows.show(
+            id: "onboarding", title: "Welcome to Tinycast",
+            size: OnboardingView.windowSize, seamlessTitleBar: true
+        ) {
+            OnboardingView()
+        }
+    }
+
+    /// Final onboarding step: close the wizard and drop straight into the launcher.
+    func finishOnboarding() {
+        auxWindows.close(id: "onboarding")
+        showPalette(mode: .launcher)
     }
 
     // MARK: - Actions invoked from the palette UI
@@ -179,6 +210,15 @@ final class AppCore: ObservableObject {
             showPalette(mode: .clipboard)
         case .searchEmoji:
             showPalette(mode: .emoji)
+        case .exportSettings:
+            hidePalette(restoreFocus: false)
+            BackupActions.exportSettings()
+        case .importSettings:
+            hidePalette(restoreFocus: false)
+            BackupActions.importSettings()
+        case .importFromRaycast:
+            hidePalette(restoreFocus: false)
+            showBackupSettings()
         case .settings:
             hidePalette(restoreFocus: false)
             showSettings()

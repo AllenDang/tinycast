@@ -15,6 +15,14 @@ final class VisibilityStore: ObservableObject {
         hiddenKinds = Set(defaults.stringArray(forKey: kindsKey) ?? [])
     }
 
+    /// Replace both exclusion sets at once (used when importing a settings backup).
+    func replace(hiddenItems: [String], hiddenKinds newKinds: [String]) {
+        hiddenItemKeys = Set(hiddenItems)
+        hiddenKinds = Set(newKinds)
+        defaults.set(Array(hiddenItemKeys), forKey: itemsKey)
+        defaults.set(Array(hiddenKinds), forKey: kindsKey)
+    }
+
     func key(for entry: AppEntry) -> String { entry.bundleID ?? entry.id }
 
     /// Whether the entry appears in the launcher: its category and the item itself must be on.
