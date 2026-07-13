@@ -16,6 +16,12 @@ final class FavoritesStore: ObservableObject {
 
     func isFavorite(_ app: AppEntry) -> Bool { keys.contains(key(for: app)) }
 
+    /// Replace the whole favorites list at once (used when importing a settings backup).
+    func replace(keys newKeys: [String]) {
+        keys = newKeys
+        defaults.set(keys, forKey: key)
+    }
+
     func toggle(_ app: AppEntry) {
         let k = key(for: app)
         if let index = keys.firstIndex(of: k) {

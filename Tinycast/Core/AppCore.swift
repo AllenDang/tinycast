@@ -144,6 +144,15 @@ final class AppCore: ObservableObject {
         }
     }
 
+    /// Open Settings on the Backup pane (used by the "Import from Raycast" command, which needs the passphrase field).
+    func showBackupSettings() {
+        showSettings()
+        // Post on the next runloop so the freshly-mounted pane's observer is already listening.
+        DispatchQueue.main.async {
+            NotificationCenter.default.post(name: .tinycastShowBackupSettings, object: nil)
+        }
+    }
+
     func showAbout() {
         auxWindows.show(id: "about", title: "About Tinycast", size: CGSize(width: 320, height: 320))
         {
@@ -179,6 +188,15 @@ final class AppCore: ObservableObject {
             showPalette(mode: .clipboard)
         case .searchEmoji:
             showPalette(mode: .emoji)
+        case .exportSettings:
+            hidePalette(restoreFocus: false)
+            BackupActions.exportSettings()
+        case .importSettings:
+            hidePalette(restoreFocus: false)
+            BackupActions.importSettings()
+        case .importFromRaycast:
+            hidePalette(restoreFocus: false)
+            showBackupSettings()
         case .settings:
             hidePalette(restoreFocus: false)
             showSettings()

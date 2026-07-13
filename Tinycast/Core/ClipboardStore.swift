@@ -9,31 +9,32 @@ struct ClipboardItem: Identifiable, Hashable, Sendable {
     let id: UUID
     let kind: Kind
     let text: String?
-    let imageFileName: String?
+    /// Absolute path to the image on disk. Files under the store's own `imagesDir` are owned (pruned/deleted with the row); external references (e.g. imported from another app's cache) are left untouched on delete.
+    let imagePath: String?
     let createdAt: Date
     /// Bundle ID of the app frontmost when the copy was captured (see `ClipboardManager.poll`).
     let sourceBundleID: String?
 
     init(text: String, sourceBundleID: String?) {
         self.init(
-            id: UUID(), kind: .text, text: text, imageFileName: nil, createdAt: Date(),
+            id: UUID(), kind: .text, text: text, imagePath: nil, createdAt: Date(),
             sourceBundleID: sourceBundleID)
     }
 
-    init(imageFileName: String, sourceBundleID: String?) {
+    init(imagePath: String, createdAt: Date = Date(), sourceBundleID: String?) {
         self.init(
-            id: UUID(), kind: .image, text: nil, imageFileName: imageFileName, createdAt: Date(),
+            id: UUID(), kind: .image, text: nil, imagePath: imagePath, createdAt: createdAt,
             sourceBundleID: sourceBundleID)
     }
 
     init(
-        id: UUID, kind: Kind, text: String?, imageFileName: String?, createdAt: Date,
+        id: UUID, kind: Kind, text: String?, imagePath: String?, createdAt: Date,
         sourceBundleID: String?
     ) {
         self.id = id
         self.kind = kind
         self.text = text
-        self.imageFileName = imageFileName
+        self.imagePath = imagePath
         self.createdAt = createdAt
         self.sourceBundleID = sourceBundleID
     }
@@ -81,7 +82,7 @@ final class ClipboardStore: ObservableObject {
           id TEXT NOT NULL UNIQUE,
           kind TEXT NOT NULL,
           text TEXT,
-          image_file TEXT,
+          image_path TEXT,
           created_at REAL NOT NULL,
           source_app TEXT
         );
@@ -157,10 +158,35 @@ final class ClipboardStore: ObservableObject {
     }
 
     func addImage(_ data: Data, sourceBundleID: String?) {
-        let name = UUID().uuidString + ".png"
-        let url = imagesDir.appendingPathComponent(name)
+        let url = imagesDir.appendingPathComponent(UUID().uuidString + ".png")
         guard (try? data.write(to: url, options: .atomic)) != nil else { return }
-        insert(ClipboardItem(imageFileName: name, sourceBundleID: sourceBundleID))
+        insert(ClipboardItem(imagePath: url.path, sourceBundleID: sourceBundleID))
+    }
+
+    /// Bulk-insert history from an external source (e.g. a Raycast import). Entries carry their original `createdAt` and image *paths* are stored as external references (zero-copy) — the store never owns or prunes files outside `imagesDir`. Dedups within the batch and against existing rows; imported items older than `maxAge` are pruned on reload.
+    func importEntries(_ entries: [ClipboardItem]) -> Int {
+        guard let stmt = insertStmt else { return 0 }
+        var seenText = Set<String>()
+        var seenPath = Set<String>()
+        var inserted = 0
+        // Oldest first so newest ends up with the highest rowid (load orders by rowid DESC).
+        for item in entries.sorted(by: { $0.createdAt < $1.createdAt }) {
+            switch item.kind {
+            case .text:
+                guard let text = item.text, !seenText.contains(text), !textExists(text) else {
+                    continue
+                }
+                seenText.insert(text)
+            case .image:
+                guard let path = item.imagePath, !seenPath.contains(path), !imagePathExists(path)
+                else { continue }
+                seenPath.insert(path)
+            }
+            bindAndInsert(stmt, item)
+            inserted += 1
+        }
+        load()
+        return inserted
     }
 
     func remove(_ item: ClipboardItem) {
@@ -182,8 +208,8 @@ final class ClipboardStore: ObservableObject {
     }
 
     func imageURL(for item: ClipboardItem) -> URL? {
-        guard let name = item.imageFileName else { return nil }
-        return imagesDir.appendingPathComponent(name)
+        guard let path = item.imagePath else { return nil }
+        return URL(fileURLWithPath: path)
     }
 
     func search(_ query: String) -> [ClipboardItem] {
@@ -211,32 +237,51 @@ final class ClipboardStore: ObservableObject {
     }
 
     private func insert(_ item: ClipboardItem) {
-        if let stmt = insertStmt {
-            sqlite3_bind_text(stmt, 1, item.id.uuidString, -1, SQLITE_TRANSIENT)
-            sqlite3_bind_text(stmt, 2, item.kind.rawValue, -1, SQLITE_TRANSIENT)
-            if let text = item.text {
-                sqlite3_bind_text(stmt, 3, text, -1, SQLITE_TRANSIENT)
-            } else {
-                sqlite3_bind_null(stmt, 3)
-            }
-            if let name = item.imageFileName {
-                sqlite3_bind_text(stmt, 4, name, -1, SQLITE_TRANSIENT)
-            } else {
-                sqlite3_bind_null(stmt, 4)
-            }
-            sqlite3_bind_double(stmt, 5, item.createdAt.timeIntervalSince1970)
-            if let source = item.sourceBundleID {
-                sqlite3_bind_text(stmt, 6, source, -1, SQLITE_TRANSIENT)
-            } else {
-                sqlite3_bind_null(stmt, 6)
-            }
-            sqlite3_step(stmt)
-            sqlite3_reset(stmt)
-            sqlite3_clear_bindings(stmt)
-        }
+        if let stmt = insertStmt { bindAndInsert(stmt, item) }
         items.insert(item, at: 0)
         if items.count > Self.memoryWindow { items.removeLast() }
         prune()
+    }
+
+    private func bindAndInsert(_ stmt: OpaquePointer, _ item: ClipboardItem) {
+        sqlite3_bind_text(stmt, 1, item.id.uuidString, -1, SQLITE_TRANSIENT)
+        sqlite3_bind_text(stmt, 2, item.kind.rawValue, -1, SQLITE_TRANSIENT)
+        if let text = item.text {
+            sqlite3_bind_text(stmt, 3, text, -1, SQLITE_TRANSIENT)
+        } else {
+            sqlite3_bind_null(stmt, 3)
+        }
+        if let path = item.imagePath {
+            sqlite3_bind_text(stmt, 4, path, -1, SQLITE_TRANSIENT)
+        } else {
+            sqlite3_bind_null(stmt, 4)
+        }
+        sqlite3_bind_double(stmt, 5, item.createdAt.timeIntervalSince1970)
+        if let source = item.sourceBundleID {
+            sqlite3_bind_text(stmt, 6, source, -1, SQLITE_TRANSIENT)
+        } else {
+            sqlite3_bind_null(stmt, 6)
+        }
+        sqlite3_step(stmt)
+        sqlite3_reset(stmt)
+        sqlite3_clear_bindings(stmt)
+    }
+
+    private func textExists(_ text: String) -> Bool { exists(column: "text", value: text) }
+    private func imagePathExists(_ path: String) -> Bool { exists(column: "image_path", value: path) }
+
+    private func exists(column: String, value: String) -> Bool {
+        guard let stmt = prepare("SELECT 1 FROM items WHERE \(column) = ? LIMIT 1") else {
+            return false
+        }
+        defer { sqlite3_finalize(stmt) }
+        sqlite3_bind_text(stmt, 1, value, -1, SQLITE_TRANSIENT)
+        return sqlite3_step(stmt) == SQLITE_ROW
+    }
+
+    /// Whether a path lives inside our managed images directory — only those files are ours to delete.
+    private func owns(_ path: String) -> Bool {
+        path.hasPrefix(imagesDir.path + "/")
     }
 
     private func prune() {
@@ -244,8 +289,9 @@ final class ClipboardStore: ObservableObject {
         if let imagesStmt = staleImagesStmt, let deleteStmt = deleteStaleStmt {
             sqlite3_bind_double(imagesStmt, 1, cutoff.timeIntervalSince1970)
             while sqlite3_step(imagesStmt) == SQLITE_ROW {
-                if let name = Self.columnString(imagesStmt, 0) {
-                    try? FileManager.default.removeItem(at: imagesDir.appendingPathComponent(name))
+                // Only delete files we own; external references (e.g. imported) just lose their row.
+                if let path = Self.columnString(imagesStmt, 0), owns(path) {
+                    try? FileManager.default.removeItem(atPath: path)
                 }
             }
             sqlite3_reset(imagesStmt)
@@ -261,8 +307,8 @@ final class ClipboardStore: ObservableObject {
     }
 
     private func deleteBlob(_ item: ClipboardItem) {
-        guard let name = item.imageFileName else { return }
-        try? FileManager.default.removeItem(at: imagesDir.appendingPathComponent(name))
+        guard let path = item.imagePath, owns(path) else { return }
+        try? FileManager.default.removeItem(atPath: path)
     }
 
     private func openDatabase() -> Bool {
@@ -278,21 +324,21 @@ final class ClipboardStore: ObservableObject {
             sqlite3_exec(db, "ALTER TABLE items ADD COLUMN source_app TEXT", nil, nil, nil)
         }
         insertStmt = prepare(
-            "INSERT INTO items(id, kind, text, image_file, created_at, source_app) VALUES(?,?,?,?,?,?)"
+            "INSERT INTO items(id, kind, text, image_path, created_at, source_app) VALUES(?,?,?,?,?,?)"
         )
         loadStmt = prepare(
             """
-            SELECT id, kind, text, image_file, created_at, source_app FROM items
+            SELECT id, kind, text, image_path, created_at, source_app FROM items
             ORDER BY rowid DESC LIMIT ?
             """)
         searchStmt = prepare(
             """
-            SELECT i.id, i.kind, i.text, i.image_file, i.created_at, i.source_app FROM items_fts f
+            SELECT i.id, i.kind, i.text, i.image_path, i.created_at, i.source_app FROM items_fts f
             JOIN items i ON i.rowid = f.rowid WHERE items_fts MATCH ? ORDER BY f.rowid DESC LIMIT 200
             """)
         deleteByIDStmt = prepare("DELETE FROM items WHERE id = ?")
         staleImagesStmt = prepare(
-            "SELECT image_file FROM items WHERE created_at < ? AND image_file IS NOT NULL")
+            "SELECT image_path FROM items WHERE created_at < ? AND image_path IS NOT NULL")
         deleteStaleStmt = prepare("DELETE FROM items WHERE created_at < ?")
         return insertStmt != nil && loadStmt != nil && searchStmt != nil
             && deleteByIDStmt != nil && staleImagesStmt != nil && deleteStaleStmt != nil
@@ -332,7 +378,7 @@ final class ClipboardStore: ObservableObject {
             let kind = ClipboardItem.Kind(rawValue: kindString)
         else { return nil }
         return ClipboardItem(
-            id: id, kind: kind, text: columnString(stmt, 2), imageFileName: columnString(stmt, 3),
+            id: id, kind: kind, text: columnString(stmt, 2), imagePath: columnString(stmt, 3),
             createdAt: Date(timeIntervalSince1970: sqlite3_column_double(stmt, 4)),
             sourceBundleID: columnString(stmt, 5))
     }
