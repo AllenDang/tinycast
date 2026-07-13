@@ -88,11 +88,48 @@ enum RaycastImport {
         return mapped ? data : nil
     }
 
-    /// Raycast's palette hotkey uses the same Carbon virtual keycodes and modifier names Tinycast does, so a `LayoutIndependent` shortcut maps directly; character-based (`LayoutDependent`) ones are skipped since Tinycast keys on keycodes.
+    /// Raycast stores the palette hotkey under `general.globalHotkey` and per-command hotkeys (clipboard, emoji, app launchers) under `commands[].macosHotkey`, all in the same `kind.shortcut` shape. Raycast uses the same Carbon keycodes and modifier names Tinycast does, so `LayoutIndependent` shortcuts map directly; character-based (`LayoutDependent`) ones are skipped since Tinycast keys on keycodes.
     private static func mapHotkeys(_ json: [String: Any]) -> SettingsBackup.HotkeyBackup? {
-        guard let general = (json["settings"] as? [String: Any])?["general"] as? [String: Any],
-            let shortcut = (general["globalHotkey"] as? [String: Any])?["kind"]
-                .flatMap({ ($0 as? [String: Any])?["shortcut"] as? [String: Any] }),
+        let settings = json["settings"] as? [String: Any]
+        var hotkeys = SettingsBackup.HotkeyBackup()
+        var apps: [String: KeyShortcut] = [:]
+        var mapped = false
+
+        if let general = settings?["general"] as? [String: Any],
+            let shortcut = keyShortcut(from: general["globalHotkey"])
+        {
+            hotkeys.togglePalette = shortcut
+            mapped = true
+        }
+
+        for command in settings?["commands"] as? [[String: Any]] ?? [] {
+            guard let shortcut = keyShortcut(from: command["macosHotkey"]) else { continue }
+            switch command["extensionId"] as? String {
+            case "e:r:clipboard-history":
+                hotkeys.toggleClipboard = shortcut
+                mapped = true
+            case "e:r:emoji-picker":
+                hotkeys.toggleEmoji = shortcut
+                mapped = true
+            case "e:r:applications":
+                if let path = appPath(fromCommandID: command["id"] as? String),
+                    let bundleID = Bundle(url: URL(fileURLWithPath: path))?.bundleIdentifier
+                {
+                    apps[bundleID] = shortcut
+                    mapped = true
+                }
+            default:
+                break
+            }
+        }
+        if !apps.isEmpty { hotkeys.apps = apps }
+        return mapped ? hotkeys : nil
+    }
+
+    /// Build a `KeyShortcut` from a Raycast hotkey object (`{ kind: { shortcut: { modifiers, key } } }`).
+    private static func keyShortcut(from hotkey: Any?) -> KeyShortcut? {
+        guard let dict = hotkey as? [String: Any],
+            let shortcut = (dict["kind"] as? [String: Any])?["shortcut"] as? [String: Any],
             let key = shortcut["key"] as? [String: Any],
             (key["type"] as? String) == "LayoutIndependent",
             let code = key["code"] as? Int
@@ -108,10 +145,15 @@ enum RaycastImport {
             default: break
             }
         }
-        var hotkeys = SettingsBackup.HotkeyBackup()
-        hotkeys.togglePalette = KeyShortcut(
+        return KeyShortcut(
             carbonKeyCode: code, carbonModifiers: KeyShortcut.carbonModifiers(from: flags))
-        return hotkeys
+    }
+
+    /// The launched app's path is the tail of an applications command id: `c:r:applications::*::application::=::/Applications/Ghostty.app`.
+    private static func appPath(fromCommandID id: String?) -> String? {
+        guard let id, let range = id.range(of: "::=::") else { return nil }
+        let path = String(id[range.upperBound...])
+        return path.isEmpty ? nil : path
     }
 
     /// Raycast stores the tone under an emoji command's preferences; a recursive search avoids hard-coding a brittle path. Enum raw values line up (`light`…`dark`); Raycast's `default` maps to none.

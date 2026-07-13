@@ -117,9 +117,8 @@ final class ClipboardStore: ObservableObject {
         imagesDir = base.appendingPathComponent("images", isDirectory: true)
         dbURL = base.appendingPathComponent("clipboard.sqlite3")
         try? FileManager.default.createDirectory(at: imagesDir, withIntermediateDirectories: true)
-        try? FileManager.default.removeItem(at: base.appendingPathComponent("clipboard.json"))
         if !openDatabase() {
-            // The database is a regenerable cache: discard a corrupt one and start over.
+            // The database is a regenerable cache: discard a corrupt or outdated one and start over.
             closeDatabase()
             for suffix in ["", "-wal", "-shm"] {
                 try? FileManager.default.removeItem(atPath: dbURL.path + suffix)
