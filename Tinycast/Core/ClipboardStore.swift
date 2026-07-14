@@ -168,6 +168,8 @@ final class ClipboardStore: ObservableObject {
         var seenText = Set<String>()
         var seenPath = Set<String>()
         var inserted = 0
+        // One transaction for the whole batch: ~1 WAL commit instead of one per row (dedup reads still see the in-progress inserts on this connection).
+        sqlite3_exec(db, "BEGIN", nil, nil, nil)
         // Oldest first so newest ends up with the highest rowid (load orders by rowid DESC).
         for item in entries.sorted(by: { $0.createdAt < $1.createdAt }) {
             switch item.kind {
@@ -184,6 +186,7 @@ final class ClipboardStore: ObservableObject {
             bindAndInsert(stmt, item)
             inserted += 1
         }
+        sqlite3_exec(db, "COMMIT", nil, nil, nil)
         load()
         return inserted
     }
@@ -267,7 +270,9 @@ final class ClipboardStore: ObservableObject {
     }
 
     private func textExists(_ text: String) -> Bool { exists(column: "text", value: text) }
-    private func imagePathExists(_ path: String) -> Bool { exists(column: "image_path", value: path) }
+    private func imagePathExists(_ path: String) -> Bool {
+        exists(column: "image_path", value: path)
+    }
 
     private func exists(column: String, value: String) -> Bool {
         guard let stmt = prepare("SELECT 1 FROM items WHERE \(column) = ? LIMIT 1") else {

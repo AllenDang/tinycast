@@ -48,11 +48,13 @@ enum BackupActions {
     static func importRaycast(file: URL, passphrase: String, options: RaycastImportOptions = .all)
         async throws -> RaycastOutcome
     {
-        // scrypt + AES-GCM + gunzip: keep off the main actor so the window stays responsive.
-        let decrypted = try await Task.detached(priority: .userInitiated) {
-            try RaycastImport.decrypt(file: file, passphrase: passphrase)
+        // Decrypt (scrypt/AES/gunzip) AND parse off the main actor, inside an autoreleasepool so the large JSON tree drains at once instead of spiking the main-thread footprint. Only the value-type Result crosses back.
+        let result = try await Task.detached(priority: .userInitiated) {
+            try autoreleasepool {
+                let decrypted = try RaycastImport.decrypt(file: file, passphrase: passphrase)
+                return try RaycastImport.parse(decrypted).selecting(options)
+            }
         }.value
-        let result = try RaycastImport.parse(decrypted).selecting(options)
         let summary = result.backup.apply()
         let imported =
             result.clipboard.isEmpty
