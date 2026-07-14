@@ -46,8 +46,9 @@ export function Hero() {
           style={{ animationDelay: "160ms" }}
         >
           {site.name} is a tiny, fully native launcher — fuzzy app search, a
-          calculator, clipboard history, and global hotkeys. Around a megabyte
-          on disk. No Electron, no account, no telemetry.
+          calculator, clipboard history, and global hotkeys. A few megabytes on
+          disk, and it brings your Raycast setup along. No Electron, no account,
+          no telemetry.
         </p>
 
         <div

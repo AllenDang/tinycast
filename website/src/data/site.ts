@@ -13,6 +13,7 @@ export const site = {
 
 export const nav = [
   { label: "Features", href: "#features" },
+  { label: "Compare", href: "#compare" },
   { label: "Why tiny", href: "#why" },
   { label: "Install", href: "#install" },
   { label: "Source", href: site.repo },
@@ -47,7 +48,7 @@ export const quarantineCommand =
 
 // Headline numbers for the "why it's tiny" band. Kept honest, from the README.
 export const stats = [
-  { value: "~3", unit: "MB", label: "On disk" },
+  { value: "<5", unit: "MB", label: "On disk" },
   { value: "<100", unit: "MB", label: "Memory" },
   { value: "0", unit: "", label: "Dependencies" },
   { value: "0", unit: "", label: "Telemetry" },

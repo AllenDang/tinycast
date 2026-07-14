@@ -1,8 +1,11 @@
 import {
+  Archive,
   Calculator,
   ClipboardList,
   Globe,
   Search,
+  Smile,
+  Sparkles,
   Zap,
   type LucideIcon,
 } from "lucide-react";
@@ -13,8 +16,11 @@ export const featureIcons = {
   launch: Search,
   calculator: Calculator,
   clipboard: ClipboardList,
+  emoji: Smile,
   globe: Globe,
   bolt: Zap,
+  hyper: Sparkles,
+  backup: Archive,
 } satisfies Record<string, LucideIcon>;
 
 export type IconName = keyof typeof featureIcons;
