@@ -14,7 +14,11 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
     var isVisible: Bool { panel?.isVisible ?? false }
 
     func show() {
-        previousApp = NSWorkspace.shared.frontmostApplication
+        // Ignore ourselves as the "previous" app (e.g. summoned while Settings/About/Onboarding is frontmost) so paste/focus-restore always targets the user's real app, never Tinycast's own field.
+        let frontmost = NSWorkspace.shared.frontmostApplication
+        if frontmost?.processIdentifier != NSRunningApplication.current.processIdentifier {
+            previousApp = frontmost
+        }
         let panel = ensurePanel()
         center(panel)
         // The `.nonactivatingPanel` takes key focus without activating the app, so summoning the palette never raises the app's Settings/onboarding windows behind it.

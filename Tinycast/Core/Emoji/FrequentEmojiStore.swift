@@ -16,6 +16,9 @@ final class FrequentEmojiStore: ObservableObject {
 
     @Published private(set) var records: [FrequentEmoji]
 
+    /// Cached glyphs in ranked order so the empty-query grid (which re-reads `top()` every render, incl. arrow-key nav) doesn't re-sort all records each frame; invalidated on `record()`.
+    private var sortedGlyphs: [String]?
+
     init() {
         let bundleID = Bundle.main.bundleIdentifier ?? "com.tinycast.app"
         let base = FileManager.default
@@ -34,6 +37,7 @@ final class FrequentEmojiStore: ObservableObject {
     }
 
     func record(_ glyph: String) {
+        sortedGlyphs = nil
         if let index = records.firstIndex(where: { $0.glyph == glyph }) {
             records[index].count += 1
             records[index].lastUsed = Date()
@@ -50,10 +54,14 @@ final class FrequentEmojiStore: ObservableObject {
 
     /// Most-used glyphs (recency breaks ties), newest habits first.
     func top(_ n: Int = 16) -> [String] {
-        records
-            .sorted { $0.count != $1.count ? $0.count > $1.count : $0.lastUsed > $1.lastUsed }
-            .prefix(n)
-            .map(\.glyph)
+        let sorted = sortedGlyphs ?? {
+            let ranked = records
+                .sorted { $0.count != $1.count ? $0.count > $1.count : $0.lastUsed > $1.lastUsed }
+                .map(\.glyph)
+            sortedGlyphs = ranked
+            return ranked
+        }()
+        return Array(sorted.prefix(n))
     }
 
     private func persist() {

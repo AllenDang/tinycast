@@ -12,6 +12,12 @@ struct CalcResult: Equatable, Sendable {
     /// Normalized echo of what was evaluated, shown on the card's left side ("3×3", "10 km").
     let expression: String
     let payload: Payload
+
+    /// True only for a copyable value — error cards are informational and have no primary action or actions menu.
+    var isActionable: Bool {
+        if case .value = payload { return true }
+        return false
+    }
 }
 
 /// Entry point turning a raw query into a calculator answer (or nil when it isn't calculator input), via a pure pre-filter → base → unit → arithmetic pipeline; kept Foundation-only so `Tools/calc-test.swift` compiles it standalone.

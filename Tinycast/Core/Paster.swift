@@ -7,7 +7,7 @@ enum Paster {
     static func paste(
         _ item: ClipboardItem, store: ClipboardStore, previousApp: NSRunningApplication?
     ) {
-        write(item, store: store)
+        guard write(item, store: store) else { return }
         previousApp?.activate()
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.08) {
             postCommandV()
@@ -69,31 +69,32 @@ enum Paster {
     static func pasteInPlace(
         _ item: ClipboardItem, store: ClipboardStore, into app: NSRunningApplication?
     ) {
-        write(item, store: store)
-        guard let pid = app?.processIdentifier else { return }
+        guard write(item, store: store), let pid = app?.processIdentifier else { return }
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
             postCommandV(toPid: pid)
         }
     }
 
-    @MainActor
-    private static func write(_ item: ClipboardItem, store: ClipboardStore) {
+    /// Returns whether content was actually written; if the item's text/image is gone, the pasteboard is left untouched (never cleared to empty) and the caller skips the paste.
+    @MainActor @discardableResult
+    private static func write(_ item: ClipboardItem, store: ClipboardStore) -> Bool {
         let pb = NSPasteboard.general
-        pb.clearContents()
-
         switch item.kind {
         case .text:
-            if let text = item.text {
-                pb.declareTypes([.string, ClipboardManager.internalType], owner: nil)
-                pb.setString(text, forType: .string)
-            }
+            guard let text = item.text else { return false }
+            pb.clearContents()
+            pb.declareTypes([.string, ClipboardManager.internalType], owner: nil)
+            pb.setString(text, forType: .string)
         case .image:
-            if let url = store.imageURL(for: item), let data = try? Data(contentsOf: url) {
-                pb.declareTypes([.png, ClipboardManager.internalType], owner: nil)
-                pb.setData(data, forType: .png)
+            guard let url = store.imageURL(for: item), let data = try? Data(contentsOf: url) else {
+                return false
             }
+            pb.clearContents()
+            pb.declareTypes([.png, ClipboardManager.internalType], owner: nil)
+            pb.setData(data, forType: .png)
         }
         pb.setData(Data(), forType: ClipboardManager.internalType)
+        return true
     }
 
     /// Synthesize ⌘V — delivered to `pid` alone when given, otherwise through the system tap to whatever is frontmost.

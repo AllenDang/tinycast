@@ -144,26 +144,17 @@ extension SettingsBackup {
     private func applyHotkeys(_ hotkeys: HotkeyBackup, to core: AppCore) -> Int {
         let hk = core.hotKeys
         var count = 0
-        if let s = hotkeys.togglePalette {
-            hk.setShortcut(s, for: .togglePalette)
+        // Skip a binding whose combo is already claimed by an earlier-applied (or existing) action: two actions on the same key would make Carbon's second RegisterEventHotKey fail with eventHotKeyExistsErr, silently killing that shortcut. The recorder does this check interactively; imports must too.
+        func apply(_ s: KeyShortcut, _ action: HotKeyAction) {
+            guard hk.conflictOwner(of: s, excluding: action) == nil else { return }
+            hk.setShortcut(s, for: action)
             count += 1
         }
-        if let s = hotkeys.toggleClipboard {
-            hk.setShortcut(s, for: .toggleClipboard)
-            count += 1
-        }
-        if let s = hotkeys.toggleEmoji {
-            hk.setShortcut(s, for: .toggleEmoji)
-            count += 1
-        }
-        for (id, s) in hotkeys.apps ?? [:] {
-            hk.setShortcut(s, for: .app(bundleID: id))
-            count += 1
-        }
-        for (id, s) in hotkeys.panes ?? [:] {
-            hk.setShortcut(s, for: .settingsPane(bundleID: id))
-            count += 1
-        }
+        if let s = hotkeys.togglePalette { apply(s, .togglePalette) }
+        if let s = hotkeys.toggleClipboard { apply(s, .toggleClipboard) }
+        if let s = hotkeys.toggleEmoji { apply(s, .toggleEmoji) }
+        for (id, s) in hotkeys.apps ?? [:] { apply(s, .app(bundleID: id)) }
+        for (id, s) in hotkeys.panes ?? [:] { apply(s, .settingsPane(bundleID: id)) }
         return count
     }
 }

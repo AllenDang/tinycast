@@ -72,8 +72,13 @@ enum ClipboardRetention: Int, CaseIterable, Identifiable, Sendable {
 /// SQLite-backed clipboard history (rows + trigram FTS5 index in `clipboard.sqlite3`, image blobs on disk), degrading to session-only in-memory history if the database can't be opened.
 @MainActor
 final class ClipboardStore: ObservableObject {
-    @Published private(set) var items: [ClipboardItem] = []
+    @Published private(set) var items: [ClipboardItem] = [] {
+        didSet { searchCache = nil }
+    }
     var maxAge: TimeInterval = ClipboardRetention.threeMonths.maxAge
+
+    /// One-entry memo so repeated renders (e.g. arrow-key nav) for the same query reuse the FTS result instead of re-querying SQLite every frame; invalidated whenever `items` changes.
+    private var searchCache: (query: String, result: [ClipboardItem])?
 
     private static let memoryWindow = 1000
 
@@ -217,6 +222,13 @@ final class ClipboardStore: ObservableObject {
     func search(_ query: String) -> [ClipboardItem] {
         let q = query.trimmingCharacters(in: .whitespaces)
         guard !q.isEmpty else { return items }
+        if let searchCache, searchCache.query == q { return searchCache.result }
+        let result = runSearch(q)
+        searchCache = (q, result)
+        return result
+    }
+
+    private func runSearch(_ q: String) -> [ClipboardItem] {
         // Trigram FTS needs ≥3 characters; shorter queries (and the no-database path) fall back to filtering the in-memory window.
         guard let stmt = searchStmt, q.count >= 3 else { return fallbackSearch(q) }
         let match = "\"" + q.replacingOccurrences(of: "\"", with: "\"\"") + "\""

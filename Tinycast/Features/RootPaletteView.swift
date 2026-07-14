@@ -67,6 +67,8 @@ struct RootPaletteView: View {
         let count = apps.count + offset + clips.count + hist.count + emojis.count
         let sel = count == 0 ? 0 : min(max(vm.selection, 0), count - 1)
         let calcSelected = calc != nil && sel == 0
+        // An error card is selectable but has no action: it must not drive the Copy Answer pill, ⌘K menu, or Enter.
+        let calcActionable = calcSelected && calc?.isActionable == true
         let showSections = vm.mode == .launcher && isQueryEmpty
         let favoriteCount =
             showSections ? apps.prefix(while: { favorites.isFavorite($0) }).count : 0
@@ -74,6 +76,9 @@ struct RootPaletteView: View {
         let selectedClip = clips.indices.contains(sel) ? clips[sel] : nil
         let selectedHist = hist.indices.contains(sel - offset) ? hist[sel - offset] : nil
         let selectedEmoji = emojis.indices.contains(sel) ? emojis[sel] : nil
+        // Derive the footer label from the already-resolved selection so `bottomBar` doesn't re-run `appResults` (its filter/sort aren't memoized). An error card selected in launcher/calc-history has no primary action, so the whole group is hidden.
+        let pillLabel = actionPillLabel(selectedApp: selectedApp, calcActionable: calcActionable)
+        let showActionGroup = !(calcSelected && !calcActionable)
 
         // Results fill the panel; header and action bar float over it as transparent safeAreaInset overlays, each list's `edgeDissolve` ghosting rows under the bars (the native scroll edge effect renders a hard rectangle inside a transparent panel).
         return content(
@@ -81,7 +86,9 @@ struct RootPaletteView: View {
             selection: sel, favoriteCount: favoriteCount, showSections: showSections
         )
         .safeAreaInset(edge: .top, spacing: 0) { header }
-        .safeAreaInset(edge: .bottom, spacing: 0) { bottomBar }
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+            bottomBar(pillLabel: pillLabel, showActionGroup: showActionGroup)
+        }
         // Menus are in-window overlays anchored to a bottom corner, so they stay clipped inside the panel — never a system popover spilling outside the window.
         .overlay {
             if showAppMenu || showActions {
@@ -101,7 +108,7 @@ struct RootPaletteView: View {
             if showActions {
                 actionsMenu(
                     app: selectedApp, clip: selectedClip, hist: selectedHist,
-                    emoji: selectedEmoji, calc: calcSelected ? calc : nil
+                    emoji: selectedEmoji, calc: calcActionable ? calc : nil
                 )
                 .padding(Self.menuInset)
                 .transition(Self.menuTransition(.bottomTrailing))
@@ -193,6 +200,8 @@ struct RootPaletteView: View {
         .onKeyPress(keys: ["k"], phases: .down) { press in
             guard press.modifiers.contains(.command) else { return .ignored }
             guard resultCount > 0 else { return .handled }
+            // An error calc card is the selection but has no actions — don't open an empty panel.
+            if calcCount > 0, selection == 0, calcResult?.isActionable != true { return .handled }
             withAnimation(Self.menuAnimation) { showActions.toggle() }
             return .handled
         }
@@ -399,12 +408,12 @@ struct RootPaletteView: View {
         }
     }
 
-    private var bottomBar: some View {
+    private func bottomBar(pillLabel: String, showActionGroup: Bool) -> some View {
         // No bar — just floating glass controls over the list; the edge dissolve ghosts rows passing beneath, so the buttons read clearly without a hard-edged strip.
         HStack(spacing: 0) {
             appMenuButton
             Spacer()
-            actionGroup
+            if showActionGroup { actionGroup(pillLabel: pillLabel) }
         }
         .padding(.horizontal, Theme.Spacing.md)
         .frame(height: Theme.Size.bottomBarHeight)
@@ -418,11 +427,11 @@ struct RootPaletteView: View {
     }
 
     /// The footer control group: primary action and the Actions toggle sharing one glass capsule.
-    private var actionGroup: some View {
+    private func actionGroup(pillLabel: String) -> some View {
         HStack(spacing: 2) {
             BarButton(action: activateSelection) {
                 HStack(spacing: Theme.Spacing.sm) {
-                    Text(actionPillLabel)
+                    Text(pillLabel)
                         .font(Theme.Typography.bar)
                         .foregroundStyle(.primary)
                     KeyCapChip(text: "↵", style: .outline)
@@ -457,19 +466,16 @@ struct RootPaletteView: View {
         }
     }
 
-    /// Pill label for the current selection; reads the memoized `appResults`, so the extra render lookup is cheap.
-    private var actionPillLabel: String {
+    /// Pill label for the current selection, derived from the selection already resolved in `body` so it never re-runs the (unmemoized) `appResults` filter/sort.
+    private func actionPillLabel(selectedApp: AppEntry?, calcActionable: Bool) -> String {
         switch vm.mode {
         case .clipboard, .emoji:
             return "Paste"
         case .calculatorHistory:
             return "Copy Answer"
         case .launcher:
-            if calcCount > 0 && selection == 0 { return "Copy Answer" }
-            let apps = appResults
-            let index = selection - calcCount
-            let selected = apps.indices.contains(index) ? apps[index] : nil
-            switch selected?.kind {
+            if calcActionable { return "Copy Answer" }
+            switch selectedApp?.kind {
             case .systemSettings: return "Open"
             case .command: return "Run Command"
             default: return "Open Application"

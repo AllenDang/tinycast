@@ -83,7 +83,8 @@ final class AppCore: ObservableObject {
         NSApp.appearance = NSAppearance(named: .darkAqua)
 
         clipboardStore.maxAge = settings.clipboardRetention.maxAge
-        clipboardStore.load()
+        // Defer the initial SQLite read + stale-image prune off the synchronous launch path so the menu bar is interactive immediately; `items` is @Published, so the palette fills in when it lands.
+        Task { clipboardStore.load() }
         clipboardManager.start()
 
         Task { await appIndex.refresh() }

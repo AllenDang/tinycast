@@ -51,9 +51,12 @@ private enum CapsLockRemap {
         #"{"UserKeyMapping":[{"HIDKeyboardModifierMappingSrc":0x700000039,"HIDKeyboardModifierMappingDst":0x70000006D}]}"#
     private static let mappingOff = #"{"UserKeyMapping":[]}"#
 
+    // Serial queue so rapid on→off→on toggles (e.g. switching the Hyper key away from Caps Lock and back) apply hidutil in call order instead of racing as independent detached tasks and leaving the wrong final remap.
+    private static let queue = DispatchQueue(label: "com.tinycast.capslock-remap", qos: .utility)
+
     static func setEnabled(_ enabled: Bool) {
         let mapping = enabled ? mappingOn : mappingOff
-        Task.detached(priority: .utility) { apply(mapping) }
+        queue.async { apply(mapping) }
     }
 
     /// Synchronous variant for `applicationWillTerminate`, where detached work wouldn't get to run.
@@ -129,6 +132,11 @@ final class HyperKeyTap: ObservableObject {
     private var otherKeyPressed = false
     private let clock = ContinuousClock()
     private static let quickPressWindow: Duration = .milliseconds(250)
+
+    // Isolated so teardown can release the main-actor IOKit connection; the tap is an AppCore-owned singleton released on main. The kernel reclaims this at process exit anyway, so this only matters if it's ever recreated.
+    isolated deinit {
+        if hidConnect != IO_OBJECT_NULL { IOServiceClose(hidConnect) }
+    }
 
     func start(settings: AppSettings) {
         self.settings = settings
