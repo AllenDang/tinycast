@@ -17,6 +17,9 @@ final class CalculatorHistoryStore: ObservableObject {
 
     @Published private(set) var entries: [CalcHistoryEntry]  // newest first
 
+    /// One-entry memo so repeated renders (e.g. arrow-key nav) for the same query reuse the filter instead of re-scanning every entry each frame; invalidated on any mutation.
+    private var searchCache: (query: String, result: [CalcHistoryEntry])?
+
     init() {
         let bundleID = Bundle.main.bundleIdentifier ?? "com.tinycast.app"
         let base = FileManager.default
@@ -60,13 +63,17 @@ final class CalculatorHistoryStore: ObservableObject {
     func search(_ query: String) -> [CalcHistoryEntry] {
         let q = query.trimmingCharacters(in: .whitespaces)
         guard !q.isEmpty else { return entries }
-        return entries.filter {
+        if let searchCache, searchCache.query == q { return searchCache.result }
+        let result = entries.filter {
             $0.expression.localizedCaseInsensitiveContains(q)
                 || $0.result.localizedCaseInsensitiveContains(q)
         }
+        searchCache = (q, result)
+        return result
     }
 
     private func persist() {
+        searchCache = nil
         if let data = try? JSONEncoder().encode(entries) {
             try? data.write(to: fileURL, options: .atomic)
         }

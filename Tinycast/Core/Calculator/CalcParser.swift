@@ -121,9 +121,6 @@ enum CalcParser {
         return result.effective
     }
 
-    static func isFunction(_ name: String) -> Bool { functions[name] != nil }
-    static func isConstant(_ name: String) -> Bool { constants[name] != nil }
-
     // Capture-free closures (not bare C function references) so every entry infers `@Sendable` under both language modes — the harness compiles this in Swift 5.
     fileprivate static let functions: [String: @Sendable (Double) -> Double] = [
         "sqrt": { sqrt($0) }, "log": { log10($0) }, "ln": { log($0) }, "sin": { sin($0) },

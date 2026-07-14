@@ -31,26 +31,47 @@ struct AppEntry: Identifiable, Hashable, Sendable {
         }
     }
 
-    @MainActor var icon: NSImage {
-        if kind == .command {
-            return IconCache.symbolIcon(
-                named: CommandRegistry.command(for: self)?.sfSymbol ?? "questionmark")
-        }
-        return IconCache.icon(forFile: url.path)
+    /// Command entries draw an SF Symbol tile; everything else uses its file icon.
+    var isSymbolIcon: Bool { kind == .command }
+    var symbolIconName: String { CommandRegistry.command(for: self)?.sfSymbol ?? "questionmark" }
+
+    var icon: NSImage {
+        isSymbolIcon
+            ? IconCache.symbolIcon(named: symbolIconName) : IconCache.icon(forFile: url.path)
     }
 }
 
 /// Caches app icons by file path, downsampled to a small fixed bitmap and byte-bounded, so list rows don't re-hit `NSWorkspace` or balloon memory.
-@MainActor
 enum IconCache {
+    /// `NSCache` is thread-safe but not `Sendable`, so a detached decode populating what the main actor reads needs the guarantee asserted once here.
+    private final class Cache: NSCache<NSString, NSImage>, @unchecked Sendable {}
+
     // 48pt (2× Retina) is plenty for the ≤24pt draw size, and keeping each icon small caps launcher memory since a scrolled `LazyVStack` pins every row's icon.
     private static let displayPixel: CGFloat = 48
 
-    private static let cache: NSCache<NSString, NSImage> = {
-        let cache = NSCache<NSString, NSImage>()
+    private static let cache: Cache = {
+        let cache = Cache()
         cache.totalCostLimit = 32 * 1024 * 1024
         return cache
     }()
+
+    /// Cache-only lookups (never decode) so a row can paint an already-warm icon on the same frame.
+    static func cached(forFile path: String) -> NSImage? { cache.object(forKey: path as NSString) }
+    static func cachedSymbol(named name: String) -> NSImage? {
+        cache.object(forKey: ("symbol:" + name) as NSString)
+    }
+
+    /// Decode off the main thread and read the result back from the thread-safe cache; the `NSImage` never crosses the actor boundary, keeping it clean under strict concurrency.
+    static func loadAsync(forFile path: String) async -> NSImage? {
+        if let cached = cached(forFile: path) { return cached }
+        await Task.detached(priority: .userInitiated) { _ = icon(forFile: path) }.value
+        return cached(forFile: path)
+    }
+    static func loadSymbolAsync(named name: String) async -> NSImage? {
+        if let cached = cachedSymbol(named: name) { return cached }
+        await Task.detached(priority: .userInitiated) { _ = symbolIcon(named: name) }.value
+        return cachedSymbol(named: name)
+    }
 
     static func icon(forFile path: String) -> NSImage {
         let key = path as NSString
@@ -92,8 +113,8 @@ enum IconCache {
 
     /// Rasterize the multi-rep workspace icon into one `displayPixel`-square bitmap, returning it and its decoded byte cost.
     private static func downsampled(_ source: NSImage) -> (NSImage, Int) {
-        let scale = NSScreen.main?.backingScaleFactor ?? 2
-        let pixels = Int(displayPixel * scale)
+        // Fixed 2× (not `NSScreen.main`, which is main-thread-only) so this can rasterize on a detached decode; 96px covers the ≤24pt draw on any display.
+        let pixels = Int(displayPixel * 2)
         let fallbackCost = Int(displayPixel * displayPixel * 4)
         guard
             let rep = NSBitmapImageRep(

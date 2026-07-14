@@ -18,6 +18,11 @@ final class ClipboardManager {
         self.settings = settings
     }
 
+    // Isolated so teardown can touch the main-actor timer; AppCore only releases the manager on the main actor, so no hop. The poll block is `[weak self]`, so this isn't fixing a leak — it stops a stray timer firing if the manager is ever recreated.
+    isolated deinit {
+        timer?.invalidate()
+    }
+
     func start() {
         lastChangeCount = NSPasteboard.general.changeCount
         let timer = Timer(timeInterval: 0.5, repeats: true) { [weak self] _ in

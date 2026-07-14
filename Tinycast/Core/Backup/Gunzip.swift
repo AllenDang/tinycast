@@ -5,7 +5,10 @@ enum GunzipError: Error { case notGzip, corrupt }
 
 /// Decompresses a gzip (RFC 1952) stream. Apple's `Compression` framework only speaks raw DEFLATE, so we parse and strip the gzip header/trailer ourselves and stream-inflate the payload — no zlib linkage or build-system changes.
 enum Gunzip {
-    static func decompress(_ data: Data) throws -> Data {
+    // Real Raycast exports are a few KB; cap inflated output so a hand-crafted gzip bomb in the import picker can't OOM the app (the outer envelope is inflated before any authentication).
+    static let defaultMaxOutput = 64 * 1024 * 1024
+
+    static func decompress(_ data: Data, maxOutput: Int = defaultMaxOutput) throws -> Data {
         let bytes = [UInt8](data)
         // Magic (1f 8b) + deflate method (08) + the 10-byte fixed header and 8-byte trailer.
         guard bytes.count >= 18, bytes[0] == 0x1f, bytes[1] == 0x8b, bytes[2] == 0x08 else {
@@ -21,7 +24,7 @@ enum Gunzip {
         if flags & 0x10 != 0 { index = try skipCString(bytes, from: index) }  // FCOMMENT
         if flags & 0x02 != 0 { index += 2 }  // FHCRC
         guard index < bytes.count - 8 else { throw GunzipError.corrupt }
-        return try rawInflate(data.subdata(in: index..<(bytes.count - 8)))
+        return try rawInflate(data.subdata(in: index..<(bytes.count - 8)), maxOutput: maxOutput)
     }
 
     private static func skipCString(_ bytes: [UInt8], from start: Int) throws -> Int {
@@ -33,7 +36,7 @@ enum Gunzip {
         throw GunzipError.corrupt
     }
 
-    private static func rawInflate(_ deflate: Data) throws -> Data {
+    private static func rawInflate(_ deflate: Data, maxOutput: Int) throws -> Data {
         let bufferSize = 256 * 1024
         let dst = UnsafeMutablePointer<UInt8>.allocate(capacity: bufferSize)
         defer { dst.deallocate() }
@@ -60,6 +63,7 @@ enum Gunzip {
                 switch status {
                 case COMPRESSION_STATUS_OK, COMPRESSION_STATUS_END:
                     out.append(dst, count: bufferSize - stream.dst_size)
+                    if out.count > maxOutput { return nil }
                     if status == COMPRESSION_STATUS_END { return out }
                 default:
                     return nil
