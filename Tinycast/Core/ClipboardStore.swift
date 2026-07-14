@@ -163,8 +163,12 @@ final class ClipboardStore: ObservableObject {
 
     func addImage(_ data: Data, sourceBundleID: String?) {
         let url = imagesDir.appendingPathComponent(UUID().uuidString + ".png")
-        guard (try? data.write(to: url, options: .atomic)) != nil else { return }
-        insert(ClipboardItem(imagePath: url.path, sourceBundleID: sourceBundleID))
+        let item = ClipboardItem(imagePath: url.path, sourceBundleID: sourceBundleID)
+        // The blob write is multi-MB disk I/O; only the row insert (a failed write inserts nothing) returns to the main actor.
+        Task.detached(priority: .utility) { [weak self] in
+            guard (try? data.write(to: url, options: .atomic)) != nil else { return }
+            await self?.insert(item)
+        }
     }
 
     /// Bulk-insert history from an external source (e.g. a Raycast import). Entries carry their original `createdAt` and image *paths* are stored as external references (zero-copy) — the store never owns or prunes files outside `imagesDir`. Dedups within the batch and against existing rows; imported items older than `maxAge` are pruned on reload.
