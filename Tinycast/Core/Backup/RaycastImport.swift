@@ -58,9 +58,19 @@ enum RaycastImport {
                 settings.showInMenuBar = show
                 hasSettings = true
             }
-            if options.contains(.shortcuts), let shift = backup.settings?.hyperKeyIncludesShift {
-                settings.hyperKeyIncludesShift = shift
-                hasSettings = true
+            if options.contains(.shortcuts) {
+                if let shift = backup.settings?.hyperKeyIncludesShift {
+                    settings.hyperKeyIncludesShift = shift
+                    hasSettings = true
+                }
+                if let key = backup.settings?.hyperKey {
+                    settings.hyperKey = key
+                    hasSettings = true
+                }
+                if let glyph = backup.settings?.hyperKeyReplacesGlyph {
+                    settings.hyperKeyReplacesGlyph = glyph
+                    hasSettings = true
+                }
             }
             if hasSettings { trimmed.settings = settings }
 
@@ -117,6 +127,15 @@ enum RaycastImport {
         return Result(backup: backup, clipboard: clipboard, missingImages: missing)
     }
 
+    /// Raycast `general.hyperKeyCode` → Tinycast physical key; unknown or absent values are skipped, and no value ever maps to `.none` (an export without a Hyper key must not disable one the user already configured).
+    private static let hyperKeyCodes: [String: HyperKeyPhysicalKey] = [
+        "caps_lock": .capsLock,
+        "right_control": .rightControl,
+        "right_shift": .rightShift,
+        "right_option": .rightOption,
+        "right_command": .rightCommand,
+    ]
+
     private static func mapSettings(_ json: [String: Any]) -> SettingsBackup.SettingsData? {
         let general = (json["settings"] as? [String: Any])?["general"] as? [String: Any]
         var data = SettingsBackup.SettingsData()
@@ -127,6 +146,15 @@ enum RaycastImport {
         }
         if let includeShift = general?["hyperKeyIncludeShift"] as? Bool {
             data.hyperKeyIncludesShift = includeShift
+            mapped = true
+        }
+        // Without the physical Hyper key the imported ⌃⌥⇧⌘ shortcuts exist but can't be triggered from it.
+        if let code = general?["hyperKeyCode"] as? String, let key = hyperKeyCodes[code] {
+            data.hyperKey = key.rawValue
+            mapped = true
+        }
+        if let display = general?["hyperKeyDisplayShortcut"] as? Bool {
+            data.hyperKeyReplacesGlyph = display
             mapped = true
         }
         if let showInMenuBar = general?["showInMenuBar"] as? Bool {
@@ -140,7 +168,7 @@ enum RaycastImport {
         return mapped ? data : nil
     }
 
-    /// Raycast stores the palette hotkey under `general.globalHotkey` and per-command hotkeys (clipboard, emoji, app launchers) under `commands[].macosHotkey`, all in the same `kind.shortcut` shape. Raycast uses the same Carbon keycodes and modifier names Tinycast does, so `LayoutIndependent` shortcuts map directly; character-based (`LayoutDependent`) ones are skipped since Tinycast keys on keycodes.
+    /// Raycast stores the palette hotkey under `general.globalHotkey` and per-command hotkeys (clipboard, emoji, app launchers) under `commands[].macosHotkey`, all in the same `kind.shortcut` shape. Raycast uses the same Carbon keycodes and modifier names Tinycast does, so `LayoutIndependent` shortcuts map directly; character-based (`LayoutDependent`) ones are skipped since Tinycast keys on keycodes. Hyper Key shortcuts need no special-casing: Raycast exports them expanded into the four explicit modifiers, and the physical key itself comes over via `hyperKeyCode` in `mapSettings`.
     private static func mapHotkeys(_ json: [String: Any]) -> SettingsBackup.HotkeyBackup? {
         let settings = json["settings"] as? [String: Any]
         var hotkeys = SettingsBackup.HotkeyBackup()
