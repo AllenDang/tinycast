@@ -35,7 +35,8 @@ enum BackupActions {
         do {
             let backup = try SettingsBackup(json: try Data(contentsOf: url))
             present(
-                title: "Settings Imported", message: summaryText(backup.apply()), style: .informational
+                title: "Settings Imported", message: summaryText(backup.apply()),
+                style: .informational
             )
         } catch {
             present(title: "Import Failed", message: error.localizedDescription, style: .warning)
@@ -44,16 +45,37 @@ enum BackupActions {
 
     // MARK: - Raycast (the pane owns the passphrase field + inline status)
 
-    static func importRaycast(file: URL, passphrase: String) async throws -> RaycastOutcome {
-        // scrypt + AES-GCM + gunzip: keep off the main actor so the window stays responsive.
-        let decrypted = try await Task.detached(priority: .userInitiated) {
-            try RaycastImport.decrypt(file: file, passphrase: passphrase)
+    static func importRaycast(file: URL, passphrase: String, options: RaycastImportOptions = .all)
+        async throws -> RaycastOutcome
+    {
+        // Decrypt (scrypt/AES/gunzip) AND parse off the main actor, inside an autoreleasepool so the large JSON tree drains at once instead of spiking the main-thread footprint. Only the value-type Result crosses back.
+        let result = try await Task.detached(priority: .userInitiated) {
+            try autoreleasepool {
+                let decrypted = try RaycastImport.decrypt(file: file, passphrase: passphrase)
+                return try RaycastImport.parse(decrypted).selecting(options)
+            }
         }.value
-        let result = try RaycastImport.parse(decrypted)
         let summary = result.backup.apply()
-        let imported = AppCore.shared.clipboardStore.importEntries(result.clipboard)
+        let imported =
+            result.clipboard.isEmpty
+            ? 0 : AppCore.shared.clipboardStore.importEntries(result.clipboard)
         return RaycastOutcome(
             summary: summary, clipboardImported: imported, missingImages: result.missingImages)
+    }
+
+    /// Every Raycast channel (stable, beta, alpha, internal) shares this bundle-id prefix.
+    static let raycastBundleIDPrefix = "com.raycast"
+
+    static func isRaycastBundleID(_ id: String) -> Bool { id.hasPrefix(raycastBundleIDPrefix) }
+
+    /// Quit any running Raycast app so its hotkeys stop clashing; skip `.prohibited` (pure background helpers/XPC).
+    static func quitRaycast() {
+        for app in NSWorkspace.shared.runningApplications
+        where app.bundleIdentifier.map(isRaycastBundleID) == true
+            && app.activationPolicy != .prohibited
+        {
+            app.terminate()
+        }
     }
 
     /// Shared `.rayconfig` file picker used by the Backup pane and onboarding.
@@ -73,7 +95,8 @@ enum BackupActions {
         if s.hotkeys > 0 { parts.append("\(s.hotkeys) shortcuts") }
         if s.favorites > 0 { parts.append("\(s.favorites) favorites") }
         if s.hiddenItems > 0 { parts.append("\(s.hiddenItems) hidden items") }
-        return parts.isEmpty ? "Nothing to import from this file." : "Applied " + parts.joined(separator: ", ") + "."
+        return parts.isEmpty
+            ? "Nothing to import from this file." : "Applied " + parts.joined(separator: ", ") + "."
     }
 
     private static func dateStamp() -> String {

@@ -188,6 +188,8 @@ struct OnboardingView: View {
                         .onSubmit { model.run() }
                 }
             }
+            RaycastImportSelection(selection: $model.selection)
+                .padding(.horizontal, Theme.Spacing.xs)
             if let status = model.status {
                 importStatus(status)
             } else {
@@ -228,11 +230,23 @@ struct OnboardingView: View {
                         .buttonStyle(.plain)
                         .foregroundStyle(.secondary)
                 }
-                Button(primaryTitle, action: primaryAction)
+                if step == 2 && model.importing {
+                    Button(action: {}) {
+                        HStack(spacing: Theme.Spacing.sm) {
+                            ProgressView().controlSize(.small)
+                            Text("Importing…")
+                        }
+                    }
                     .buttonStyle(.borderedProminent)
                     .controlSize(.large)
-                    .disabled(primaryDisabled)
-                    .keyboardShortcut(.defaultAction)
+                    .disabled(true)
+                } else {
+                    Button(primaryTitle, action: primaryAction)
+                        .buttonStyle(.borderedProminent)
+                        .controlSize(.large)
+                        .disabled(primaryDisabled)
+                        .keyboardShortcut(.defaultAction)
+                }
             }
         }
     }
@@ -345,8 +359,9 @@ final class OnboardingModel: ObservableObject {
     @Published var passphrase = ""
     @Published var importing = false
     @Published var status: ImportStatus?
+    @Published var selection: RaycastImportOptions = .all
 
-    var canImport: Bool { file != nil && !passphrase.isEmpty && !importing }
+    var canImport: Bool { file != nil && !passphrase.isEmpty && !selection.isEmpty && !importing }
     var didImport: Bool {
         if case .success = status { return true }
         return false
@@ -366,7 +381,7 @@ final class OnboardingModel: ObservableObject {
             defer { importing = false }
             do {
                 let outcome = try await BackupActions.importRaycast(
-                    file: file, passphrase: passphrase)
+                    file: file, passphrase: passphrase, options: selection)
                 var message = BackupActions.summaryText(outcome.summary)
                 if outcome.clipboardImported > 0 {
                     message += " Imported \(outcome.clipboardImported) clipboard entries."

@@ -13,7 +13,8 @@ struct AboutView: View {
     private var appIcon: NSImage {
         if let name = Bundle.main.infoDictionary?["CFBundleIconFile"] as? String,
             let url = Bundle.main.url(forResource: name, withExtension: "icns"),
-            let image = NSImage(contentsOf: url) {
+            let image = NSImage(contentsOf: url)
+        {
             return image
         }
         return NSApp.applicationIconImage
@@ -131,6 +132,17 @@ final class AuxWindowController: NSObject, NSWindowDelegate {
         DispatchQueue.main.async {
             window.makeKeyAndOrderFront(nil)
         }
+    }
+
+    /// Re-focus an open aux window on reopen (Dock-icon click); returns false when none is open. `windows` only holds live windows (`windowWillClose` prunes them).
+    @discardableResult
+    func focusExisting() -> Bool {
+        guard let window = windows.values.first(where: { $0.isVisible }) ?? windows.values.first
+        else { return false }
+        NSApp.setActivationPolicy(.regular)
+        NSApp.activate(ignoringOtherApps: true)
+        window.makeKeyAndOrderFront(nil)
+        return true
     }
 
     /// Close a window programmatically; `windowWillClose` handles the dict/teardown so the SwiftUI tree deallocates.

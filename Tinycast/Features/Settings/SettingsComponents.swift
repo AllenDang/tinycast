@@ -124,3 +124,50 @@ struct SettingsRow<Trailing: View>: View {
         .padding(.vertical, Theme.Spacing.lg)
     }
 }
+
+// MARK: - Callout
+
+/// A tinted inset box for a notice or warning inside a `SettingsCard` — SF Symbol + title + optional message, with an optional trailing control (e.g. a fix-it button).
+struct SettingsCallout<Trailing: View>: View {
+    let title: String
+    var message: String? = nil
+    var systemImage: String = "info.circle"
+    var tint: Color = .secondary
+    @ViewBuilder var trailing: Trailing
+
+    var body: some View {
+        HStack(spacing: Theme.Spacing.lg) {
+            Image(systemName: systemImage)
+                .font(.system(size: 13, weight: .medium))
+                .foregroundStyle(tint)
+                .frame(width: Theme.Size.settingsRowIcon)
+            VStack(alignment: .leading, spacing: Theme.Spacing.xs / 2) {
+                Text(title).font(.body)
+                if let message {
+                    Text(message)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+            Spacer(minLength: Theme.Spacing.xl)
+            trailing
+        }
+        .padding(.horizontal, Theme.Spacing.xl)
+        .padding(.vertical, Theme.Spacing.lg)
+        .background(
+            RoundedRectangle(cornerRadius: Theme.Radius.card, style: .continuous)
+                .fill(tint.opacity(0.10))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: Theme.Radius.card, style: .continuous)
+                .strokeBorder(tint.opacity(0.25), lineWidth: 1)
+        )
+    }
+}
+
+extension SettingsCallout where Trailing == EmptyView {
+    init(title: String, message: String? = nil, systemImage: String = "info.circle", tint: Color = .secondary) {
+        self.init(title: title, message: message, systemImage: systemImage, tint: tint) { EmptyView() }
+    }
+}

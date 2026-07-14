@@ -2,14 +2,20 @@ import AppKit
 import SwiftUI
 
 struct BackupSettingsView: View {
+    @ObservedObject private var runningApps = AppCore.shared.runningApps
     @State private var raycastFile: URL?
     @State private var passphrase = ""
     @State private var importing = false
     @State private var status: Status?
+    @State private var selection: RaycastImportOptions = .all
 
     private enum Status {
         case success(String)
         case failure(String)
+    }
+
+    private var raycastRunning: Bool {
+        runningApps.runningBundleIDs.contains(where: BackupActions.isRaycastBundleID)
     }
 
     var body: some View {
@@ -66,8 +72,7 @@ struct BackupSettingsView: View {
                 SettingsDivider()
                 SettingsRow(
                     title: "Import",
-                    subtitle:
-                        "Imports what Tinycast supports: palette, clipboard, emoji, and per-app launch hotkeys; favorite apps; emoji skin tone; launch-at-login; menu-bar visibility; and clipboard history.",
+                    subtitle: "Choose what to bring over, then import.",
                     systemImage: "arrow.down.circle",
                     tint: .indigo
                 ) {
@@ -76,14 +81,42 @@ struct BackupSettingsView: View {
                     } else {
                         Button("Import") { runRaycastImport() }
                             .controlSize(.small)
-                            .disabled(raycastFile == nil || passphrase.isEmpty)
+                            .disabled(raycastFile == nil || passphrase.isEmpty || selection.isEmpty)
                     }
                 }
+                RaycastImportSelection(selection: $selection)
+                    .padding(.horizontal, Theme.Spacing.xl)
+                    .padding(.bottom, Theme.Spacing.lg)
+                conflictCallout
                 if let status {
                     SettingsDivider()
                     statusRow(status)
                 }
             }
+        }
+    }
+
+    @ViewBuilder
+    private var conflictCallout: some View {
+        if raycastRunning {
+            SettingsCallout(
+                title: "Raycast is running — quit it to avoid hotkey conflicts.",
+                systemImage: "exclamationmark.triangle.fill",
+                tint: .orange
+            ) {
+                Button("Quit Raycast") { BackupActions.quitRaycast() }
+                    .controlSize(.small)
+            }
+            .padding(.horizontal, Theme.Spacing.xl)
+            .padding(.vertical, Theme.Spacing.lg)
+        } else {
+            SettingsCallout(
+                title: "Tip: unset the matching Raycast shortcuts to avoid conflicts.",
+                systemImage: "info.circle",
+                tint: .secondary
+            )
+            .padding(.horizontal, Theme.Spacing.xl)
+            .padding(.vertical, Theme.Spacing.lg)
         }
     }
 
@@ -109,14 +142,16 @@ struct BackupSettingsView: View {
     }
 
     private func runRaycastImport() {
-        guard let file = raycastFile, !passphrase.isEmpty, !importing else { return }
+        guard let file = raycastFile, !passphrase.isEmpty, !selection.isEmpty, !importing else {
+            return
+        }
         importing = true
         status = nil
         Task {
             defer { importing = false }
             do {
                 let outcome = try await BackupActions.importRaycast(
-                    file: file, passphrase: passphrase)
+                    file: file, passphrase: passphrase, options: selection)
                 var message = BackupActions.summaryText(outcome.summary)
                 if outcome.clipboardImported > 0 {
                     message += " Imported \(outcome.clipboardImported) clipboard entries."
