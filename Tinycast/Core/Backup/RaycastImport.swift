@@ -25,8 +25,10 @@ struct RaycastImportOptions: OptionSet, Sendable {
     static let launchAtLogin = RaycastImportOptions(rawValue: 1 << 3)
     static let menuBarVisibility = RaycastImportOptions(rawValue: 1 << 4)
     static let clipboardHistory = RaycastImportOptions(rawValue: 1 << 5)
+    static let popToRoot = RaycastImportOptions(rawValue: 1 << 6)
     static let all: RaycastImportOptions = [
         .shortcuts, .favorites, .emojiSkinTone, .launchAtLogin, .menuBarVisibility, .clipboardHistory,
+        .popToRoot,
     ]
 }
 
@@ -56,6 +58,10 @@ enum RaycastImport {
             }
             if options.contains(.menuBarVisibility), let show = backup.settings?.showInMenuBar {
                 settings.showInMenuBar = show
+                hasSettings = true
+            }
+            if options.contains(.popToRoot), let secs = backup.settings?.popToRootSeconds {
+                settings.popToRootSeconds = secs
                 hasSettings = true
             }
             if options.contains(.shortcuts) {
@@ -163,6 +169,13 @@ enum RaycastImport {
         }
         if let tone = mapSkinTone(json) {
             data.emojiSkinTone = tone
+            mapped = true
+        }
+        // Exact-match only: a Raycast timeout outside Tinycast's option set is skipped, not clamped.
+        if let secs = general?["popToRootTimeout"] as? Int,
+            let timeout = PopToRootTimeout(rawValue: secs)
+        {
+            data.popToRootSeconds = timeout.rawValue
             mapped = true
         }
         return mapped ? data : nil

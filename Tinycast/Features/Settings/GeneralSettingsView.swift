@@ -147,6 +147,21 @@ struct GeneralSettingsView: View {
                 }
                 SettingsDivider()
                 SettingsRow(
+                    title: "Pop to Root Search",
+                    subtitle: "Reset to the launcher this long after the window closes.",
+                    systemImage: "arrow.uturn.backward",
+                    tint: .indigo
+                ) {
+                    Picker("", selection: $settings.popToRootTimeout) {
+                        ForEach(PopToRootTimeout.allCases) { timeout in
+                            Text(timeout.title).tag(timeout)
+                        }
+                    }
+                    .labelsHidden()
+                    .fixedSize()
+                }
+                SettingsDivider()
+                SettingsRow(
                     title: "Welcome Guide",
                     subtitle: "Re-run the first-launch setup: shortcut, permissions, and Raycast import.",
                     systemImage: "sparkles",

@@ -133,6 +133,16 @@ struct RootPaletteView: View {
             showActions = false
             scrollToken = UUID()
         }
+        // Pop-to-root: `prepare` clears query/selection, but if both were already at their defaults the handlers above never fire — this token guarantees the scroll itself snaps back to the top.
+        .onChange(of: vm.resetToken) {
+            scrollToken = UUID()
+        }
+        // A new top clip while the list is showing (promote-on-paste, live capture) pulls the highlight and scroll back to the row that just moved up.
+        .onChange(of: clips.first?.id) { _, newTop in
+            guard vm.mode == .clipboard, newTop != nil else { return }
+            vm.selection = 0
+            scrollToken = UUID()
+        }
         .onAppear { searchFocused = true }
         .onKeyPress(.downArrow) {
             if vm.mode == .emoji { moveEmojiRow(1) } else { move(1) }

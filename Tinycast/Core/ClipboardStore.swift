@@ -196,6 +196,28 @@ final class ClipboardStore: ObservableObject {
         return inserted
     }
 
+    /// Move an item to the top of history (pasting/copying it from the palette re-recencies it, Raycast-style). Display order is rowid, so this is a delete + re-insert under the same id; the fresh `createdAt` keeps date buckets descending and the image blob is never touched.
+    func promote(_ item: ClipboardItem) {
+        guard items.first?.id != item.id else { return }
+        let promoted = ClipboardItem(
+            id: item.id, kind: item.kind, text: item.text, imagePath: item.imagePath,
+            createdAt: Date(), sourceBundleID: item.sourceBundleID)
+        if let deleteStmt = deleteByIDStmt, let insertStmt {
+            // One transaction: `id` is UNIQUE and a crash between the two statements must not lose the row.
+            sqlite3_exec(db, "BEGIN", nil, nil, nil)
+            sqlite3_bind_text(deleteStmt, 1, item.id.uuidString, -1, SQLITE_TRANSIENT)
+            sqlite3_step(deleteStmt)
+            sqlite3_reset(deleteStmt)
+            sqlite3_clear_bindings(deleteStmt)
+            bindAndInsert(insertStmt, promoted)
+            sqlite3_exec(db, "COMMIT", nil, nil, nil)
+        }
+        // Array ops also cover items surfaced by FTS from beyond the in-memory window.
+        items.removeAll { $0.id == item.id }
+        items.insert(promoted, at: 0)
+        if items.count > Self.memoryWindow { items.removeLast() }
+    }
+
     func remove(_ item: ClipboardItem) {
         if let stmt = deleteByIDStmt {
             sqlite3_bind_text(stmt, 1, item.id.uuidString, -1, SQLITE_TRANSIENT)

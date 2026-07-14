@@ -42,12 +42,15 @@ final class PaletteViewModel: ObservableObject {
     @Published var selection: Int = 0
     /// Changes every time the palette is shown so the search field can re-focus.
     @Published var focusToken = UUID()
+    /// Changes only when `prepare` resets the palette, so the lists snap their scroll to the top even when query/mode were already at their defaults (`focusToken` can't serve: it bumps on every reopen, which must preserve a within-timeout scroll).
+    @Published var resetToken = UUID()
 
     func prepare(mode: PaletteMode) {
         self.mode = mode
         query = ""
         selection = 0
         focusToken = UUID()
+        resetToken = UUID()
     }
 }
 
@@ -110,7 +113,7 @@ final class AppCore: ObservableObject {
         if windowController.isVisible, palette.mode == .launcher {
             hidePalette()
         } else {
-            showPalette(mode: .launcher)
+            showPalette(mode: .launcher, restoreAnyMode: true)
         }
     }
 
@@ -130,8 +133,12 @@ final class AppCore: ObservableObject {
         }
     }
 
-    func showPalette(mode: PaletteMode) {
-        palette.prepare(mode: mode)
+    /// Shows the palette, honoring Pop to Root Search: a reopen within the timeout restores the pre-close state — any mode for the generic summon (`restoreAnyMode`), else only when the preserved mode already matches the requested one.
+    func showPalette(mode: PaletteMode, restoreAnyMode: Bool = false) {
+        let preserved = windowController.consumePreservedState()
+        if !(preserved && (restoreAnyMode || palette.mode == mode)) {
+            palette.prepare(mode: mode)
+        }
         windowController.show()
     }
 
@@ -142,7 +149,7 @@ final class AppCore: ObservableObject {
     /// Dock-icon / reopen: focus an open aux window (About/Settings/Onboarding), else summon the launcher. Decoupled from the individual show paths so activation always works.
     func handleReopen() {
         if auxWindows.focusExisting() { return }
-        showPalette(mode: .launcher)
+        showPalette(mode: .launcher, restoreAnyMode: true)
     }
 
     /// Settings runs in its own window (the SwiftUI `Settings` scene is unreliable for accessory apps), raised via the same controller as About.
@@ -266,16 +273,23 @@ final class AppCore: ObservableObject {
     func paste(_ item: ClipboardItem) {
         let previous = windowController.previousApp
         hidePalette(restoreFocus: false)
-        Paster.paste(item, store: clipboardStore, previousApp: previous)
+        // A successful write promotes the item to index 0; follow it so any preserved (pop-to-root) or open clipboard state highlights the row that moved.
+        if Paster.paste(item, store: clipboardStore, previousApp: previous) {
+            palette.selection = 0
+        }
     }
 
     func pasteKeepingWindowOpen(_ item: ClipboardItem) {
-        windowController.pasteKeepingWindowOpen(item, store: clipboardStore)
+        if windowController.pasteKeepingWindowOpen(item, store: clipboardStore) {
+            palette.selection = 0
+        }
     }
 
     func copyToClipboard(_ item: ClipboardItem) {
         hidePalette(restoreFocus: false)
-        Paster.copy(item, store: clipboardStore)
+        if Paster.copy(item, store: clipboardStore) {
+            palette.selection = 0
+        }
     }
 
     func revealClipboardImage(_ item: ClipboardItem) {

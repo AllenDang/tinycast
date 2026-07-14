@@ -6,6 +6,24 @@ enum SettingsKey {
     static let showInMenuBar = "showInMenuBar"
 }
 
+/// Delay before a closed palette resets to the root launcher; raw value is seconds in UserDefaults, so an unset key (0) reads as `.immediately`, the default.
+enum PopToRootTimeout: Int, CaseIterable, Identifiable, Sendable {
+    case immediately = 0
+    case afterFive = 5
+    case afterFifteen = 15
+    case afterThirty = 30
+    case afterSixty = 60
+    case afterNinety = 90
+
+    var id: Int { rawValue }
+
+    var title: String {
+        self == .immediately ? "Immediately" : "After \(rawValue) seconds"
+    }
+
+    var interval: TimeInterval { TimeInterval(rawValue) }
+}
+
 @MainActor
 final class AppSettings: ObservableObject {
     private let defaults = UserDefaults.standard
@@ -17,6 +35,7 @@ final class AppSettings: ObservableObject {
         static let hyperKeyQuickPress = "hyperKeyQuickPress"
         static let hyperKeyReplacesGlyph = "hyperKeyReplacesGlyph"
         static let emojiSkinTone = "emojiSkinTone"
+        static let popToRootTimeout = "popToRootTimeout"
     }
 
     @Published var clipboardRetention: ClipboardRetention {
@@ -56,6 +75,11 @@ final class AppSettings: ObservableObject {
         didSet { defaults.set(emojiSkinTone.rawValue, forKey: Key.emojiSkinTone) }
     }
 
+    /// How long a closed palette keeps its state before popping back to the root launcher.
+    @Published var popToRootTimeout: PopToRootTimeout {
+        didSet { defaults.set(popToRootTimeout.rawValue, forKey: Key.popToRootTimeout) }
+    }
+
     init() {
         // integer(forKey:) returns 0 when unset, which no case matches — falls through to 3 Months.
         clipboardRetention =
@@ -80,5 +104,8 @@ final class AppSettings: ObservableObject {
             || defaults.bool(forKey: Key.hyperKeyReplacesGlyph)
         emojiSkinTone =
             defaults.string(forKey: Key.emojiSkinTone).flatMap(EmojiSkinTone.init) ?? .none
+        popToRootTimeout =
+            PopToRootTimeout(rawValue: defaults.integer(forKey: Key.popToRootTimeout))
+            ?? .immediately
     }
 }
