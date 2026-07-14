@@ -2,14 +2,43 @@ import AppKit
 import SwiftUI
 
 struct BackupSettingsView: View {
+    @ObservedObject private var runningApps = AppCore.shared.runningApps
     @State private var raycastFile: URL?
     @State private var passphrase = ""
     @State private var importing = false
     @State private var status: Status?
+    @State private var selection: RaycastImportOptions = .all
 
     private enum Status {
         case success(String)
         case failure(String)
+    }
+
+    private var raycastRunning: Bool {
+        runningApps.runningBundleIDs.contains(BackupActions.raycastBundleID)
+    }
+
+    private struct ImportCategory: Identifiable {
+        let option: RaycastImportOptions
+        let symbol: String
+        let label: String
+        var id: Int { option.rawValue }
+    }
+
+    /// The categories the user can pick from before importing; each maps to one `RaycastImportOptions` bit.
+    private static let categories: [ImportCategory] = [
+        .init(option: .shortcuts, symbol: "command", label: "Shortcuts & per-app launch hotkeys"),
+        .init(option: .favorites, symbol: "star", label: "Favorite apps"),
+        .init(option: .emojiSkinTone, symbol: "face.smiling", label: "Emoji skin tone"),
+        .init(option: .launchAtLogin, symbol: "power", label: "Launch at login"),
+        .init(option: .menuBarVisibility, symbol: "menubar.rectangle", label: "Menu-bar visibility"),
+        .init(option: .clipboardHistory, symbol: "doc.on.clipboard", label: "Clipboard history"),
+    ]
+
+    private func included(_ option: RaycastImportOptions) -> Binding<Bool> {
+        Binding(
+            get: { selection.contains(option) },
+            set: { selection = $0 ? selection.union(option) : selection.subtracting(option) })
     }
 
     var body: some View {
@@ -66,8 +95,7 @@ struct BackupSettingsView: View {
                 SettingsDivider()
                 SettingsRow(
                     title: "Import",
-                    subtitle:
-                        "Imports what Tinycast supports: palette, clipboard, emoji, and per-app launch hotkeys; favorite apps; emoji skin tone; launch-at-login; menu-bar visibility; and clipboard history.",
+                    subtitle: "Choose what to bring over, then import.",
                     systemImage: "arrow.down.circle",
                     tint: .indigo
                 ) {
@@ -76,14 +104,71 @@ struct BackupSettingsView: View {
                     } else {
                         Button("Import") { runRaycastImport() }
                             .controlSize(.small)
-                            .disabled(raycastFile == nil || passphrase.isEmpty)
+                            .disabled(raycastFile == nil || passphrase.isEmpty || selection.isEmpty)
                     }
                 }
+                selectionList
+                conflictCallout
                 if let status {
                     SettingsDivider()
                     statusRow(status)
                 }
             }
+        }
+    }
+
+    private var selectionList: some View {
+        VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
+            ForEach(Self.categories) { category in
+                Toggle(isOn: included(category.option)) {
+                    HStack(spacing: Theme.Spacing.sm) {
+                        Image(systemName: category.symbol)
+                            .foregroundStyle(.secondary)
+                            .frame(width: 18)
+                        Text(category.label)
+                    }
+                }
+                .toggleStyle(.checkbox)
+            }
+            Button(selection == .all ? "Deselect All" : "Select All") {
+                selection = selection == .all ? [] : .all
+            }
+            .buttonStyle(.link)
+            .font(.caption)
+            .padding(.top, Theme.Spacing.xs / 2)
+        }
+        .font(.callout)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.leading, Theme.Spacing.xl + Theme.Size.settingsRowIcon + Theme.Spacing.lg)
+        .padding(.trailing, Theme.Spacing.xl)
+        .padding(.bottom, Theme.Spacing.lg)
+    }
+
+    @ViewBuilder
+    private var conflictCallout: some View {
+        if raycastRunning {
+            SettingsCallout(
+                title: "Raycast is running",
+                message:
+                    "Its hotkeys will clash with the ones you import. Quit Raycast, or unset the matching shortcuts there.",
+                systemImage: "exclamationmark.triangle.fill",
+                tint: .orange
+            ) {
+                Button("Quit Raycast") { BackupActions.quitRaycast() }
+                    .controlSize(.small)
+            }
+            .padding(.horizontal, Theme.Spacing.xl)
+            .padding(.vertical, Theme.Spacing.lg)
+        } else {
+            SettingsCallout(
+                title: "Watch for shortcut conflicts",
+                message:
+                    "If you still use Raycast, unset the matching shortcuts there so they don't clash with Tinycast.",
+                systemImage: "info.circle",
+                tint: .secondary
+            )
+            .padding(.horizontal, Theme.Spacing.xl)
+            .padding(.vertical, Theme.Spacing.lg)
         }
     }
 
@@ -109,14 +194,14 @@ struct BackupSettingsView: View {
     }
 
     private func runRaycastImport() {
-        guard let file = raycastFile, !passphrase.isEmpty, !importing else { return }
+        guard let file = raycastFile, !passphrase.isEmpty, !selection.isEmpty, !importing else { return }
         importing = true
         status = nil
         Task {
             defer { importing = false }
             do {
                 let outcome = try await BackupActions.importRaycast(
-                    file: file, passphrase: passphrase)
+                    file: file, passphrase: passphrase, options: selection)
                 var message = BackupActions.summaryText(outcome.summary)
                 if outcome.clipboardImported > 0 {
                     message += " Imported \(outcome.clipboardImported) clipboard entries."

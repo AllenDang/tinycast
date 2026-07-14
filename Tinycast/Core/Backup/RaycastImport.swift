@@ -16,6 +16,20 @@ enum RaycastImportError: LocalizedError {
     }
 }
 
+/// The independently importable categories in a Raycast export, so the user can pick a subset.
+struct RaycastImportOptions: OptionSet, Sendable {
+    let rawValue: Int
+    static let shortcuts = RaycastImportOptions(rawValue: 1 << 0)
+    static let favorites = RaycastImportOptions(rawValue: 1 << 1)
+    static let emojiSkinTone = RaycastImportOptions(rawValue: 1 << 2)
+    static let launchAtLogin = RaycastImportOptions(rawValue: 1 << 3)
+    static let menuBarVisibility = RaycastImportOptions(rawValue: 1 << 4)
+    static let clipboardHistory = RaycastImportOptions(rawValue: 1 << 5)
+    static let all: RaycastImportOptions = [
+        .shortcuts, .favorites, .emojiSkinTone, .launchAtLogin, .menuBarVisibility, .clipboardHistory,
+    ]
+}
+
 /// Decrypts a Raycast `.rayconfig` export and maps the subset Tinycast supports. Format: gzip → JSON envelope → hex ciphertext decrypted with AES-256-GCM under a scrypt(N=16384,r=8,p=1) key → gunzip → settings JSON. Decrypt is CPU-heavy (scrypt) and pure Foundation/CryptoKit, so run it off the main actor.
 enum RaycastImport {
     struct Result {
@@ -23,6 +37,39 @@ enum RaycastImport {
         var clipboard: [ClipboardItem]
         /// Image clips whose referenced file no longer exists on disk (reported so the UI can note them).
         var missingImages: Int
+
+        /// A copy trimmed to the chosen categories; `apply()` is already per-field non-destructive, so dropping a field is enough to skip it.
+        func selecting(_ options: RaycastImportOptions) -> Result {
+            var trimmed = SettingsBackup()
+            if options.contains(.shortcuts) { trimmed.hotkeys = backup.hotkeys }
+            if options.contains(.favorites) { trimmed.favoriteApps = backup.favoriteApps }
+
+            var settings = SettingsBackup.SettingsData()
+            var hasSettings = false
+            if options.contains(.emojiSkinTone), let tone = backup.settings?.emojiSkinTone {
+                settings.emojiSkinTone = tone
+                hasSettings = true
+            }
+            if options.contains(.launchAtLogin), let launch = backup.settings?.launchAtLogin {
+                settings.launchAtLogin = launch
+                hasSettings = true
+            }
+            if options.contains(.menuBarVisibility), let show = backup.settings?.showInMenuBar {
+                settings.showInMenuBar = show
+                hasSettings = true
+            }
+            if options.contains(.shortcuts), let shift = backup.settings?.hyperKeyIncludesShift {
+                settings.hyperKeyIncludesShift = shift
+                hasSettings = true
+            }
+            if hasSettings { trimmed.settings = settings }
+
+            let keepClipboard = options.contains(.clipboardHistory)
+            return Result(
+                backup: trimmed,
+                clipboard: keepClipboard ? clipboard : [],
+                missingImages: keepClipboard ? missingImages : 0)
+        }
     }
 
     // MARK: - Decrypt

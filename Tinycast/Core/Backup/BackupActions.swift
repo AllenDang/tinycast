@@ -44,16 +44,28 @@ enum BackupActions {
 
     // MARK: - Raycast (the pane owns the passphrase field + inline status)
 
-    static func importRaycast(file: URL, passphrase: String) async throws -> RaycastOutcome {
+    static func importRaycast(file: URL, passphrase: String, options: RaycastImportOptions = .all)
+        async throws -> RaycastOutcome
+    {
         // scrypt + AES-GCM + gunzip: keep off the main actor so the window stays responsive.
         let decrypted = try await Task.detached(priority: .userInitiated) {
             try RaycastImport.decrypt(file: file, passphrase: passphrase)
         }.value
-        let result = try RaycastImport.parse(decrypted)
+        let result = try RaycastImport.parse(decrypted).selecting(options)
         let summary = result.backup.apply()
-        let imported = AppCore.shared.clipboardStore.importEntries(result.clipboard)
+        let imported =
+            result.clipboard.isEmpty ? 0 : AppCore.shared.clipboardStore.importEntries(result.clipboard)
         return RaycastOutcome(
             summary: summary, clipboardImported: imported, missingImages: result.missingImages)
+    }
+
+    static let raycastBundleID = "com.raycast.macos"
+
+    /// Quit a running Raycast so its hotkeys stop clashing with the ones just imported.
+    static func quitRaycast() {
+        NSWorkspace.shared.runningApplications
+            .first { $0.bundleIdentifier == raycastBundleID }?
+            .terminate()
     }
 
     /// Shared `.rayconfig` file picker used by the Backup pane and onboarding.
