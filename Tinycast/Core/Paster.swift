@@ -2,21 +2,22 @@ import AppKit
 import Carbon.HIToolbox
 
 enum Paster {
-    /// Write the item onto the pasteboard and paste it into `previousApp` via a synthetic ⌘V, activating that app so the keystroke lands there.
-    @MainActor
+    /// Write the item onto the pasteboard and paste it into `previousApp` via a synthetic ⌘V, activating that app so the keystroke lands there. Returns whether content was written (and thus promoted).
+    @MainActor @discardableResult
     static func paste(
         _ item: ClipboardItem, store: ClipboardStore, previousApp: NSRunningApplication?
-    ) {
-        guard write(item, store: store) else { return }
+    ) -> Bool {
+        guard write(item, store: store) else { return false }
         previousApp?.activate()
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.08) {
             postCommandV()
         }
+        return true
     }
 
     /// Put the item on the pasteboard without pasting; the internal marker keeps our poller from re-capturing it.
-    @MainActor
-    static func copy(_ item: ClipboardItem, store: ClipboardStore) {
+    @MainActor @discardableResult
+    static func copy(_ item: ClipboardItem, store: ClipboardStore) -> Bool {
         write(item, store: store)
     }
 
@@ -64,15 +65,18 @@ enum Paster {
         pb.setData(Data(), forType: ClipboardManager.internalType)
     }
 
-    /// Paste into `app` *without* activating it (⌘V delivered straight to its process), leaving Tinycast frontmost so the palette stays open.
-    @MainActor
+    /// Paste into `app` *without* activating it (⌘V delivered straight to its process), leaving Tinycast frontmost so the palette stays open. Returns whether content was written (and thus promoted).
+    @MainActor @discardableResult
     static func pasteInPlace(
         _ item: ClipboardItem, store: ClipboardStore, into app: NSRunningApplication?
-    ) {
-        guard write(item, store: store), let pid = app?.processIdentifier else { return }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
-            postCommandV(toPid: pid)
+    ) -> Bool {
+        guard write(item, store: store) else { return false }
+        if let pid = app?.processIdentifier {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+                postCommandV(toPid: pid)
+            }
         }
+        return true
     }
 
     /// Returns whether content was actually written; if the item's text/image is gone, the pasteboard is left untouched (never cleared to empty) and the caller skips the paste.
@@ -94,6 +98,8 @@ enum Paster {
             pb.setData(data, forType: .png)
         }
         pb.setData(Data(), forType: ClipboardManager.internalType)
+        // Whatever lands back on the pasteboard becomes the most recent history entry (Raycast-style); the poller skips marked writes, so this is the only promotion point.
+        store.promote(item)
         return true
     }
 

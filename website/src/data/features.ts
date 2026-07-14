@@ -8,8 +8,8 @@ export type Feature = {
   wide?: boolean;
 };
 
-// The five things Tinycast does, in plain language. Sourced from the README so
-// the copy stays true to what the app actually ships.
+// Everything Tinycast does, in plain language. Kept true to what the app
+// actually ships — each maps to a real feature in the source.
 export const features: Feature[] = [
   {
     icon: "launch",
@@ -20,12 +20,17 @@ export const features: Feature[] = [
   {
     icon: "clipboard",
     title: "Clipboard history",
-    body: "Text and images, searchable, pasted straight back into the app you came from.",
+    body: "Text and images, full-text searchable, pasted straight back where you came from — kept as long as you like, up to forever.",
   },
   {
     icon: "calculator",
     title: "Inline calculator",
-    body: "Type math or unit conversions right in the palette and read the answer as you go.",
+    body: "Type math or unit conversions right in the palette, read the answer as you go, and revisit past results from history.",
+  },
+  {
+    icon: "emoji",
+    title: "Emoji & symbols",
+    body: "Search the full emoji and symbol set, tune the skin tone, and your most-used ones float to the top.",
   },
   {
     icon: "globe",
@@ -36,5 +41,15 @@ export const features: Feature[] = [
     icon: "bolt",
     title: "Per-app hotkeys",
     body: "Bind a key to an app to toggle it: press once to focus, again to hide.",
+  },
+  {
+    icon: "hyper",
+    title: "Hyper key",
+    body: "Turn Caps Lock into a ⌃⌥⇧⌘ super-modifier — a whole extra layer of shortcuts, shown as a single ✦.",
+  },
+  {
+    icon: "backup",
+    title: "Backup & restore",
+    body: "Export every shortcut, favorite, and clip to one file, then restore it on any Mac.",
   },
 ];

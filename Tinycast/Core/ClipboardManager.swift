@@ -52,12 +52,16 @@ final class ClipboardManager {
         }
 
         if let type = pb.availableType(from: [.png, .tiff]), let data = pb.data(forType: type) {
-            if type == .png {
-                store.addImage(data, sourceBundleID: sourceBundleID)
-            } else if let png = NSBitmapImageRep(data: data)?.representation(
-                using: .png, properties: [:])
-            {
-                store.addImage(png, sourceBundleID: sourceBundleID)
+            let isPNG = type == .png
+            let store = store
+            // A big copy's TIFF→PNG re-encode can take 100ms+; keep the poll (and the UI) off that path.
+            Task.detached(priority: .utility) {
+                let png =
+                    isPNG
+                    ? data
+                    : NSBitmapImageRep(data: data)?.representation(using: .png, properties: [:])
+                guard let png else { return }
+                await store.addImage(png, sourceBundleID: sourceBundleID)
             }
         }
     }

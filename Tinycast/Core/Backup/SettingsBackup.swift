@@ -20,6 +20,7 @@ struct SettingsBackup: Codable {
         var hyperKeyReplacesGlyph: Bool?
         var emojiSkinTone: String?
         var showInMenuBar: Bool?
+        var popToRootSeconds: Int?
     }
 
     struct HotkeyBackup: Codable {
@@ -56,7 +57,8 @@ extension SettingsBackup {
             hyperKeyReplacesGlyph: s.hyperKeyReplacesGlyph,
             emojiSkinTone: s.emojiSkinTone.rawValue,
             showInMenuBar: UserDefaults.standard.object(forKey: SettingsKey.showInMenuBar) as? Bool
-                ?? true)
+                ?? true,
+            popToRootSeconds: s.popToRootTimeout.rawValue)
 
         let hk = core.hotKeys
         var hotkeys = HotkeyBackup()
@@ -136,6 +138,10 @@ extension SettingsBackup {
         }
         if let show = s.showInMenuBar {
             UserDefaults.standard.set(show, forKey: SettingsKey.showInMenuBar)
+            count += 1
+        }
+        if let secs = s.popToRootSeconds, let timeout = PopToRootTimeout(rawValue: secs) {
+            settings.popToRootTimeout = timeout
             count += 1
         }
         return count

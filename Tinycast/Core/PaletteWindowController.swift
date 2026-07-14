@@ -6,6 +6,7 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
     private unowned let core: AppCore
     private var panel: PalettePanel?
     private(set) var previousApp: NSRunningApplication?
+    private var popToRootTimer: Timer?
 
     init(core: AppCore) {
         self.core = core
@@ -30,13 +31,38 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
         panel?.orderOut(nil)
         // Drop the multi-MB clipboard preview bitmaps now the window is gone, so idle RAM returns near baseline (row thumbnails stay cached).
         ImageThumbnail.purgePreviews()
-        // Reset to a fresh launcher so the hidden panel releases the heavy sub-screens (a fully scrolled emoji grid is ~2k realized views); every show path re-prepares anyway.
-        core.palette.prepare(mode: .launcher)
+        schedulePopToRoot()
         if restoreFocus { previousApp?.activate() }
     }
 
+    /// Pop to Root Search: reset immediately (also releases heavy sub-screens — a fully scrolled emoji grid is ~2k realized views), or keep state and reset after the configured delay unless a reopen consumes it first.
+    private func schedulePopToRoot() {
+        popToRootTimer?.invalidate()
+        let timeout = core.settings.popToRootTimeout
+        guard timeout != .immediately else {
+            core.palette.prepare(mode: .launcher)
+            return
+        }
+        popToRootTimer = Timer.scheduledTimer(withTimeInterval: timeout.interval, repeats: false) {
+            [weak self] _ in
+            MainActor.assumeIsolated {
+                self?.popToRootTimer = nil
+                self?.core.palette.prepare(mode: .launcher)
+            }
+        }
+    }
+
+    /// True when a hidden palette still holds pre-close state (pending pop-to-root); consuming cancels the reset either way — the caller decides whether to restore or re-prepare.
+    func consumePreservedState() -> Bool {
+        guard let timer = popToRootTimer else { return false }
+        timer.invalidate()
+        popToRootTimer = nil
+        return true
+    }
+
     /// Paste into the previously focused app while leaving the palette frontmost (keystroke delivered straight to that app's process).
-    func pasteKeepingWindowOpen(_ item: ClipboardItem, store: ClipboardStore) {
+    @discardableResult
+    func pasteKeepingWindowOpen(_ item: ClipboardItem, store: ClipboardStore) -> Bool {
         Paster.pasteInPlace(item, store: store, into: previousApp)
     }
 
