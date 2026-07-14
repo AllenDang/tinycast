@@ -35,7 +35,8 @@ enum BackupActions {
         do {
             let backup = try SettingsBackup(json: try Data(contentsOf: url))
             present(
-                title: "Settings Imported", message: summaryText(backup.apply()), style: .informational
+                title: "Settings Imported", message: summaryText(backup.apply()),
+                style: .informational
             )
         } catch {
             present(title: "Import Failed", message: error.localizedDescription, style: .warning)
@@ -54,18 +55,25 @@ enum BackupActions {
         let result = try RaycastImport.parse(decrypted).selecting(options)
         let summary = result.backup.apply()
         let imported =
-            result.clipboard.isEmpty ? 0 : AppCore.shared.clipboardStore.importEntries(result.clipboard)
+            result.clipboard.isEmpty
+            ? 0 : AppCore.shared.clipboardStore.importEntries(result.clipboard)
         return RaycastOutcome(
             summary: summary, clipboardImported: imported, missingImages: result.missingImages)
     }
 
-    static let raycastBundleID = "com.raycast.macos"
+    /// Every Raycast channel (stable, beta, alpha, internal) shares this bundle-id prefix.
+    static let raycastBundleIDPrefix = "com.raycast"
 
-    /// Quit a running Raycast so its hotkeys stop clashing with the ones just imported.
+    static func isRaycastBundleID(_ id: String) -> Bool { id.hasPrefix(raycastBundleIDPrefix) }
+
+    /// Quit any running Raycast app so its hotkeys stop clashing; skip `.prohibited` (pure background helpers/XPC).
     static func quitRaycast() {
-        NSWorkspace.shared.runningApplications
-            .first { $0.bundleIdentifier == raycastBundleID }?
-            .terminate()
+        for app in NSWorkspace.shared.runningApplications
+        where app.bundleIdentifier.map(isRaycastBundleID) == true
+            && app.activationPolicy != .prohibited
+        {
+            app.terminate()
+        }
     }
 
     /// Shared `.rayconfig` file picker used by the Backup pane and onboarding.
@@ -85,7 +93,8 @@ enum BackupActions {
         if s.hotkeys > 0 { parts.append("\(s.hotkeys) shortcuts") }
         if s.favorites > 0 { parts.append("\(s.favorites) favorites") }
         if s.hiddenItems > 0 { parts.append("\(s.hiddenItems) hidden items") }
-        return parts.isEmpty ? "Nothing to import from this file." : "Applied " + parts.joined(separator: ", ") + "."
+        return parts.isEmpty
+            ? "Nothing to import from this file." : "Applied " + parts.joined(separator: ", ") + "."
     }
 
     private static func dateStamp() -> String {

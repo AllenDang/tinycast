@@ -138,6 +138,12 @@ final class AppCore: ObservableObject {
         windowController.hide(restoreFocus: restoreFocus)
     }
 
+    /// Dock-icon / reopen: focus an open aux window (About/Settings/Onboarding), else summon the launcher. Decoupled from the individual show paths so activation always works.
+    func handleReopen() {
+        if auxWindows.focusExisting() { return }
+        showPalette(mode: .launcher)
+    }
+
     /// Settings runs in its own window (the SwiftUI `Settings` scene is unreliable for accessory apps), raised via the same controller as About.
     func showSettings() {
         auxWindows.show(
