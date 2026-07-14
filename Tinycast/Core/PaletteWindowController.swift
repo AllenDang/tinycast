@@ -17,7 +17,7 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
         previousApp = NSWorkspace.shared.frontmostApplication
         let panel = ensurePanel()
         center(panel)
-        NSApp.activate(ignoringOtherApps: true)
+        // The `.nonactivatingPanel` takes key focus without activating the app, so summoning the palette never raises the app's Settings/onboarding windows behind it.
         panel.makeKeyAndOrderFront(nil)
         panel.orderFrontRegardless()
     }

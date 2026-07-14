@@ -246,9 +246,13 @@ struct OnboardingView: View {
         case 0: "Continue"
         case 1: accessibilityTrusted ? "Continue" : "Grant Access"
         case 2:
-            if model.didImport { "Continue" }
-            else if model.importing { "Importing…" }
-            else { "Import" }
+            if model.didImport {
+                "Continue"
+            } else if model.importing {
+                "Importing…"
+            } else {
+                "Import"
+            }
         default: "Get Started"
         }
     }
@@ -260,7 +264,6 @@ struct OnboardingView: View {
     private func primaryAction() {
         switch step {
         case 1 where !accessibilityTrusted:
-            Permissions.ensureAccessibility()
             Permissions.openAccessibilitySettings()
         case 2 where !model.didImport:
             model.run()
@@ -322,7 +325,8 @@ struct OnboardingView: View {
     private static let appIcon: NSImage = {
         if let name = Bundle.main.infoDictionary?["CFBundleIconFile"] as? String,
             let url = Bundle.main.url(forResource: name, withExtension: "icns"),
-            let image = NSImage(contentsOf: url) {
+            let image = NSImage(contentsOf: url)
+        {
             return image
         }
         return NSApp.applicationIconImage

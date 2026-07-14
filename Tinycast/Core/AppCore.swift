@@ -96,9 +96,9 @@ final class AppCore: ObservableObject {
         // Deliberately keeps running while `hotKeys.recordingAction` pauses Carbon: the recorder relies on the tap's rewritten flags to capture Hyper shortcuts.
         hyperKeyTap.start(settings: settings)
 
-        // First launch has no palette hotkey bound and shows nothing but the menu-bar icon; guide the user once. Flag is set at show-time so it stays one-time even if they Cmd-Q mid-flow.
-        if !UserDefaults.standard.bool(forKey: SettingsKey.didCompleteOnboarding) {
-            UserDefaults.standard.set(true, forKey: SettingsKey.didCompleteOnboarding)
+        // First launch has no palette hotkey bound and shows nothing but the menu-bar icon; guide the user once. Marker is written at show-time so it stays one-time even if they Cmd-Q mid-flow.
+        if !OnboardingState.hasOnboarded {
+            OnboardingState.markShown()
             showOnboarding()
         }
     }
