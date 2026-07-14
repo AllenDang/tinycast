@@ -122,6 +122,8 @@ final class AuxWindowController: NSObject, NSWindowDelegate {
             window.center()
             windows[id] = window
         }
+        // Promote to a regular app so the window gets a Dock icon and normal layering; demoted back to accessory when the last aux window closes.
+        NSApp.setActivationPolicy(.regular)
         NSApp.activate(ignoringOtherApps: true)
         window.makeKeyAndOrderFront(nil)
 
@@ -141,5 +143,6 @@ final class AuxWindowController: NSObject, NSWindowDelegate {
             let id = windows.first(where: { $0.value === window })?.key
         else { return }
         windows.removeValue(forKey: id)
+        if windows.isEmpty { NSApp.setActivationPolicy(.accessory) }
     }
 }
