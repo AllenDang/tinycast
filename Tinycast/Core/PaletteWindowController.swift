@@ -25,6 +25,11 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
         // The `.nonactivatingPanel` takes key focus without activating the app, so summoning the palette never raises the app's Settings/onboarding windows behind it.
         panel.makeKeyAndOrderFront(nil)
         panel.orderFrontRegardless()
+        // A never-activated login-item process can drop the first key request before the window is registered with the window server; re-assert next turn once it is (same pattern as AuxWindowController).
+        DispatchQueue.main.async { [weak panel] in
+            guard let panel, panel.isVisible, !panel.isKeyWindow else { return }
+            panel.makeKeyAndOrderFront(nil)
+        }
     }
 
     func hide(restoreFocus: Bool) {
@@ -79,9 +84,11 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
         hide(restoreFocus: false)
     }
 
-    /// Re-bump focusToken once the panel has *actually* become key, since activating an accessory app from a hotkey is async and refocusing right after `show()` can lose the race.
+    /// Re-bump focusToken a turn after the panel becomes key: on the first-ever show this fires mid-mount, before the SwiftUI tree has registered its onChange, so a synchronous bump is silently lost.
     func windowDidBecomeKey(_ notification: Notification) {
-        core.palette.focusToken = UUID()
+        DispatchQueue.main.async { [weak self] in
+            self?.core.palette.focusToken = UUID()
+        }
     }
 
     // MARK: - Private
