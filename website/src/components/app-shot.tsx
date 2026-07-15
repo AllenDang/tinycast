@@ -6,8 +6,8 @@ export function AppShot() {
     <figure className="w-full overflow-hidden rounded-2xl shadow-window">
       <img
         src={`${import.meta.env.BASE_URL}screenshot.png`}
-        width={3012}
-        height={1964}
+        width={2451}
+        height={1510}
         alt="Tinycast's launcher floating over the macOS desktop, showing grouped Favorites and Applications with Ghostty selected and an Open Application action."
         className="block h-auto w-full"
         loading="eager"
