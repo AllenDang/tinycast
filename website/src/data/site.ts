@@ -24,19 +24,15 @@ export const channels = [
   {
     id: "stable",
     label: "Stable",
-    command: "brew install --cask tinycast",
+    command:
+      "brew trust --tap abue-ammar/tinycast && brew install --cask abue-ammar/tinycast/tinycast",
     note: "Recommended",
   },
   {
     id: "beta",
     label: "Beta",
-    command: "brew install --cask tinycast@beta",
-    note: "Side-by-side",
-  },
-  {
-    id: "alpha",
-    label: "Alpha",
-    command: "brew install --cask tinycast@alpha",
+    command:
+      "brew trust --tap abue-ammar/tinycast && brew install --cask abue-ammar/tinycast/tinycast@beta",
     note: "Side-by-side",
   },
 ] as const;

@@ -10,27 +10,28 @@ hotkeys, and a text/image clipboard history. SwiftUI + AppKit, runs as an access
 
 ## Build & run
 
-The real build is **SwiftPM driven through Xcode's toolchain**, not `xcodebuild`. SwiftPM only emits a
-bare executable, so `Packaging/make-app.sh` assembles the `.app` bundle (Info.plist, resource bundles,
-code signing) around it:
+The app is built with **`xcodebuild`** against the committed `Tinycast.xcodeproj` (an application
+target that produces the signed `.app` with icon/plist/resources natively):
 
 ```sh
-DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer Packaging/make-app.sh debug   # -> build/Tinycast.app
-open build/Tinycast.app
-Packaging/build-dmg.sh                                                                  # release .app + DMG
+open Tinycast.xcodeproj                                                            # ⌘R to run
+xcodebuild -project Tinycast.xcodeproj -scheme Tinycast -configuration Debug build # or CLI
 ```
 
-- `DEVELOPER_DIR` is mandatory: the SwiftUI `@State`/`@FocusState` macros live in Xcode's macOS
-  platform, not in the Command Line Tools. Building with plain `swift build` or `xcodebuild` against
-  the CLT will fail here. (If `xcode-select` already points at Xcode you can drop the prefix.)
-- Run `Packaging/dev-cert.sh` **once** to create a stable self-signed identity ("Tinycast Self-Signed").
-  `make-app.sh` signs with it when present; this keeps the macOS Accessibility (TCC) grant alive across
-  rebuilds. Without it the build falls back to ad-hoc signing and you must re-grant Accessibility every
-  build (needed for clipboard paste — see Paster).
+- `xcodebuild` needs Xcode's toolchain (the SwiftUI `@State`/`@FocusState` macros live in Xcode's
+  macOS platform, not the CLT); if `xcode-select` points at the CLT, prefix
+  `DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer`.
+- `Tinycast.xcodeproj` is committed and generated from `project.yml` via XcodeGen — after editing
+  `project.yml`, run `xcodegen generate` and commit. There is **no** `Package.swift`/SwiftPM.
+- Builds sign with the stable `Tinycast Self-Signed` identity (project default), so the Accessibility
+  grant persists across rebuilds. Create that identity once — see `docs/SIGNING.md` §1.
+- VS Code code-intelligence (SourceKit-LSP) is driven by a git-ignored `buildServer.json` from
+  `xcode-build-server` (setup in `docs/DEVELOPMENT.md`); the `.vscode` build task / F5 build to the
+  fixed `build/DerivedData` so LSP indexes what you build. The test harnesses use `swiftc` directly.
 
-There are **two parallel project definitions**: `Package.swift` is the build of record;
-`project.yml` (XcodeGen → `xcodegen generate && open Tinycast.xcodeproj`) exists only to open the
-project in the Xcode IDE. Keep dependency/version changes in sync between them.
+**Releases** are built entirely by `.github/workflows/release.yml` (xcodebuild + `diskutil` DMG,
+signed with the stable "Tinycast Self-Signed" identity from the `SIGNING_P12_*` secrets), per channel
+(beta/stable). There is no local packaging script. See `docs/SIGNING.md` for the signing model.
 
 ## Tests
 
@@ -132,7 +133,7 @@ while all Carbon registrations are paused.
 - `Tinycast/Core/` — managers, stores, windows, AppKit glue (no view bodies beyond hosting); `Core/Calculator/` is the Foundation-only calc engine, `Core/Theme.swift` the design tokens.
 - `Tinycast/Features/` — SwiftUI views: `RootPaletteView`, `Launcher/`, `Clipboard/`, `Calculator/`, `Settings/`, `About/`, plus shared `PopoverMenu`.
 - `Tinycast/App/` — `@main` app + delegate.
-- `Packaging/` — `make-app.sh` (bundle assembly + signing), `build-dmg.sh`, `dev-cert.sh`.
+- `.github/workflows/release.yml` — the entire release pipeline (xcodebuild + DMG + GitHub Release + cask bump); signing setup lives in `docs/SIGNING.md`.
 - `DESIGN.md` (repo root) — the visual design system: tokens, panel chrome, edge dissolve, rules for restyles.
 
 ## Concurrency

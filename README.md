@@ -7,7 +7,7 @@ A tiny, fully native macOS launcher — the essentials, without the bloat.
   <img src="docs/screenshot.png" alt="Tinycast command palette" width="720">
 </p>
 
-Around **5 MB on disk** and **under 100 MB of RAM** — no Electron, no telemetry, no background
+Around **3 MB on disk** and **under 100 MB of RAM** — no Electron, no telemetry, no background
 CPU churn. Just SwiftUI + AppKit with zero dependencies. It's fast because there's nothing to it.
 
 ## Features
@@ -21,21 +21,19 @@ CPU churn. Just SwiftUI + AppKit with zero dependencies. It's fast because there
 ## Install
 
 ```sh
+brew trust --tap abue-ammar/tinycast   # required for third-party taps
 brew tap abue-ammar/tinycast
 brew install --cask tinycast          # stable
-brew install --cask tinycast@alpha    # alpha  (installs side-by-side)
-brew install --cask tinycast@beta     # beta   (installs side-by-side)
+brew install --cask tinycast@beta     # beta  (installs side-by-side)
 ```
 
-Each channel is a separate app (`Tinycast.app`, `Tinycast Alpha.app`, `Tinycast Beta.app`) with
-its own settings and permissions, so you can run stable next to a pre-release.
+Each channel is a separate app (`Tinycast.app`, `Tinycast Beta.app`) with its own settings and
+permissions, so you can run stable next to the beta.
 
-Tinycast has no Apple Developer ID and isn't notarized (there's no $99/yr account behind it), so
-macOS quarantines it on install. Clear the flag once — the cask prints this too:
-
-```sh
-xattr -dr com.apple.quarantine "/Applications/Tinycast.app"
-```
+Tinycast is self-signed. Installing via Homebrew clears the macOS quarantine flag for you
+automatically on every install and update, so there's nothing to run. (If you download the DMG
+directly from Releases instead, clear it once: `xattr -dr com.apple.quarantine
+"/Applications/Tinycast.app"`.)
 
 ## Permissions
 

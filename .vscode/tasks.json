@@ -2,12 +2,12 @@
   "version": "2.0.0",
   "tasks": [
     {
-      // Assembles the real .app bundle via make-app.sh. DEVELOPER_DIR forces Xcode's
-      // toolchain (Command Line Tools can't build this — SwiftUI macros are missing),
-      // regardless of what `xcode-select` points at.
+      // Build the .app with xcodebuild into a fixed path (build/DerivedData) so the app
+      // location is stable — that's what lets F5 find it and keeps the Accessibility grant.
+      // DEVELOPER_DIR forces Xcode's toolchain (the SwiftUI macros aren't in the CLT).
       "label": "Build Tinycast.app (debug)",
       "type": "shell",
-      "command": "Packaging/make-app.sh debug",
+      "command": "xcodebuild -project Tinycast.xcodeproj -scheme Tinycast -configuration Debug -derivedDataPath build/DerivedData build",
       "options": {
         "cwd": "${workspaceFolder}",
         "env": { "DEVELOPER_DIR": "/Applications/Xcode.app/Contents/Developer" }
@@ -19,7 +19,7 @@
       // Rebuild, then relaunch the menu-bar app. Default build task (⌘⇧B).
       "label": "Build & Run Tinycast (debug)",
       "type": "shell",
-      "command": "killall Tinycast 2>/dev/null; open build/Tinycast.app",
+      "command": "killall Tinycast 2>/dev/null; open build/DerivedData/Build/Products/Debug/Tinycast.app",
       "options": { "cwd": "${workspaceFolder}" },
       "dependsOn": "Build Tinycast.app (debug)",
       "group": { "kind": "build", "isDefault": true },

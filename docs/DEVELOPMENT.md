@@ -7,35 +7,48 @@ How to build, test, package, and release Tinycast.
 - macOS 26 or later (Liquid Glass).
 - Xcode 26 installed — it provides the SwiftUI macro plugin and SDK used to build.
 
+## First-time setup
+
+Create the `Tinycast Self-Signed` code-signing identity once — builds sign with it, which keeps the
+macOS Accessibility grant from being forgotten every rebuild. Follow **[SIGNING.md](SIGNING.md) §1**
+(a few `openssl`/`security` commands).
+
 ## Build & run
 
-Tinycast builds with Swift Package Manager, driven through Xcode's toolchain:
+Open the project in Xcode and run it:
 
 ```sh
-# Build a runnable, ad-hoc-signed app into ./build/Tinycast.app
-DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer Packaging/make-app.sh debug
-open build/Tinycast.app
+open Tinycast.xcodeproj    # then press ⌘R
 ```
 
-`DEVELOPER_DIR` is required because the SwiftUI `@State`/`@FocusState` macros live in Xcode's
-macOS platform, not in the Command Line Tools — a plain `swift build`/`xcodebuild` against the
-CLT fails. If `xcode-select` already points at Xcode
-(`sudo xcode-select -s /Applications/Xcode.app`), you can drop the `DEVELOPER_DIR=` prefix.
-
-Run `Packaging/dev-cert.sh` **once** to create a stable self-signed identity. `make-app.sh` signs
-with it when present, which keeps the macOS Accessibility (TCC) grant alive across rebuilds;
-without it the build falls back to ad-hoc signing and you must re-grant Accessibility each build.
-
-### Opening in Xcode
-
-There's an XcodeGen `project.yml` for the IDE:
+Or from the command line:
 
 ```sh
-xcodegen generate && open Tinycast.xcodeproj
+xcodebuild -project Tinycast.xcodeproj -scheme Tinycast -configuration Debug build
 ```
 
-`Package.swift` is the build of record; `project.yml` exists only to open the project in Xcode.
-Keep dependency/version changes in sync between them.
+`xcodebuild` uses whatever `xcode-select` points at; if that's the Command Line Tools rather than
+Xcode, prefix with `DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer` (the SwiftUI
+`@State`/`@FocusState` macros need Xcode's macOS platform).
+
+`Tinycast.xcodeproj` is committed and generated from `project.yml` via
+[XcodeGen](https://github.com/yonaskolb/XcodeGen) — after changing project settings in `project.yml`,
+run `xcodegen generate` and commit the result.
+
+### Editor (VS Code) code-intelligence
+
+Autocomplete / go-to-definition come from SourceKit-LSP driven by a `buildServer.json`. Generate it
+once (it's machine-specific and git-ignored):
+
+```sh
+brew install xcode-build-server
+xcode-build-server config -project Tinycast.xcodeproj -scheme Tinycast \
+    --build_root "$PWD/build/DerivedData"
+```
+
+`--build_root` matches the fixed path the VS Code build task / F5 use, so the editor indexes what you
+actually build. Do a build once (⌘⇧B or F5) to populate it. In VS Code, **F5** builds and launches the
+app; changes always apply (fixed build path — no need to delete `build/`).
 
 ## Tests
 
@@ -51,64 +64,45 @@ swiftc Tinycast/Core/Calculator/*.swift Tools/calc-test.swift \
 change the scoring in one and mirror it in the other. The calc harness compiles the real engine
 sources, which is why `Tinycast/Core/Calculator/` must stay Foundation-only.
 
-## Package a DMG
+## Packaging a DMG
+
+For a local signed DMG:
 
 ```sh
-Packaging/build-dmg.sh        # -> build/Tinycast-<version>.dmg (release build)
+./build-dmg.sh            # -> build/Tinycast-<version>.dmg (version from project.yml)
+./build-dmg.sh 0.5.7      # -> build/Tinycast-0.5.7.dmg
 ```
 
-`build-dmg.sh` always runs `make-app.sh release` first (never debug) and packages the DMG with
-`diskutil image create` (the supported replacement for the deprecated `hdiutil create`).
-
-### Channel builds
-
-To cut a one-off channel build — a distinct app name / bundle id / version, e.g. an alpha to
-hand a tester — override the defaults via env vars:
-
-```sh
-DISPLAY_NAME="Tinycast Alpha" BUNDLE_ID="com.tinycast.app.alpha" VERSION="0.1.0-alpha.1" \
-    Packaging/build-dmg.sh    # -> build/Tinycast-0.1.0-alpha.1.dmg (contains "Tinycast Alpha.app")
-```
-
-- `DISPLAY_NAME` sets `CFBundleName`/`CFBundleDisplayName`, the `.app` bundle name, and the DMG's
-  mounted volume name. The executable inside stays `Tinycast`.
-- `BUNDLE_ID` sets `CFBundleIdentifier` (default `com.tinycast.app`) — the per-channel id is what
-  lets channels install side-by-side with separate settings and permissions.
-- The DMG file name is always `Tinycast-<VERSION>.dmg` (`DMG_BASE` overrides the `Tinycast`
-  prefix), so release assets always carry the version.
+It builds a Release `Tinycast.app` signed with `Tinycast Self-Signed` and packs it (with an
+`/Applications` symlink). Official per-channel releases (beta/stable) are built by CI — see
+below and [`.github/workflows/release.yml`](../.github/workflows/release.yml).
 
 ## Signing & Gatekeeper
 
-Tinycast is **not** signed with an Apple Developer ID and **not** notarized — deliberately, to
-avoid the $99/yr account. Ad-hoc signing (what CI does) is enough to _run_ the app but gives
-Gatekeeper nothing to vouch for, so users clear quarantine once after install:
-
-```sh
-xattr -dr com.apple.quarantine "/Applications/Tinycast.app"
-```
-
-When you build locally, macOS instead shows the ordinary "unidentified developer" prompt — allow
-it under **System Settings → Privacy & Security → Open Anyway**.
+Both local builds and CI releases sign with the same stable `Tinycast Self-Signed` identity (not an
+Apple Developer ID), so macOS quarantines a directly-downloaded DMG — the Homebrew cask strips that
+automatically, and direct downloaders run `xattr -dr com.apple.quarantine "…/Tinycast.app"` once.
+Full details in [SIGNING.md](SIGNING.md).
 
 ## CI releases
 
 `.github/workflows/release.yml` builds and publishes a DMG from GitHub Actions — no local machine
 needed. Run it from the **Actions** tab (`Release` → **Run workflow**) and pick:
 
-- **channel** — `alpha`, `beta`, or `stable`. Each builds a distinct app
-  (`Tinycast Alpha.app` / `Tinycast Beta.app` / `Tinycast.app`) with its own bundle id.
-  Alpha/beta get an auto-incrementing `-alpha.N`/`-beta.N` suffix (`N` = the Actions run number)
+- **channel** — `beta` or `stable`. Each builds a distinct app
+  (`Tinycast Beta.app` / `Tinycast.app`) with its own bundle id.
+  Beta gets an auto-incrementing `-beta.N` suffix (`N` = the Actions run number)
   so re-running never collides; stable ships the version as-is.
 - **version** — base semver, e.g. `0.2.0`.
 
 It builds on a `macos-26` runner with Xcode 26 and publishes a GitHub Release tagged
 `v<full-version>` with a versioned DMG asset (`Tinycast-<full-version>.dmg`), marked prerelease
-for alpha/beta. On success it also bumps the matching cask in the tap (below).
+for beta. On success it also bumps the matching cask in the tap (below).
 
 ### Homebrew tap automation
 
-The release job's final step rewrites the `version` + `sha256` of the channel's cask (`tinycast`,
-`tinycast@alpha`, or `tinycast@beta`) in the
+The release job's final step rewrites the `version` + `sha256` of the channel's cask (`tinycast`
+or `tinycast@beta`) in the
 [`homebrew-tinycast`](https://github.com/abue-ammar/homebrew-tinycast) tap and pushes. It needs a
 `HOMEBREW_TAP_TOKEN` repo secret — a fine-grained PAT with **Contents: read/write** on the tap
 repo. Without the secret the step logs a warning and skips (the release still publishes).

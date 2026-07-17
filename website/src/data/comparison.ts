@@ -38,7 +38,7 @@ export const compareRows: CompareRow[] = [
     raycast: "500 MB+",
     sourced: true,
   },
-  { label: "On disk", tinycast: "<5 MB", raycast: "Hundreds of MB" },
+  { label: "On disk", tinycast: "<3 MB", raycast: "Hundreds of MB" },
   { label: "Price", tinycast: "Free forever", raycast: "Freemium (Pro)" },
   { label: "Open source", tinycast: true, raycast: false },
   { label: "Account required", tinycast: false, raycast: true },
