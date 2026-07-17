@@ -8,6 +8,13 @@ final class ClipboardManager {
     /// Longest text we capture into history; bigger copies are skipped outright (truncating would silently drop the tail on paste).
     static let maxTextLength = 32_000
 
+    /// Pasteboard markers password managers, browsers, and the OS put on secret copies (passwords, OTPs, autofill) — never recorded, regardless of source app.
+    static let sensitiveTypes: Set<NSPasteboard.PasteboardType> = [
+        .init("org.nspasteboard.ConcealedType"),
+        .init("org.nspasteboard.TransientType"),
+        .init("com.apple.is-sensitive"),
+    ]
+
     private let store: ClipboardStore
     private let settings: AppSettings
     private var timer: Timer?
@@ -38,6 +45,9 @@ final class ClipboardManager {
         lastChangeCount = pb.changeCount
 
         if pb.types?.contains(Self.internalType) == true { return }
+
+        // Never record secrets: skip copies tagged sensitive by password managers, browsers, or the OS.
+        if let types = pb.types, !Set(types).isDisjoint(with: Self.sensitiveTypes) { return }
 
         // The pasteboard doesn't carry its source, so attribute the change to the frontmost app (the copy happened within the last 0.5s poll).
         let sourceBundleID = NSWorkspace.shared.frontmostApplication?.bundleIdentifier
