@@ -101,10 +101,18 @@ PLIST
 
 # Prefer a stable, self-signed identity so the Accessibility (TCC) grant survives rebuilds.
 # Falls back to ad-hoc if it hasn't been created yet (run Packaging/dev-cert.sh once).
+# STRICT_SIGN=1 refuses that fallback — released (CI) builds MUST use the stable identity,
+# because ad-hoc gives a fresh cdhash each build and macOS drops the users' Accessibility
+# grant on every update. Import the release cert (Packaging/export-signing-cert.sh) first.
 SIGN_IDENTITY="Tinycast Self-Signed"
 if security find-identity -p codesigning 2>/dev/null | grep -q "$SIGN_IDENTITY"; then
     echo "▸ Signing with stable identity ($SIGN_IDENTITY)…"
     SIGN_AS="$SIGN_IDENTITY"
+elif [ "${STRICT_SIGN:-0}" = "1" ]; then
+    echo "✗ STRICT_SIGN=1 but stable identity '$SIGN_IDENTITY' is not in the keychain." >&2
+    echo "  Refusing to ad-hoc sign a release: ad-hoc changes the code signature every build," >&2
+    echo "  which breaks every user's Accessibility (TCC) grant on update." >&2
+    exit 1
 else
     echo "▸ Ad-hoc signing (run Packaging/dev-cert.sh once for a persistent Accessibility grant)…"
     SIGN_AS="-"

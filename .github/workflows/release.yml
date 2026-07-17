@@ -60,6 +60,35 @@ jobs:
             echo "prerelease=${PRERELEASE}"
           } >> "$GITHUB_OUTPUT"
 
+      # Import the stable self-signed identity so every release is signed with the SAME cert.
+      # This is what keeps users' Accessibility (TCC) grant alive across updates — without it
+      # make-app.sh ad-hoc signs, changing the code signature (and breaking the grant) each build.
+      # Generate the secrets with Packaging/export-signing-cert.sh.
+      - name: Import signing certificate
+        id: signing
+        env:
+          P12_BASE64: ${{ secrets.SIGNING_P12_BASE64 }}
+          P12_PASSWORD: ${{ secrets.SIGNING_P12_PASSWORD }}
+        run: |
+          if [ -z "${P12_BASE64}" ]; then
+            echo "::warning::SIGNING_P12_BASE64 not set — falling back to ad-hoc signing. Users' Accessibility grant will NOT survive updates until this secret is added (see Packaging/export-signing-cert.sh)."
+            echo "strict=0" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          KEYCHAIN="$RUNNER_TEMP/signing.keychain-db"
+          KPW="$(openssl rand -base64 24)"
+          echo "${P12_BASE64}" | base64 --decode > "$RUNNER_TEMP/cert.p12"
+          security create-keychain -p "$KPW" "$KEYCHAIN"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN"
+          security unlock-keychain -p "$KPW" "$KEYCHAIN"
+          security import "$RUNNER_TEMP/cert.p12" -k "$KEYCHAIN" -P "${P12_PASSWORD}" -A -T /usr/bin/codesign
+          # Let codesign use the key without an interactive prompt.
+          security set-key-partition-list -S apple-tool:,apple: -s -k "$KPW" "$KEYCHAIN" >/dev/null
+          # Prepend to the search list so `security find-identity` (in make-app.sh) sees it.
+          security list-keychains -d user -s "$KEYCHAIN" $(security list-keychains -d user | sed 's/"//g')
+          rm -f "$RUNNER_TEMP/cert.p12"
+          echo "strict=1" >> "$GITHUB_OUTPUT"
+
       - name: Build DMG
         env:
           VERSION: ${{ steps.meta.outputs.full_version }}
@@ -67,6 +96,7 @@ jobs:
           BUNDLE_ID: ${{ steps.meta.outputs.bundle_id }}
           BUILD_NUMBER: ${{ github.run_number }}
           DMG_BASE: Tinycast
+          STRICT_SIGN: ${{ steps.signing.outputs.strict }}
         run: Packaging/build-dmg.sh
 
       - uses: actions/upload-artifact@v7
@@ -91,11 +121,14 @@ jobs:
           **Bundle ID:** \`${{ steps.meta.outputs.bundle_id }}\`
           Built from ${{ github.sha }}.
 
-          This build is **not signed with an Apple Developer ID and not notarized** (this project has no paid Apple account). macOS will refuse to open it until you clear the quarantine flag:
+          **Recommended:** install via Homebrew — it clears the quarantine flag automatically on every install and update, so there's nothing to run by hand:
+          \`\`\`sh
+          brew install --cask abue-ammar/tinycast/${{ steps.meta.outputs.cask_name }}
+          \`\`\`
+          This build is signed with a stable self-signed identity (**not** an Apple Developer ID, and not notarized — this project has no paid Apple account). If you download the DMG directly instead of using Homebrew, macOS will refuse to open it until you clear the quarantine flag once:
           \`\`\`sh
           xattr -dr com.apple.quarantine \"/Applications/${{ steps.meta.outputs.display_name }}.app\"
-          \`\`\`
-          Or install via Homebrew: \`brew install --cask abue-ammar/tinycast/${{ steps.meta.outputs.cask_name }}\`" \
+          \`\`\`" \
             $PRERELEASE_FLAG
 
       - name: Update Homebrew cask
