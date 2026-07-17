@@ -21,14 +21,14 @@ CPU churn. Just SwiftUI + AppKit with zero dependencies. It's fast because there
 ## Install
 
 ```sh
+brew trust --tap abue-ammar/tinycast   # required for third-party taps
 brew tap abue-ammar/tinycast
 brew install --cask tinycast          # stable
-brew install --cask tinycast@alpha    # alpha  (installs side-by-side)
-brew install --cask tinycast@beta     # beta   (installs side-by-side)
+brew install --cask tinycast@beta     # beta  (installs side-by-side)
 ```
 
-Each channel is a separate app (`Tinycast.app`, `Tinycast Alpha.app`, `Tinycast Beta.app`) with
-its own settings and permissions, so you can run stable next to a pre-release.
+Each channel is a separate app (`Tinycast.app`, `Tinycast Beta.app`) with its own settings and
+permissions, so you can run stable next to the beta.
 
 Tinycast is self-signed. Installing via Homebrew clears the macOS quarantine flag for you
 automatically on every install and update, so there's nothing to run. (If you download the DMG

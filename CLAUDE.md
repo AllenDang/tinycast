@@ -31,7 +31,7 @@ xcodebuild -project Tinycast.xcodeproj -scheme Tinycast -configuration Debug bui
 
 **Releases** are built entirely by `.github/workflows/release.yml` (xcodebuild + `diskutil` DMG,
 signed with the stable "Tinycast Self-Signed" identity from the `SIGNING_P12_*` secrets), per channel
-(alpha/beta/stable). There is no local packaging script. See `docs/SIGNING.md` for the signing model.
+(beta/stable). There is no local packaging script. See `docs/SIGNING.md` for the signing model.
 
 ## Tests
 

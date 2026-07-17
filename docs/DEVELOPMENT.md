@@ -74,7 +74,7 @@ For a local signed DMG:
 ```
 
 It builds a Release `Tinycast.app` signed with `Tinycast Self-Signed` and packs it (with an
-`/Applications` symlink). Official per-channel releases (alpha/beta/stable) are built by CI — see
+`/Applications` symlink). Official per-channel releases (beta/stable) are built by CI — see
 below and [`.github/workflows/release.yml`](../.github/workflows/release.yml).
 
 ## Signing & Gatekeeper
@@ -89,20 +89,20 @@ Full details in [SIGNING.md](SIGNING.md).
 `.github/workflows/release.yml` builds and publishes a DMG from GitHub Actions — no local machine
 needed. Run it from the **Actions** tab (`Release` → **Run workflow**) and pick:
 
-- **channel** — `alpha`, `beta`, or `stable`. Each builds a distinct app
-  (`Tinycast Alpha.app` / `Tinycast Beta.app` / `Tinycast.app`) with its own bundle id.
-  Alpha/beta get an auto-incrementing `-alpha.N`/`-beta.N` suffix (`N` = the Actions run number)
+- **channel** — `beta` or `stable`. Each builds a distinct app
+  (`Tinycast Beta.app` / `Tinycast.app`) with its own bundle id.
+  Beta gets an auto-incrementing `-beta.N` suffix (`N` = the Actions run number)
   so re-running never collides; stable ships the version as-is.
 - **version** — base semver, e.g. `0.2.0`.
 
 It builds on a `macos-26` runner with Xcode 26 and publishes a GitHub Release tagged
 `v<full-version>` with a versioned DMG asset (`Tinycast-<full-version>.dmg`), marked prerelease
-for alpha/beta. On success it also bumps the matching cask in the tap (below).
+for beta. On success it also bumps the matching cask in the tap (below).
 
 ### Homebrew tap automation
 
-The release job's final step rewrites the `version` + `sha256` of the channel's cask (`tinycast`,
-`tinycast@alpha`, or `tinycast@beta`) in the
+The release job's final step rewrites the `version` + `sha256` of the channel's cask (`tinycast`
+or `tinycast@beta`) in the
 [`homebrew-tinycast`](https://github.com/abue-ammar/homebrew-tinycast) tap and pushes. It needs a
 `HOMEBREW_TAP_TOKEN` repo secret — a fine-grained PAT with **Contents: read/write** on the tap
 repo. Without the secret the step logs a warning and skips (the release still publishes).
