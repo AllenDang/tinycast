@@ -11,7 +11,7 @@ struct TinycastApp: App {
 
     var body: some Scene {
         MenuBarExtra(
-            appName, systemImage: "app.shadow", isInserted: $showInMenuBar
+            appName, systemImage: "macwindow.on.rectangle", isInserted: $showInMenuBar
         ) {
             Button("Open \(appName)") { AppCore.shared.showPalette(mode: .launcher) }
             Button("Clipboard History") { AppCore.shared.showPalette(mode: .clipboard) }
