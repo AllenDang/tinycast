@@ -18,6 +18,13 @@ settings:
     CODE_SIGN_IDENTITY: "Tinycast Self-Signed"
     ENABLE_HARDENED_RUNTIME: NO
     SWIFT_STRICT_CONCURRENCY: complete
+  configs:
+    Release:
+      # Strip the shipped binary (dSYM is still generated first) and drop unused code.
+      DEPLOYMENT_POSTPROCESSING: YES
+      STRIP_INSTALLED_PRODUCT: YES
+      STRIP_SWIFT_SYMBOLS: YES
+      DEAD_CODE_STRIPPING: YES
 
 targets:
   Tinycast:
