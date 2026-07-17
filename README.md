@@ -30,12 +30,10 @@ brew install --cask tinycast@beta     # beta   (installs side-by-side)
 Each channel is a separate app (`Tinycast.app`, `Tinycast Alpha.app`, `Tinycast Beta.app`) with
 its own settings and permissions, so you can run stable next to a pre-release.
 
-Tinycast has no Apple Developer ID and isn't notarized (there's no $99/yr account behind it), so
-macOS quarantines it on install. Clear the flag once — the cask prints this too:
-
-```sh
-xattr -dr com.apple.quarantine "/Applications/Tinycast.app"
-```
+Tinycast is self-signed. Installing via Homebrew clears the macOS quarantine flag for you
+automatically on every install and update, so there's nothing to run. (If you download the DMG
+directly from Releases instead, clear it once: `xattr -dr com.apple.quarantine
+"/Applications/Tinycast.app"`.)
 
 ## Permissions
 
