@@ -140,8 +140,17 @@
 
   /* Anchor targets land below the floating nav instead of underneath it. */
   section[id] {
-    scroll-margin-top: 5.5rem;
+    scroll-margin-top: 6rem;
   }
+}
+
+/* Lightbox (yet-another-react-lightbox) — tint its dark chrome to match the
+   page. YARL's own classes are namespaced (yarl__), so nothing here leaks. */
+.yarl__root {
+  --yarl__color_backdrop: rgb(4 5 6 / 0.94);
+  --yarl__color_button: var(--color-ash);
+  --yarl__color_button_active: var(--color-white);
+  --yarl__slide_captions_container_background: rgb(4 5 6 / 0.6);
 }
 
 /* The page gutter: 16px on mobile, 24px from the sm breakpoint up. */

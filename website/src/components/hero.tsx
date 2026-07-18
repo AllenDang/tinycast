@@ -1,4 +1,4 @@
-import { site } from "../data/site";
+import { hero, site } from "../data/site";
 import { AppShot } from "./app-shot";
 import { Button } from "./ui/button";
 import { AppleLogo, GitHubLogo } from "./ui/icon";
@@ -30,25 +30,21 @@ export function Hero() {
           className="rise font-mono text-eyebrow uppercase text-ash"
           style={{ animationDelay: "0ms" }}
         >
-          Native macOS launcher
+          {hero.eyebrow}
         </p>
 
         <h1
           className="rise mt-6 max-w-3xl text-display"
           style={{ animationDelay: "80ms" }}
         >
-          Your shortcut to
-          <br className="hidden sm:block" /> everything on your Mac.
+          {hero.headline}
         </h1>
 
         <p
-          className="rise mt-6 max-w-xl text-sm text-ash"
+          className="rise mt-6 max-w-lg text-body-lg text-ash"
           style={{ animationDelay: "160ms" }}
         >
-          {site.name} is a tiny, fully native launcher — fuzzy app search, a
-          calculator, clipboard history, and global hotkeys. A few megabytes on
-          disk, and it brings your Raycast setup along. No Electron, no account,
-          no telemetry.
+          {hero.sub}
         </p>
 
         <div

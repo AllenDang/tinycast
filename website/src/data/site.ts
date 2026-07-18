@@ -9,9 +9,21 @@ export const site = {
   platform: "macOS 26+",
   license: "AGPL-3.0",
   licenseUrl: "https://github.com/abue-ammar/tinycast/blob/main/LICENSE",
+  // Community. Replace the placeholder with the real Discord invite when ready.
+  community: {
+    discord: "#",
+  },
+} as const;
+
+// The hero, in as few words as possible — headline plus one punchy line.
+export const hero = {
+  eyebrow: "Native macOS launcher",
+  headline: "Everything on your Mac. One keystroke away.",
+  sub: "A tiny, native launcher. No Electron. No account. No telemetry. No bullshit.",
 } as const;
 
 export const nav = [
+  { label: "Gallery", href: "#gallery" },
   { label: "Features", href: "#features" },
   { label: "Compare", href: "#compare" },
   { label: "Why tiny", href: "#why" },

@@ -18,8 +18,8 @@ export function Nav() {
   return (
     <header className="fixed inset-x-0 top-4 z-50">
       <div className="container-page">
-        <nav className="rounded-xl border border-border bg-void-black/60 backdrop-blur-2xl">
-          <div className="flex items-center justify-between gap-4 px-3 py-2">
+        <nav className="rounded-2xl border border-white/8 bg-void-black/60  backdrop-blur-2xl">
+          <div className="flex items-center justify-between gap-4 px-4 py-3">
             <a
               href="#top"
               onClick={close}

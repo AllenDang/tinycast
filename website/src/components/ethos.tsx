@@ -10,7 +10,7 @@ export function Ethos() {
       id="why"
       eyebrow="Why it's tiny"
       title="Built like a Mac app should be."
-      intro="SwiftUI and AppKit, zero dependencies, no Electron runtime hiding underneath. It's fast because there's barely anything to it."
+      intro="Native SwiftUI and AppKit. No Electron, no bloat — fast because there's barely anything to it."
     >
       {/* Stat strip — the one place numbers get loud. */}
       <Reveal className="mb-10 md:mb-14">
@@ -36,21 +36,19 @@ export function Ethos() {
         </div>
       </Reveal>
 
-      <div className="grid gap-4 sm:grid-cols-2">
-        {values.map((value, i) => (
-          <Reveal key={value.title} delay={i * 60}>
-            <article className="flex h-full gap-4 rounded-2xl border border-border p-4 sm:p-6">
-              <span className="mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full bg-violet/15 text-violet-bright">
-                <Check size={15} strokeWidth={2} />
-              </span>
-              <div>
-                <h3 className="text-body-lg font-medium">{value.title}</h3>
-                <p className="mt-1.5 text-body text-ash">{value.body}</p>
-              </div>
-            </article>
-          </Reveal>
-        ))}
-      </div>
+      <Reveal>
+        <ul className="flex flex-wrap justify-center gap-2">
+          {values.map((value) => (
+            <li
+              key={value}
+              className="inline-flex items-center gap-1.5 rounded-lg bg-white/5 px-3 py-2 text-small text-ash shadow-keycap"
+            >
+              <Check size={13} strokeWidth={2.4} className="text-violet-bright" />
+              {value}
+            </li>
+          ))}
+        </ul>
+      </Reveal>
     </Section>
   );
 }
