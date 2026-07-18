@@ -133,6 +133,9 @@
   html {
     scroll-behavior: smooth;
     -webkit-text-size-adjust: 100%;
+    /* Reserve the scrollbar space always, so locking scroll (e.g. when the
+       lightbox opens) doesn't shift the page. */
+    scrollbar-gutter: stable;
   }
 
   body {
@@ -172,7 +175,8 @@
 /* Lightbox (yet-another-react-lightbox) — tint its dark chrome to match the
    page. YARL's own classes are namespaced (yarl__), so nothing here leaks. */
 .yarl__root {
-  --yarl__color_backdrop: rgb(4 5 6 / 0.94);
+  /* Opaque, so page content behind the lightbox never shows through. */
+  --yarl__color_backdrop: var(--color-void-black);
   --yarl__color_button: var(--color-ash);
   --yarl__color_button_active: var(--color-white);
   /* No scrim behind the title/caption — just text over the image. */

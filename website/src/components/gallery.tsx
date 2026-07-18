@@ -1,5 +1,5 @@
 import { Play } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Lightbox, { type Slide } from "yet-another-react-lightbox";
 import Captions from "yet-another-react-lightbox/plugins/captions";
 import Thumbnails from "yet-another-react-lightbox/plugins/thumbnails";
@@ -44,6 +44,20 @@ function toSlide(item: GalleryItem): Slide {
 export function Gallery() {
   const [index, setIndex] = useState(-1);
   const slides = galleryItems.map(toSlide);
+
+  // Lock scroll ourselves instead of via YARL's NoScroll module: YARL pads the
+  // scrollbar width onto <body> and every fixed element (the scroll-top button
+  // included, shifting its arrow). `scrollbar-gutter: stable` already reserves
+  // that space, so a plain overflow:hidden lock changes no widths — no shift.
+  useEffect(() => {
+    if (index < 0) return;
+    const html = document.documentElement;
+    const previous = html.style.overflow;
+    html.style.overflow = "hidden";
+    return () => {
+      html.style.overflow = previous;
+    };
+  }, [index]);
 
   return (
     <Section
@@ -94,6 +108,7 @@ export function Gallery() {
         slides={slides}
         plugins={[Video, Captions, Thumbnails]}
         controller={{ closeOnBackdropClick: true }}
+        noScroll={{ disabled: true }}
         // Muted autoplay is the only cross-browser-reliable autoplay; the
         // (now unobstructed) controls let viewers unmute.
         video={{ autoPlay: true, muted: true, controls: true, playsInline: true }}
