@@ -175,7 +175,13 @@
   --yarl__color_backdrop: rgb(4 5 6 / 0.94);
   --yarl__color_button: var(--color-ash);
   --yarl__color_button_active: var(--color-white);
-  --yarl__slide_captions_container_background: rgb(4 5 6 / 0.6);
+  /* No scrim behind the title/caption — just text over the image. */
+  --yarl__slide_captions_container_background: transparent;
+  --yarl__slide_description_text_align: center;
+  --yarl__thumbnails_container_background_color: var(--color-void-black);
+  --yarl__thumbnails_thumbnail_background: var(--color-ink);
+  --yarl__thumbnails_thumbnail_border_color: var(--color-border);
+  --yarl__thumbnails_thumbnail_active_border_color: var(--color-violet-bright);
 }
 
 /* The page gutter: 16px on mobile, 24px from the sm breakpoint up. */
