@@ -25,12 +25,15 @@
   --color-cyan: #47bfff;
 
   /* ── Typography ──────────────────────────────────────────────────────── */
+  /* The "* Fallback" families are metric-matched to the web fonts (see the
+     @font-face block below), so the first-paint fallback occupies the exact
+     same space and the swap to the real font causes zero layout shift. */
   --font-sans:
-    "Inter Variable", ui-sans-serif, system-ui, -apple-system,
-    BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    "Inter Variable", "Inter Variable Fallback", ui-sans-serif, system-ui,
+    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   --font-mono:
-    "Geist Mono Variable", ui-monospace, SFMono-Regular, Menlo, Monaco,
-    Consolas, monospace;
+    "Geist Mono Variable", "Geist Mono Variable Fallback", ui-monospace,
+    SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 
   /* Type scale — every size on the site, with its line-height and tracking
      baked in. `text-sm`, `text-base`, etc. are disabled: use these roles. */
@@ -102,6 +105,28 @@
     rgb(255 255 255 / 0.05) 0px 1px 0px 0px inset,
     rgb(255 255 255 / 0.14) 0px 0px 0px 1px, rgb(0 0 0 / 0.4) 0px 4px 40px 8px,
     rgb(0 0 0 / 0.8) 0px 0px 0px 0.5px;
+}
+
+/* Metric-matched fallback fonts — the fallback renders at first paint sized to
+   match the real web font exactly, so swapping in Inter / Geist Mono shifts
+   nothing (zero CLS). Override values are computed, not guessed. Regenerate via
+   @capsizecss/core `createFontStack([{ ...metrics, familyName }, systemFont])`
+   if the web fonts ever change. */
+@font-face {
+  font-family: "Inter Variable Fallback";
+  src: local("Arial"), local("ArialMT");
+  ascent-override: 90.4365%;
+  descent-override: 22.518%;
+  line-gap-override: 0%;
+  size-adjust: 107.1194%;
+}
+
+@font-face {
+  font-family: "Geist Mono Variable Fallback";
+  src: local("Courier New"), local("CourierNewPSMT");
+  ascent-override: 100.5164%;
+  descent-override: 29.5048%;
+  size-adjust: 99.9837%;
 }
 
 @layer base {

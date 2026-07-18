@@ -34,7 +34,7 @@ export function Hero() {
         </p>
 
         <h1
-          className="rise mt-6 max-w-3xl text-display"
+          className="rise mt-6 max-w-3xl text-display [text-shadow:0_2px_28px_rgb(0_0_0_/0.45)]"
           style={{ animationDelay: "80ms" }}
         >
           {hero.headline}

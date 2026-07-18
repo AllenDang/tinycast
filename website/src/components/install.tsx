@@ -23,10 +23,10 @@ function CopyCommand({ command }: { command: string }) {
 
   return (
     <div className="flex items-center gap-3 rounded-lg bg-obsidian px-4 py-3 shadow-key">
-      <span className="select-none text-smoke">
+      <span className="shrink-0 select-none text-smoke">
         <Terminal size={16} />
       </span>
-      <code className="flex-1 overflow-x-auto whitespace-nowrap font-mono text-small text-white">
+      <code className="min-w-0 flex-1 whitespace-pre-wrap wrap-break-word font-mono text-small text-white">
         {command}
       </code>
       <button
@@ -53,7 +53,7 @@ export function Install() {
       title="Install with Homebrew."
       intro="One command and you're running. Pick a channel — each installs as its own app, so a pre-release can live next to stable."
     >
-      <Reveal className="mx-auto max-w-2xl">
+      <Reveal className="mx-auto max-w-4xl">
         {/* Channel picker */}
         <div className="mb-3 inline-flex rounded-lg bg-white/5 p-1">
           {channels.map((c, i) => (

@@ -4,7 +4,7 @@ import { MetaStrip } from "./ui/meta-strip";
 
 export function Footer() {
   const repoPath = site.repo.replace("https://", "");
-  const hasDiscord = site.community.discord !== "#";
+  const hasDiscord = site.community.discord.startsWith("http");
 
   return (
     <footer className="border-t border-border/50">
