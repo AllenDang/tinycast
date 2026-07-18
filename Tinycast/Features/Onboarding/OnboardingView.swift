@@ -1,4 +1,5 @@
 import AppKit
+import Combine
 import SwiftUI
 
 /// First-launch wizard: set the palette shortcut, offer Accessibility + launch-at-login, offer a Raycast import, then drop into the launcher. Re-runnable from Settings. Reuses the app's own controls (`ShortcutRecorder`, `SettingsCard`, `BackupActions`) so it looks and behaves like the rest of Tinycast.

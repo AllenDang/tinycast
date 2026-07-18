@@ -51,7 +51,8 @@ export function Compare() {
       intro="Everything you actually reach for is here — then Tinycast wins on the things that don't show up in a feature list: size, price, and who owns your data."
     >
       <Reveal className="mx-auto max-w-4xl">
-        <div className="overflow-x-auto rounded-2xl border border-border shadow-key">
+        {/* Desktop: the aligned three-column table. */}
+        <div className="hidden overflow-x-auto rounded-2xl border border-border shadow-key md:block">
           <div className="relative min-w-152">
             {/* The "winner column" — one continuous panel behind Tinycast. */}
             <div
@@ -101,6 +102,39 @@ export function Compare() {
               ))}
             </div>
           </div>
+        </div>
+
+        {/* Mobile: one card per row, so nothing scrolls sideways. */}
+        <div className="space-y-3 md:hidden">
+          {compareRows.map((row) => (
+            <div
+              key={row.label}
+              className="rounded-xl border border-border/50 p-4"
+            >
+              <div className="mb-3 flex items-center text-small text-ash">
+                {row.label}
+                {row.sourced && (
+                  <sup className="ml-0.5 text-violet-bright">†</sup>
+                )}
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <div className="flex flex-col items-center gap-2 rounded-lg bg-violet/[0.07] px-3 py-3 text-center ring-1 ring-inset ring-violet/20">
+                  <span className="flex items-center gap-1.5 font-mono text-eyebrow uppercase text-smoke">
+                    <Logo size={13} />
+                    Tinycast
+                  </span>
+                  <Value value={row.tinycast} own />
+                </div>
+                <div className="flex flex-col items-center gap-2 px-3 py-3 text-center">
+                  <span className="flex items-center gap-1.5 font-mono text-eyebrow uppercase text-smoke">
+                    <RaycastLogo size={12} />
+                    Raycast
+                  </span>
+                  <Value value={row.raycast} own={false} />
+                </div>
+              </div>
+            </div>
+          ))}
         </div>
 
         {/* The one external claim, cited so it holds up. */}

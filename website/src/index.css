@@ -25,12 +25,15 @@
   --color-cyan: #47bfff;
 
   /* ── Typography ──────────────────────────────────────────────────────── */
+  /* The "* Fallback" families are metric-matched to the web fonts (see the
+     @font-face block below), so the first-paint fallback occupies the exact
+     same space and the swap to the real font causes zero layout shift. */
   --font-sans:
-    "Inter Variable", ui-sans-serif, system-ui, -apple-system,
-    BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    "Inter Variable", "Inter Variable Fallback", ui-sans-serif, system-ui,
+    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   --font-mono:
-    "Geist Mono Variable", ui-monospace, SFMono-Regular, Menlo, Monaco,
-    Consolas, monospace;
+    "Geist Mono Variable", "Geist Mono Variable Fallback", ui-monospace,
+    SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 
   /* Type scale — every size on the site, with its line-height and tracking
      baked in. `text-sm`, `text-base`, etc. are disabled: use these roles. */
@@ -104,10 +107,35 @@
     rgb(0 0 0 / 0.8) 0px 0px 0px 0.5px;
 }
 
+/* Metric-matched fallback fonts — the fallback renders at first paint sized to
+   match the real web font exactly, so swapping in Inter / Geist Mono shifts
+   nothing (zero CLS). Override values are computed, not guessed. Regenerate via
+   @capsizecss/core `createFontStack([{ ...metrics, familyName }, systemFont])`
+   if the web fonts ever change. */
+@font-face {
+  font-family: "Inter Variable Fallback";
+  src: local("Arial"), local("ArialMT");
+  ascent-override: 90.4365%;
+  descent-override: 22.518%;
+  line-gap-override: 0%;
+  size-adjust: 107.1194%;
+}
+
+@font-face {
+  font-family: "Geist Mono Variable Fallback";
+  src: local("Courier New"), local("CourierNewPSMT");
+  ascent-override: 100.5164%;
+  descent-override: 29.5048%;
+  size-adjust: 99.9837%;
+}
+
 @layer base {
   html {
     scroll-behavior: smooth;
     -webkit-text-size-adjust: 100%;
+    /* Reserve the scrollbar space always, so locking scroll (e.g. when the
+       lightbox opens) doesn't shift the page. */
+    scrollbar-gutter: stable;
   }
 
   body {
@@ -140,8 +168,24 @@
 
   /* Anchor targets land below the floating nav instead of underneath it. */
   section[id] {
-    scroll-margin-top: 5.5rem;
+    scroll-margin-top: 6rem;
   }
+}
+
+/* Lightbox (yet-another-react-lightbox) — tint its dark chrome to match the
+   page. YARL's own classes are namespaced (yarl__), so nothing here leaks. */
+.yarl__root {
+  /* Opaque, so page content behind the lightbox never shows through. */
+  --yarl__color_backdrop: var(--color-void-black);
+  --yarl__color_button: var(--color-ash);
+  --yarl__color_button_active: var(--color-white);
+  /* No scrim behind the title/caption — just text over the image. */
+  --yarl__slide_captions_container_background: transparent;
+  --yarl__slide_description_text_align: center;
+  --yarl__thumbnails_container_background_color: var(--color-void-black);
+  --yarl__thumbnails_thumbnail_background: var(--color-ink);
+  --yarl__thumbnails_thumbnail_border_color: var(--color-border);
+  --yarl__thumbnails_thumbnail_active_border_color: var(--color-violet-bright);
 }
 
 /* The page gutter: 16px on mobile, 24px from the sm breakpoint up. */

@@ -1,5 +1,6 @@
 import { Nav } from "./components/nav";
 import { Hero } from "./components/hero";
+import { Gallery } from "./components/gallery";
 import { Features } from "./components/features";
 import { Compare } from "./components/compare";
 import { Switch } from "./components/switch";
@@ -14,6 +15,7 @@ function App() {
       <Nav />
       <main>
         <Hero />
+        <Gallery />
         <Features />
         <Compare />
         <Switch />

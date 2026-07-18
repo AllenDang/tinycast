@@ -9,14 +9,25 @@ export const site = {
   platform: "macOS 26+",
   license: "AGPL-3.0",
   licenseUrl: "https://github.com/abue-ammar/tinycast/blob/main/LICENSE",
+  // Community. Replace the placeholder with the real Discord invite when ready.
+  community: {
+    discord: "https://discord.gg/v2Eeb4QQy3",
+  },
+} as const;
+
+// The hero, in as few words as possible — headline plus one punchy line.
+export const hero = {
+  eyebrow: "Native macOS launcher",
+  headline: "Everything on your Mac. One keystroke away.",
+  sub: "A tiny, native launcher. No Electron. No account. No telemetry. No bullshit.",
 } as const;
 
 export const nav = [
+  { label: "Gallery", href: "#gallery" },
   { label: "Features", href: "#features" },
   { label: "Compare", href: "#compare" },
   { label: "Why tiny", href: "#why" },
   { label: "Install", href: "#install" },
-  { label: "Source", href: site.repo },
 ] as const;
 
 // Homebrew install channels. Each is a separate app that runs side by side.
@@ -44,7 +55,7 @@ export const quarantineCommand =
 
 // Headline numbers for the "why it's tiny" band. Kept honest, from the README.
 export const stats = [
-  { value: "<5", unit: "MB", label: "On disk" },
+  { value: "<3", unit: "MB", label: "On disk" },
   { value: "<100", unit: "MB", label: "Memory" },
   { value: "0", unit: "", label: "Dependencies" },
   { value: "0", unit: "", label: "Telemetry" },
