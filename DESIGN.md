@@ -55,20 +55,22 @@ Row content insets are `md`; list horizontal inset is `md`; the search icon alig
 
 ### Radius (`Theme.Radius`)
 
-`panel 26` · `row 10` · `card 10` · `menuPanel 12` · `menu 6` · `thumbnail 6` · `keyCap 5`
+`panel 26` · `row 10` · `card 10` · `menuPanel 16` · `menu 6` · `menuRow 10` · `thumbnail 6` · `keyCap 6`
+
+`menu` is the shared small-control corner (sidebar tiles, About link pills); `menuRow` is the slightly rounder hover highlight behind popover-menu rows.
 
 Always `RoundedRectangle(cornerRadius:, style: .continuous)` — continuous corners everywhere, never `.circular`.
 
 ### Size (`Theme.Size`)
 
 `panelWidth 750` · `panelHeight 475` · `headerHeight 44` · `bottomBarHeight 52` · `rowIcon 24` ·
-`keyCap 20` · `menuButton 36` · `clipboardListWidth 290` · `menuWidth 240` · `menuIcon 16` ·
+`keyCap 20` · `menuButton 36` · `clipboardListWidth 290` · `menuWidth 276` · `menuIcon 16` ·
 `settingsSidebar 184` · `settingsRowIcon 20`
 
 ### Typography (`Theme.Typography`)
 
 System fonts only — **no fixed point sizes in views** (honors Dynamic Type). `searchField` is the one
-explicit size (20pt regular). Use `rowTitle` (`.body`), `sectionHeader` (`.subheadline.semibold`),
+explicit size (20pt regular). Use `rowTitle` (`.body`), `sectionHeader` (`.subheadline.medium`),
 `rowTrailing`/`bar`/`menuRow`/`keyCap` etc. as named.
 
 ### Colors (`Theme.Colors`) — the white-alpha ramp
@@ -121,7 +123,7 @@ All lists share one row grammar so launcher and clipboard look identical:
 - `HStack(spacing: lg)`: leading 24pt icon/thumbnail, title (`.body`, `lineLimit(1)`), optional trailing keycaps/kind label, `Spacer`. Insets: `.horizontal md`, `.vertical sm`.
 - Background is a `RoundedRectangle(row, .continuous)` filled by `fill`: **selection → hover → clear**, in that precedence. This `fill` computed property is copy-identical across `AppRow`, `ClipboardRow`, `CalculatorCard` — keep them in sync.
 - **Hover state lives on the row**, not the list, so a mouse sweep repaints only the rows entering/leaving (a list-level hover rebuilds every row per move — don't do that).
-- **`SectionHeader`** (`.subheadline.semibold`, secondary) labels groups: launcher uses Favorites/Applications/System Settings/Commands; clipboard/history use date buckets (Today/Yesterday/…).
+- **`SectionHeader`** (`.subheadline.medium`, secondary) labels groups: launcher uses Favorites/Applications/System Settings/Commands; clipboard/history use date buckets (Today/Yesterday/…).
 - **Keycaps** use `KeyCapChip`: `.outline` (white-0.20 border) for hotkey hints on rows, `.filled` (white-0.10 fill) for footer shortcuts.
 - **Scroll follows selection only on keyboard nav/reset**, driven by a `scrollToken` UUID — mouse selection targets a visible row and never yanks scroll.
 
@@ -132,8 +134,8 @@ All lists share one row grammar so launcher and clipboard look identical:
 Glass is **only** for floating controls, never the main surface.
 
 - `View.frosted(in:)` = `glassEffect(.regular.interactive(), in:)` + `.tint(.clear)` — interactive lensing, untinted. Used on the action-group capsule and the menu circle.
-- **`PopoverMenu`** uses `glassEffect(.regular, in: RoundedRectangle(menuPanel 12))` with **no hand-tuned shadow** — Tahoe glass carries its own elevation; adding a drop shadow reads heavy and non-native.
-- `PopoverMenuRow`: leading SF Symbol (`hierarchical`, secondary — or **red** when `isDestructive`), label, trailing shortcut glyph, `menuHover` fill on hover, `menu 6` corner. Menus animate in with `.opacity + .scale(0.96)` from the anchored corner, `easeOut 0.14`.
+- **`PopoverMenu`** uses `glassEffect(.regular, in: RoundedRectangle(menuPanel 16))` with **no hand-tuned shadow** — Tahoe glass carries its own elevation; adding a drop shadow reads heavy and non-native.
+- `PopoverMenuRow`: leading SF Symbol (`hierarchical`, secondary — or **red** when `isDestructive`), label, trailing shortcut glyph, `menuHover` fill on hover, `menuRow 10` corner. Menus animate in with `.opacity + .scale(0.96)` from the anchored corner, `easeOut 0.14`.
 
 ---
 
