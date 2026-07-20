@@ -15,6 +15,8 @@ enum Theme {
         static let panel: CGFloat = 26
         static let row: CGFloat = 10
         static let menu: CGFloat = 6
+        /// Hover highlight behind a popover menu row.
+        static let menuRow: CGFloat = 10
         static let menuPanel: CGFloat = 16
         static let thumbnail: CGFloat = 6
         static let card: CGFloat = 10
@@ -31,7 +33,7 @@ enum Theme {
         static let menuButton: CGFloat = 36
         static let clipboardListWidth: CGFloat = 290
         static let emojiCell: CGFloat = 56
-        static let menuWidth: CGFloat = 240
+        static let menuWidth: CGFloat = 276
         static let menuIcon: CGFloat = 16
         /// Settings window: sidebar column width and the small icon used in setting rows.
         static let settingsSidebar: CGFloat = 184

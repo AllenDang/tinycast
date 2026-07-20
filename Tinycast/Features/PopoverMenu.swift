@@ -59,12 +59,12 @@ struct PopoverMenuRow: View {
                     }
                 }
             }
-            .padding(.horizontal, Theme.Spacing.sm)
-            .padding(.vertical, Theme.Spacing.sm)
+            .padding(.horizontal, Theme.Spacing.md)
+            .padding(.vertical, Theme.Spacing.md)
             .frame(maxWidth: .infinity, alignment: .leading)
             .contentShape(Rectangle())
             .background(
-                RoundedRectangle(cornerRadius: Theme.Radius.menu, style: .continuous)
+                RoundedRectangle(cornerRadius: Theme.Radius.menuRow, style: .continuous)
                     .fill(hovering ? Theme.Colors.menuHover : Color.clear)
             )
         }
