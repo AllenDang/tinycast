@@ -59,6 +59,8 @@ struct PopoverMenuRow: View {
                     }
                 }
             }
+            // Pin the content height to the keycap height so rows with and without a shortcut share one row height.
+            .frame(minHeight: Theme.Size.keyCap)
             .padding(.horizontal, Theme.Spacing.md)
             .padding(.vertical, Theme.Spacing.md)
             .frame(maxWidth: .infinity, alignment: .leading)
