@@ -583,12 +583,14 @@ private struct MenuCircleButton: View {
 
     var body: some View {
         Button(action: action) {
-            Image(systemName: "ellipsis")
-                .font(.title3)
-                .foregroundStyle(Theme.Colors.textSecondary)
-                .frame(width: Theme.Size.menuButton, height: Theme.Size.menuButton)
-                .background(Circle().fill(hovered ? Theme.Colors.rowHover : Color.clear))
-                .contentShape(.circle)
+            VStack(alignment: .leading, spacing: 3) {
+                Capsule().frame(width: 16, height: 2)
+                Capsule().frame(width: 10, height: 2)
+            }
+            .foregroundStyle(Theme.Colors.textSecondary)
+            .frame(width: Theme.Size.menuButton, height: Theme.Size.menuButton)
+            .background(Circle().fill(hovered ? Theme.Colors.rowHover : Color.clear))
+            .contentShape(.circle)
         }
         .buttonStyle(.plain)
         .onHover { hovered = $0 }
