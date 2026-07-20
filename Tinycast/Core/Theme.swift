@@ -15,7 +15,7 @@ enum Theme {
         static let panel: CGFloat = 26
         static let row: CGFloat = 10
         static let menu: CGFloat = 6
-        static let menuPanel: CGFloat = 12
+        static let menuPanel: CGFloat = 16
         static let thumbnail: CGFloat = 6
         static let card: CGFloat = 10
         static let keyCap: CGFloat = 6
