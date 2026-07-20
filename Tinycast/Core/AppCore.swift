@@ -173,10 +173,11 @@ final class AppCore: ObservableObject {
         }
     }
 
+    /// About lives as a pane inside Settings now, so this opens Settings and switches to it.
     func showAbout() {
-        auxWindows.show(id: "about", title: "About Tinycast", size: CGSize(width: 320, height: 320))
-        {
-            AboutView()
+        showSettings()
+        DispatchQueue.main.async {
+            NotificationCenter.default.post(name: .tinycastShowAbout, object: nil)
         }
     }
 

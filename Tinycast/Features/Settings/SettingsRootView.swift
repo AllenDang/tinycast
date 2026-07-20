@@ -3,10 +3,11 @@ import SwiftUI
 extension Notification.Name {
     static let tinycastShowSettings = Notification.Name("TinycastShowSettings")
     static let tinycastShowBackupSettings = Notification.Name("TinycastShowBackupSettings")
+    static let tinycastShowAbout = Notification.Name("TinycastShowAbout")
 }
 
 private enum SettingsTab: Int, CaseIterable, Identifiable {
-    case general, clipboard, emoji, permissions, shortcuts, backup
+    case general, clipboard, emoji, permissions, shortcuts, backup, about
     var id: Int { rawValue }
 
     var title: String {
@@ -17,6 +18,7 @@ private enum SettingsTab: Int, CaseIterable, Identifiable {
         case .permissions: return "Permissions"
         case .shortcuts: return "Shortcuts"
         case .backup: return "Backup"
+        case .about: return "About"
         }
     }
 
@@ -28,6 +30,7 @@ private enum SettingsTab: Int, CaseIterable, Identifiable {
         case .permissions: return "lock.shield"
         case .shortcuts: return "keyboard"
         case .backup: return "arrow.up.arrow.down.circle"
+        case .about: return "info.circle"
         }
     }
 
@@ -40,6 +43,7 @@ private enum SettingsTab: Int, CaseIterable, Identifiable {
         case .permissions: return .blue
         case .shortcuts: return .indigo
         case .backup: return .teal
+        case .about: return .pink
         }
     }
 }
@@ -60,6 +64,7 @@ struct SettingsRootView: View {
                 case .permissions: PermissionsSettingsView()
                 case .shortcuts: ShortcutsSettingsView()
                 case .backup: BackupSettingsView()
+                case .about: AboutView()
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -76,17 +81,15 @@ struct SettingsRootView: View {
         .onReceive(NotificationCenter.default.publisher(for: .tinycastShowBackupSettings)) { _ in
             tab = .backup
         }
+        .onReceive(NotificationCenter.default.publisher(for: .tinycastShowAbout)) { _ in
+            tab = .about
+        }
     }
 
     private var sidebar: some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.xs / 2) {
             ForEach(SettingsTab.allCases) { item in
-                SidebarRow(
-                    title: item.title,
-                    systemImage: item.systemImage,
-                    tint: item.tint,
-                    isSelected: tab == item
-                ) { tab = item }
+                sidebarRow(item)
             }
 
             Spacer()
@@ -105,6 +108,15 @@ struct SettingsRootView: View {
             }
             .ignoresSafeArea()
         )
+    }
+
+    private func sidebarRow(_ item: SettingsTab) -> some View {
+        SidebarRow(
+            title: item.title,
+            systemImage: item.systemImage,
+            tint: item.tint,
+            isSelected: tab == item
+        ) { tab = item }
     }
 }
 

@@ -2,15 +2,16 @@ import AppKit
 import SwiftUI
 
 struct AboutView: View {
-    private var version: String {
+    private static var version: String {
         let short = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "—"
         let build = Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "—"
         return "Version \(short) (\(build))"
     }
 
-    // Read the bundled .icns directly: NSApp.applicationIconImage returns the generic
-    // placeholder until LaunchServices registers the app, which it hasn't when run from build/.
-    private var appIcon: NSImage {
+    // Loaded once and cached: reading the .icns is disk I/O, and body can re-run often. Read the
+    // bundled file directly since NSApp.applicationIconImage returns the generic placeholder until
+    // LaunchServices registers the app, which it hasn't when run from build/.
+    @MainActor private static let appIcon: NSImage = {
         if let name = Bundle.main.infoDictionary?["CFBundleIconFile"] as? String,
             let url = Bundle.main.url(forResource: name, withExtension: "icns"),
             let image = NSImage(contentsOf: url)
@@ -18,36 +19,56 @@ struct AboutView: View {
             return image
         }
         return NSApp.applicationIconImage
-    }
+    }()
 
     private static let repoURL = URL(string: "https://github.com/abue-ammar/tinycast")!
-    private static let developerURL = URL(string: "https://github.com/abue-ammar")!
+    private static let developerURL = URL(string: "https://abue-ammar.github.io")!
 
     var body: some View {
-        VStack(spacing: Theme.Spacing.xl) {
-            Image(nsImage: appIcon)
-                .resizable()
-                .frame(width: 72, height: 72)
+        VStack(spacing: Theme.Spacing.xxl) {
+            Spacer(minLength: 0)
 
-            VStack(spacing: Theme.Spacing.xs) {
-                Text(Bundle.main.appDisplayName)
-                    .font(.title2.bold())
-                Text(version)
-                    .font(.caption)
+            VStack(spacing: Theme.Spacing.xl) {
+                Image(nsImage: Self.appIcon)
+                    .resizable()
+                    .interpolation(.high)
+                    .frame(width: 104, height: 104)
+                    .shadow(color: .black.opacity(0.35), radius: 12, y: 6)
+
+                VStack(spacing: Theme.Spacing.sm) {
+                    Text(Bundle.main.appDisplayName)
+                        .font(.system(size: 26, weight: .bold))
+                    Text(Self.version)
+                        .font(.caption.monospacedDigit())
+                        .foregroundStyle(.secondary)
+                        .padding(.horizontal, Theme.Spacing.md)
+                        .padding(.vertical, Theme.Spacing.xs / 2)
+                        .background(
+                            Capsule().fill(Theme.Colors.cardFill)
+                        )
+                        .overlay(
+                            Capsule().strokeBorder(Theme.Colors.cardStroke, lineWidth: 1)
+                        )
+                }
+
+                Text("A tiny, native macOS launcher.")
+                    .font(.callout)
                     .foregroundStyle(.secondary)
             }
 
-            Text("A tiny, native macOS launcher.")
-                .font(.callout)
-                .foregroundStyle(.secondary)
-
-            HStack(spacing: Theme.Spacing.sm) {
+            HStack(spacing: Theme.Spacing.md) {
                 AboutLinkButton(
                     title: "GitHub", systemImage: "chevron.left.forwardslash.chevron.right",
                     url: Self.repoURL)
                 AboutLinkButton(
-                    title: "abue-ammar", systemImage: "person.crop.circle", url: Self.developerURL)
+                    title: "Abue Ammar", systemImage: "person.crop.circle", url: Self.developerURL)
             }
+
+            Spacer(minLength: 0)
+
+            Text("© 2026 Abue Ammar. All rights reserved.")
+                .font(.caption2)
+                .foregroundStyle(.tertiary)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .padding(Theme.Spacing.xxl)
