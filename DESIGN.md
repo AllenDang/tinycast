@@ -49,13 +49,15 @@ Add a token rather than a magic number when introducing a new value.
 
 ### Spacing (`Theme.Spacing`)
 
-`xs 4` · `sm 6` · `md 8` · `lg 10` · `xl 12` · `xxl 20`
+`xxs 2` · `xs 4` · `sm 6` · `md 8` · `lg 10` · `xl 12` · `xxl 20`
+
+`xxs` is the tight gap between adjacent keycap chips (used everywhere keycaps sit side by side).
 
 Row content insets are `md`; list horizontal inset is `md`; the search icon aligns with rows via `md * 2`.
 
 ### Radius (`Theme.Radius`)
 
-`panel 26` · `row 10` · `card 10` · `menuPanel 16` · `menu 6` · `menuRow 10` · `thumbnail 6` · `keyCap 6`
+`panel 26` · `row 10` · `card 10` · `menuPanel 16` · `menu 6` · `menuRow 10` · `thumbnail 6` · `keyCap 6` · `recorderKeyCap 4`
 
 `menu` is the shared small-control corner (sidebar tiles, About link pills); `menuRow` is the slightly rounder hover highlight behind popover-menu rows.
 
@@ -64,8 +66,10 @@ Always `RoundedRectangle(cornerRadius:, style: .continuous)` — continuous corn
 ### Size (`Theme.Size`)
 
 `panelWidth 750` · `panelHeight 475` · `headerHeight 44` · `bottomBarHeight 52` · `rowIcon 24` ·
-`keyCap 20` · `menuButton 36` · `clipboardListWidth 290` · `menuWidth 276` · `menuIcon 16` ·
+`keyCap 18` · `recorderKeyCap 16` · `menuButton 36` · `clipboardListWidth 290` · `menuWidth 276` · `menuIcon 16` ·
 `settingsSidebar 184` · `settingsRowIcon 20`
+
+`keyCap` sizes the palette's keycap chips; `recorderKeyCap` (both size and radius) is the intentionally-smaller Settings shortcut-recorder chip.
 
 ### Typography (`Theme.Typography`)
 

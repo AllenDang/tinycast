@@ -52,7 +52,7 @@ struct PopoverMenuRow: View {
                     .foregroundStyle(isDestructive ? Color.red : Color.primary)
                 Spacer(minLength: Theme.Spacing.sm)
                 if let shortcut {
-                    HStack(spacing: 2) {
+                    HStack(spacing: Theme.Spacing.xxs) {
                         ForEach(Array(shortcut.enumerated()), id: \.offset) { _, glyph in
                             KeyCapChip(text: String(glyph), style: .outline)
                         }

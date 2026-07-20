@@ -3,6 +3,7 @@ import SwiftUI
 /// Central design tokens for the palette UI (dark design system per `DESIGN.md`; the app forces `.darkAqua`, so colors are literal white/black alphas).
 enum Theme {
     enum Spacing {
+        static let xxs: CGFloat = 2
         static let xs: CGFloat = 4
         static let sm: CGFloat = 6
         static let md: CGFloat = 8
@@ -31,7 +32,7 @@ enum Theme {
         static let headerHeight: CGFloat = 44
         static let bottomBarHeight: CGFloat = 52
         static let rowIcon: CGFloat = 24
-        static let keyCap: CGFloat = 20
+        static let keyCap: CGFloat = 18
         /// Settings shortcut-recorder keycap — smaller than the palette's `keyCap` chip.
         static let recorderKeyCap: CGFloat = 16
         static let menuButton: CGFloat = 36

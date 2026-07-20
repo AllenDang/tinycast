@@ -452,7 +452,7 @@ struct RootPaletteView: View {
                     Text("Actions")
                         .font(Theme.Typography.bar)
                         .foregroundStyle(Theme.Colors.textSecondary)
-                    HStack(spacing: 2) {
+                    HStack(spacing: Theme.Spacing.xxs) {
                         KeyCapChip(text: "⌘", style: .outline)
                         KeyCapChip(text: "K", style: .outline)
                     }

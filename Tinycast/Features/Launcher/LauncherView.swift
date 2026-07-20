@@ -160,7 +160,7 @@ private struct AppRow: View {
                 .font(Theme.Typography.rowTitle)
                 .lineLimit(1)
             if let caps = shortcutCaps {
-                HStack(spacing: Theme.Spacing.xs) {
+                HStack(spacing: Theme.Spacing.xxs) {
                     ForEach(Array(caps.enumerated()), id: \.offset) { _, cap in
                         KeyCapChip(text: cap, style: .outline)
                     }
