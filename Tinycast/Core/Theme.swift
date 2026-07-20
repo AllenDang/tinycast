@@ -18,7 +18,7 @@ enum Theme {
         static let menuPanel: CGFloat = 12
         static let thumbnail: CGFloat = 6
         static let card: CGFloat = 10
-        static let keyCap: CGFloat = 5
+        static let keyCap: CGFloat = 6
     }
 
     enum Size {
