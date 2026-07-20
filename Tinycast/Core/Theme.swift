@@ -21,6 +21,8 @@ enum Theme {
         static let thumbnail: CGFloat = 6
         static let card: CGFloat = 10
         static let keyCap: CGFloat = 6
+        /// Settings shortcut-recorder keycap — smaller than the palette's `keyCap` chip.
+        static let recorderKeyCap: CGFloat = 4
     }
 
     enum Size {
@@ -30,6 +32,8 @@ enum Theme {
         static let bottomBarHeight: CGFloat = 52
         static let rowIcon: CGFloat = 24
         static let keyCap: CGFloat = 20
+        /// Settings shortcut-recorder keycap — smaller than the palette's `keyCap` chip.
+        static let recorderKeyCap: CGFloat = 16
         static let menuButton: CGFloat = 36
         static let clipboardListWidth: CGFloat = 290
         static let emojiCell: CGFloat = 56

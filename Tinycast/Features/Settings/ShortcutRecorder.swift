@@ -83,10 +83,14 @@ struct ShortcutRecorder: View {
                     .font(Theme.Typography.keyCap)
                     .foregroundStyle(.secondary)
                     .padding(.horizontal, Theme.Spacing.xs)
-                    .frame(minWidth: 16, minHeight: 16)
+                    .frame(
+                        minWidth: Theme.Size.recorderKeyCap, minHeight: Theme.Size.recorderKeyCap
+                    )
                     .background(
-                        RoundedRectangle(cornerRadius: 4, style: .continuous)
-                            .fill(Color.primary.opacity(0.08))
+                        RoundedRectangle(
+                            cornerRadius: Theme.Radius.recorderKeyCap, style: .continuous
+                        )
+                        .fill(Color.primary.opacity(0.08))
                     )
             }
             // Constant-width slot so the clear button doesn't shift the caps on hover.
