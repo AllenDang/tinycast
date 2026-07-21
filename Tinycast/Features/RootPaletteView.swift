@@ -584,8 +584,8 @@ private struct MenuCircleButton: View {
     var body: some View {
         Button(action: action) {
             VStack(alignment: .leading, spacing: 3) {
-                Capsule().frame(width: 16, height: 2)
-                Capsule().frame(width: 10, height: 2)
+                Capsule().frame(width: 14, height: 1.5)
+                Capsule().frame(width: 8, height: 1.5)
             }
             .foregroundStyle(Theme.Colors.textSecondary)
             .frame(width: Theme.Size.menuButton, height: Theme.Size.menuButton)

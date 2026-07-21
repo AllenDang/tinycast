@@ -79,6 +79,8 @@ enum Theme {
         /// Settings grouped "card": a faint raised surface whose hairline border doubles as the inset row divider.
         static let cardFill = Color.white.opacity(0.05)
         static let cardStroke = Color.white.opacity(0.10)
+        /// Whitish tint layered into the Liquid Glass floating controls (action group + menu circle) so the glass reads frosted rather than clear.
+        static let glassFrost = Color.white.opacity(0.05)
     }
 }
 
@@ -109,9 +111,9 @@ struct KeyCapChip: View {
 }
 
 extension View {
-    /// A floating Liquid Glass control surface (action group + menu button), interactive for native lensing and untinted via `.tint(.clear)`.
+    /// A floating Liquid Glass control surface (action group + menu button), interactive for native lensing with a whitish frost tint so it reads brighter than clear glass.
     func frosted(in shape: some Shape) -> some View {
-        glassEffect(.regular.interactive(), in: shape)
+        glassEffect(.regular.interactive().tint(Theme.Colors.glassFrost), in: shape)
             .tint(.clear)
     }
 }
