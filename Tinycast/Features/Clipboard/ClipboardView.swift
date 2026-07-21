@@ -294,6 +294,7 @@ struct ClipboardPreview: View {
                     .font(.system(.subheadline, design: .monospaced))
                     .textSelection(.enabled)
                     .frame(maxWidth: .infinity, alignment: .topLeading)
+                    .overlayScroller()
             }
         case .image:
             AsyncThumbnail(url: store.imageURL(for: item), maxPixel: Self.previewMaxPixel) {

@@ -96,7 +96,7 @@ private struct CategoryCard: View {
             }
             .padding(.horizontal, Theme.Spacing.xs)
 
-            // Native scroller kept (unlike the palette's overlay list) — this is a plain windowed settings list.
+            // Plain windowed settings list; force the thin, auto-hiding overlay scroller so a system-wide "always show scroll bars" setting can't draw a wide legacy one.
             ScrollView {
                 LazyVStack(spacing: 1) {
                     ForEach(entries) { entry in
@@ -105,6 +105,7 @@ private struct CategoryCard: View {
                 }
                 .padding(.horizontal, Theme.Spacing.sm)
                 .padding(.vertical, Theme.Spacing.sm)
+                .overlayScroller()
             }
             .background(
                 RoundedRectangle(cornerRadius: Theme.Radius.card, style: .continuous)
