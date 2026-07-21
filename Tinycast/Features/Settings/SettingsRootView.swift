@@ -1,12 +1,11 @@
 import SwiftUI
 
 extension Notification.Name {
-    static let tinycastShowSettings = Notification.Name("TinycastShowSettings")
-    static let tinycastShowBackupSettings = Notification.Name("TinycastShowBackupSettings")
-    static let tinycastShowAbout = Notification.Name("TinycastShowAbout")
+    /// Switch an already-open Settings window to a pane (object: the target `SettingsTab`).
+    static let tinycastSelectSettingsTab = Notification.Name("TinycastSelectSettingsTab")
 }
 
-private enum SettingsTab: Int, CaseIterable, Identifiable {
+enum SettingsTab: Int, CaseIterable, Identifiable {
     case general, clipboard, emoji, permissions, shortcuts, backup, about
     var id: Int { rawValue }
 
@@ -49,7 +48,11 @@ private enum SettingsTab: Int, CaseIterable, Identifiable {
 }
 
 struct SettingsRootView: View {
-    @State private var tab: SettingsTab = .general
+    @State private var tab: SettingsTab
+
+    init(initialTab: SettingsTab = .general) {
+        _tab = State(initialValue: initialTab)
+    }
 
     var body: some View {
         HStack(spacing: 0) {
@@ -75,14 +78,8 @@ struct SettingsRootView: View {
             )
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .onReceive(NotificationCenter.default.publisher(for: .tinycastShowSettings)) { _ in
-            tab = .general
-        }
-        .onReceive(NotificationCenter.default.publisher(for: .tinycastShowBackupSettings)) { _ in
-            tab = .backup
-        }
-        .onReceive(NotificationCenter.default.publisher(for: .tinycastShowAbout)) { _ in
-            tab = .about
+        .onReceive(NotificationCenter.default.publisher(for: .tinycastSelectSettingsTab)) { note in
+            if let target = note.object as? SettingsTab { tab = target }
         }
     }
 

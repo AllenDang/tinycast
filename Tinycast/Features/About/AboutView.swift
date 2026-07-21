@@ -112,14 +112,19 @@ private struct AboutLinkButton: View {
 final class AuxWindowController: NSObject, NSWindowDelegate {
     private var windows: [String: NSWindow] = [:]
 
+    /// Returns `true` when a new window was created, `false` when an existing one was re-raised.
+    @discardableResult
     func show<Content: View>(
         id: String, title: String, size: CGSize, seamlessTitleBar: Bool = false,
         @ViewBuilder content: () -> Content
-    ) {
+    ) -> Bool {
         let window: NSWindow
+        let isNew: Bool
         if let existing = windows[id] {
             window = existing
+            isNew = false
         } else {
+            isNew = true
             var style: NSWindow.StyleMask = [.titled, .closable]
             if seamlessTitleBar { style.insert(.fullSizeContentView) }
             window = NSWindow(
@@ -153,6 +158,7 @@ final class AuxWindowController: NSObject, NSWindowDelegate {
         DispatchQueue.main.async {
             window.makeKeyAndOrderFront(nil)
         }
+        return isNew
     }
 
     /// Re-focus an open aux window on reopen (Dock-icon click); returns false when none is open. `windows` only holds live windows (`windowWillClose` prunes them).

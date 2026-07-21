@@ -152,33 +152,27 @@ final class AppCore: ObservableObject {
         showPalette(mode: .launcher, restoreAnyMode: true)
     }
 
-    /// Settings runs in its own window (the SwiftUI `Settings` scene is unreliable for accessory apps), raised via the same controller as About.
-    func showSettings() {
-        auxWindows.show(
+    /// Settings runs in its own window (the SwiftUI `Settings` scene is unreliable for accessory apps). A fresh window mounts directly on `tab` (no first-frame flicker); an already-open one is switched in place.
+    func showSettings(tab: SettingsTab = .general) {
+        let isNew = auxWindows.show(
             id: "settings", title: "Settings", size: CGSize(width: 720, height: 650),
             seamlessTitleBar: true
         ) {
-            SettingsRootView()
+            SettingsRootView(initialTab: tab)
                 .environmentObject(self.appIndex)
                 .environmentObject(self.visibility)
         }
+        if !isNew {
+            NotificationCenter.default.post(name: .tinycastSelectSettingsTab, object: tab)
+        }
     }
 
-    /// Open Settings on the Backup pane (used by the "Import from Raycast" command, which needs the passphrase field).
     func showBackupSettings() {
-        showSettings()
-        // Post on the next runloop so the freshly-mounted pane's observer is already listening.
-        DispatchQueue.main.async {
-            NotificationCenter.default.post(name: .tinycastShowBackupSettings, object: nil)
-        }
+        showSettings(tab: .backup)
     }
 
-    /// About lives as a pane inside Settings now, so this opens Settings and switches to it.
     func showAbout() {
-        showSettings()
-        DispatchQueue.main.async {
-            NotificationCenter.default.post(name: .tinycastShowAbout, object: nil)
-        }
+        showSettings(tab: .about)
     }
 
     /// The first-run wizard: palette shortcut, Accessibility, Raycast import. Also re-runnable from Settings.
