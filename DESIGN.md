@@ -92,6 +92,7 @@ explicit size (20pt regular). Use `rowTitle` (`.body`), `sectionHeader` (`.subhe
 | `textTertiary`   | white 0.40     | placeholders, trailing kind labels               |
 | `cardFill`       | white 0.05     | settings/calc card fill                          |
 | `cardStroke`     | white 0.10     | settings/calc card border + inset dividers       |
+| `glassFrost`     | white 0.01     | whitish tint layered into the floating glass     |
 
 Beyond these, `.secondary`/`.tertiary` foreground styles are fine for SF Symbols (they resolve against
 the forced-dark environment). **Selection always beats hover** when a row is both.
@@ -137,7 +138,7 @@ All lists share one row grammar so launcher and clipboard look identical:
 
 Glass is **only** for floating controls, never the main surface.
 
-- `View.frosted(in:)` = `glassEffect(.regular.interactive(), in:)` + `.tint(.clear)` — interactive lensing, untinted. Used on the action-group capsule and the menu circle.
+- `View.frosted(in:)` = `glassEffect(.regular.interactive().tint(glassFrost), in:)` + `.tint(.clear)` — interactive lensing with a whitish frost tint (`glassFrost`) so the glass reads brighter than clear. Used on the action-group capsule and the menu circle; tune the frost amount via the `glassFrost` token, not per call site.
 - **`PopoverMenu`** uses `glassEffect(.regular, in: RoundedRectangle(menuPanel 16))` with **no hand-tuned shadow** — Tahoe glass carries its own elevation; adding a drop shadow reads heavy and non-native.
 - `PopoverMenuRow`: leading SF Symbol (`hierarchical`, secondary — or **red** when `isDestructive`), label, trailing shortcut glyph, `menuHover` fill on hover, `menuRow 10` corner. Menus animate in with `.opacity + .scale(0.96)` from the anchored corner, `easeOut 0.14`.
 
