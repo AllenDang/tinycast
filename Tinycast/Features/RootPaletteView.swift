@@ -271,7 +271,7 @@ struct RootPaletteView: View {
             else { return .ignored }
             let slots = compactFavoriteSlots
             let index = digit - 1
-            guard slots.indices.contains(index) else { return .handled }
+            guard slots.indices.contains(index) else { return .ignored }
             switch slots[index] {
             case .app(let app): core.launch(app)
             case .more: core.expandFromCompact()
@@ -279,6 +279,7 @@ struct RootPaletteView: View {
             return .handled
         }
         .onKeyPress(.downArrow) {
+            if isCollapsed { return .ignored }
             if menuOpen {
                 moveMenu(1)
                 return .handled
@@ -287,6 +288,7 @@ struct RootPaletteView: View {
             return .handled
         }
         .onKeyPress(.upArrow) {
+            if isCollapsed { return .ignored }
             if menuOpen {
                 moveMenu(-1)
                 return .handled
@@ -677,6 +679,8 @@ struct RootPaletteView: View {
     }
 
     private func activateSelection() {
+        // Nothing is visibly selected in the collapsed compact bar; launch only via ⌘1–⌘5 or by typing.
+        guard !isCollapsed else { return }
         switch vm.mode {
         case .launcher:
             if let calcResult, selection == 0 {
