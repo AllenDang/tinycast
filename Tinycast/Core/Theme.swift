@@ -29,6 +29,8 @@ enum Theme {
     enum Size {
         static let panelWidth: CGFloat = 750
         static let panelHeight: CGFloat = 475
+        /// Height of the collapsed compact search bar (headerHeight + symmetric padding for the favorite icons).
+        static let compactHeight: CGFloat = 64
         static let headerHeight: CGFloat = 44
         static let bottomBarHeight: CGFloat = 52
         static let rowIcon: CGFloat = 24

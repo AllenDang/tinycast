@@ -36,6 +36,8 @@ final class AppSettings: ObservableObject {
         static let hyperKeyReplacesGlyph = "hyperKeyReplacesGlyph"
         static let emojiSkinTone = "emojiSkinTone"
         static let popToRootTimeout = "popToRootTimeout"
+        static let compactMode = "compactMode"
+        static let showFavoritesInCompactMode = "showFavoritesInCompactMode"
     }
 
     @Published var clipboardRetention: ClipboardRetention {
@@ -80,6 +82,16 @@ final class AppSettings: ObservableObject {
         didSet { defaults.set(popToRootTimeout.rawValue, forKey: Key.popToRootTimeout) }
     }
 
+    /// Summon the launcher as a slim search bar that expands into the full list on typing.
+    @Published var compactMode: Bool {
+        didSet { defaults.set(compactMode, forKey: Key.compactMode) }
+    }
+
+    /// Pin favorite app icons to the right of the compact search bar (⌘1–⌘5 to launch).
+    @Published var showFavoritesInCompactMode: Bool {
+        didSet { defaults.set(showFavoritesInCompactMode, forKey: Key.showFavoritesInCompactMode) }
+    }
+
     init() {
         // integer(forKey:) returns 0 when unset, which no case matches — falls through to 3 Months.
         clipboardRetention =
@@ -107,5 +119,10 @@ final class AppSettings: ObservableObject {
         popToRootTimeout =
             PopToRootTimeout(rawValue: defaults.integer(forKey: Key.popToRootTimeout))
             ?? .immediately
+        compactMode = defaults.bool(forKey: Key.compactMode)
+        // Defaults to true, so absence must be distinguished from a stored `false`.
+        showFavoritesInCompactMode =
+            defaults.object(forKey: Key.showFavoritesInCompactMode) == nil
+            || defaults.bool(forKey: Key.showFavoritesInCompactMode)
     }
 }

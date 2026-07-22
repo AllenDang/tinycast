@@ -120,6 +120,35 @@ struct GeneralSettingsView: View {
                 }
             }
 
+            SettingsCard(header: "Appearance") {
+                SettingsRow(
+                    title: "Compact mode",
+                    subtitle:
+                        "Open the launcher as a slim search bar that expands into the full list as you type.",
+                    systemImage: "macwindow",
+                    tint: .blue
+                ) {
+                    Toggle("", isOn: $settings.compactMode)
+                        .labelsHidden()
+                        .toggleStyle(.switch)
+                        .controlSize(.small)
+                }
+                SettingsDivider()
+                SettingsRow(
+                    title: "Show favorites in compact mode",
+                    subtitle: "Pin favorite app icons to the right of the compact bar (⌘1–⌘5 to launch).",
+                    systemImage: "star",
+                    tint: .yellow
+                ) {
+                    Toggle("", isOn: $settings.showFavoritesInCompactMode)
+                        .labelsHidden()
+                        .toggleStyle(.switch)
+                        .controlSize(.small)
+                        .disabled(!settings.compactMode)
+                }
+                .opacity(settings.compactMode ? 1 : 0.5)
+            }
+
             SettingsCard(header: "General") {
                 SettingsRow(
                     title: "Launch at login",

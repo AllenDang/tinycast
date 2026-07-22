@@ -22,6 +22,16 @@ struct RootPaletteView: View {
 
     private var isQueryEmpty: Bool { vm.query.trimmingCharacters(in: .whitespaces).isEmpty }
 
+    /// Slim compact bar vs. full window — the single source of truth lives on `AppCore` so the window controller and this view can never disagree.
+    private var isCollapsed: Bool { core.paletteIsCollapsed }
+
+    /// Favorite slots shown in the compact bar: up to 5 launchable apps, or the first 4 plus an overflow "…" that expands the window. Evaluated only in the compact render and on the rare ⌘N keypress.
+    private var compactFavoriteSlots: [CompactFavoriteSlot] {
+        let favs = favorites.ordered(appIndex.matches("").filter(visibility.isVisible)).favorites
+        if favs.count <= 5 { return favs.map(CompactFavoriteSlot.app) }
+        return favs.prefix(4).map(CompactFavoriteSlot.app) + [.more]
+    }
+
     /// Ordered launcher results (the single source of truth for list, selection and activation): empty query pins favorites to the top, otherwise plain ranked matches.
     private var appResults: [AppEntry] {
         // Visibility filtering stays downstream of `matches` so its one-deep memo cache is never keyed on hidden state; hidden favorites drop out here too.
@@ -161,14 +171,22 @@ struct RootPaletteView: View {
         let pillLabel = actionPillLabel(selectedApp: selectedApp, calcActionable: calcActionable)
         let showActionGroup = !(calcSelected && !calcActionable)
 
-        // Results fill the panel; header and action bar float over it as transparent safeAreaInset overlays, each list's `edgeDissolve` ghosting rows under the bars (the native scroll edge effect renders a hard rectangle inside a transparent panel).
-        return content(
-            apps: apps, clips: clips, hist: hist, emojiSections: emojiSections, calc: calc,
-            selection: sel, favoriteCount: favoriteCount, showSections: showSections
-        )
+        // The `header` (and its single search field) is always attached in the same position via safeAreaInset so its focus survives the compact↔expanded swap — only the results below it toggle. Collapsed shows the bar alone; expanded floats header + action bar over the list with edge-dissolve (see DESIGN.md).
+        return Group {
+            if isCollapsed {
+                Color.clear
+            } else {
+                content(
+                    apps: apps, clips: clips, hist: hist, emojiSections: emojiSections, calc: calc,
+                    selection: sel, favoriteCount: favoriteCount, showSections: showSections
+                )
+            }
+        }
         .safeAreaInset(edge: .top, spacing: 0) { header }
         .safeAreaInset(edge: .bottom, spacing: 0) {
-            bottomBar(pillLabel: pillLabel, showActionGroup: showActionGroup)
+            if !isCollapsed {
+                bottomBar(pillLabel: pillLabel, showActionGroup: showActionGroup)
+            }
         }
         // Menus are in-window overlays anchored to a bottom corner, so they stay clipped inside the panel — never a system popover spilling outside the window.
         .overlay {
@@ -199,7 +217,8 @@ struct RootPaletteView: View {
                 .transition(Self.menuTransition(.bottomTrailing))
             }
         }
-        .frame(width: Theme.Size.panelWidth, height: Theme.Size.panelHeight)
+        // The window's own frame (driven by `PaletteWindowController`) is the size source of truth; filling it keeps the glass background and corner clip matched to the current compact/expanded window height.
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .background(Color.black.opacity(Theme.Colors.panelDimming))
         .background(VisualEffectView())
         .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.panel, style: .continuous))
@@ -242,7 +261,25 @@ struct RootPaletteView: View {
             scrollToken = UUID()
         }
         .onAppear { searchFocused = true }
+        // Typing/clearing/overflow/settings all flip `paletteIsCollapsed`; resize the window to match.
+        .onChange(of: core.paletteIsCollapsed) { core.syncPaletteSize() }
+        // ⌘1–⌘5 launch the compact bar's favorite slots (or expand, for the "…" overflow slot).
+        .onKeyPress(keys: ["1", "2", "3", "4", "5"], phases: .down) { press in
+            guard isCollapsed, settings.showFavoritesInCompactMode,
+                press.modifiers.contains(.command),
+                let digit = press.key.character.wholeNumberValue
+            else { return .ignored }
+            let slots = compactFavoriteSlots
+            let index = digit - 1
+            guard slots.indices.contains(index) else { return .ignored }
+            switch slots[index] {
+            case .app(let app): core.launch(app)
+            case .more: core.expandFromCompact()
+            }
+            return .handled
+        }
         .onKeyPress(.downArrow) {
+            if isCollapsed { return .ignored }
             if menuOpen {
                 moveMenu(1)
                 return .handled
@@ -251,6 +288,7 @@ struct RootPaletteView: View {
             return .handled
         }
         .onKeyPress(.upArrow) {
+            if isCollapsed { return .ignored }
             if menuOpen {
                 moveMenu(-1)
                 return .handled
@@ -322,6 +360,8 @@ struct RootPaletteView: View {
         // ⌘K toggles the actions panel for the current selection.
         .onKeyPress(keys: ["k"], phases: .down) { press in
             guard press.modifiers.contains(.command) else { return .ignored }
+            // The Actions menu has no anchor in the compact bar (no bottom bar); swallow ⌘K there.
+            guard !isCollapsed else { return .handled }
             guard resultCount > 0 else { return .handled }
             // An error calc card is the selection but has no actions — don't open an empty panel.
             if calcCount > 0, selection == 0, calcResult?.isActionable != true { return .handled }
@@ -362,20 +402,37 @@ struct RootPaletteView: View {
                     .symbolRenderingMode(.hierarchical)
                     .foregroundStyle(.secondary)
             }
-            TextField(
-                "", text: $vm.query,
-                prompt: Text(vm.mode.placeholder).foregroundStyle(Theme.Colors.textTertiary)
-            )
-            .textFieldStyle(.plain)
-            .font(Theme.Typography.searchField)
-            .focused($searchFocused)
-            .onSubmit(activateSelection)
+            searchField
+            // Compact bar pins favorites to the right of the field; expanded shows them as list rows instead.
+            if isCollapsed, settings.showFavoritesInCompactMode {
+                let slots = compactFavoriteSlots
+                if !slots.isEmpty {
+                    CompactFavoritesRow(
+                        slots: slots,
+                        onLaunch: { core.launch($0) },
+                        onOverflow: { core.expandFromCompact() }
+                    )
+                }
+            }
         }
         // Align the search icon with the list rows and section headers below (list inset + row inset).
         .padding(.horizontal, Theme.Spacing.md * 2)
-        .frame(height: Theme.Size.headerHeight)
-        .padding(.top, Theme.Spacing.md)
+        // Collapsed: the bar is the whole window, so it takes the taller compact height (no top-only padding); expanded: the floating header height.
+        .frame(height: isCollapsed ? Theme.Size.compactHeight : Theme.Size.headerHeight)
+        .padding(.top, isCollapsed ? 0 : Theme.Spacing.md)
         .frame(maxWidth: .infinity)
+    }
+
+    /// The one search field, kept in a single tree position (the `header`) so its focus survives the compact↔expanded swap.
+    private var searchField: some View {
+        TextField(
+            "", text: $vm.query,
+            prompt: Text(vm.mode.placeholder).foregroundStyle(Theme.Colors.textTertiary)
+        )
+        .textFieldStyle(.plain)
+        .font(Theme.Typography.searchField)
+        .focused($searchFocused)
+        .onSubmit(activateSelection)
     }
 
     @ViewBuilder
@@ -622,6 +679,8 @@ struct RootPaletteView: View {
     }
 
     private func activateSelection() {
+        // Nothing is visibly selected in the collapsed compact bar; launch only via ⌘1–⌘5 or by typing.
+        guard !isCollapsed else { return }
         switch vm.mode {
         case .launcher:
             if let calcResult, selection == 0 {
@@ -701,5 +760,62 @@ struct EmptyResults: View {
             Text(text).foregroundStyle(.secondary)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+}
+
+/// A slot in the compact bar's favorites strip: a launchable app, or the "…" overflow that expands the window.
+enum CompactFavoriteSlot {
+    case app(AppEntry)
+    case more
+}
+
+/// The compact bar's favorites strip — up to 5 icon buttons, ⌘1–⌘5 mirrored in each tooltip.
+private struct CompactFavoritesRow: View {
+    let slots: [CompactFavoriteSlot]
+    let onLaunch: (AppEntry) -> Void
+    let onOverflow: () -> Void
+
+    var body: some View {
+        HStack(spacing: Theme.Spacing.xs) {
+            ForEach(Array(slots.enumerated()), id: \.offset) { index, slot in
+                switch slot {
+                case .app(let app):
+                    CompactFavoriteButton(help: "\(app.name)  ⌘\(index + 1)") {
+                        onLaunch(app)
+                    } content: {
+                        AppIconView(app: app)
+                            .frame(width: Theme.Size.rowIcon, height: Theme.Size.rowIcon)
+                    }
+                case .more:
+                    CompactFavoriteButton(help: "Show all  ⌘\(index + 1)", action: onOverflow) {
+                        Image(systemName: "ellipsis")
+                            .font(.system(size: 10))
+                            .foregroundStyle(Theme.Colors.textSecondary)
+                            .frame(width: Theme.Size.rowIcon, height: Theme.Size.rowIcon)
+                            .background(
+                                RoundedRectangle(cornerRadius: 6, style: .continuous)
+                                    .fill(Theme.Colors.controlSurface)
+                                    .padding(Theme.Spacing.xxs)
+                            )
+                    }
+                }
+            }
+        }
+    }
+}
+
+/// A single compact favorite icon: bare icon, native tooltip, click action — no hover chrome, kept tight so the strip reads as one cluster.
+private struct CompactFavoriteButton<Content: View>: View {
+    let help: String
+    let action: () -> Void
+    @ViewBuilder let content: Content
+
+    var body: some View {
+        Button(action: action) {
+            content
+                .contentShape(RoundedRectangle(cornerRadius: Theme.Radius.row, style: .continuous))
+        }
+        .buttonStyle(.plain)
+        .help(help)
     }
 }

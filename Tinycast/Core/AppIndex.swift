@@ -61,16 +61,20 @@ enum IconCache {
         cache.object(forKey: ("symbol:" + name) as NSString)
     }
 
-    /// Decode off the main thread and read the result back from the thread-safe cache; the `NSImage` never crosses the actor boundary, keeping it clean under strict concurrency.
+    /// A freshly-decoded, thereafter-immutable `NSImage` is safe to move across the actor boundary.
+    private struct Decoded: @unchecked Sendable { let image: NSImage }
+
+    /// Return the decode directly (not a cache re-read) so an `NSCache` purge mid-decode can't strand a row on its placeholder.
     static func loadAsync(forFile path: String) async -> NSImage? {
         if let cached = cached(forFile: path) { return cached }
-        await Task.detached(priority: .userInitiated) { _ = icon(forFile: path) }.value
-        return cached(forFile: path)
+        return await Task.detached(priority: .userInitiated) { Decoded(image: icon(forFile: path)) }
+            .value.image
     }
     static func loadSymbolAsync(named name: String) async -> NSImage? {
         if let cached = cachedSymbol(named: name) { return cached }
-        await Task.detached(priority: .userInitiated) { _ = symbolIcon(named: name) }.value
-        return cachedSymbol(named: name)
+        return await Task.detached(priority: .userInitiated) {
+            Decoded(image: symbolIcon(named: name))
+        }.value.image
     }
 
     static func icon(forFile path: String) -> NSImage {

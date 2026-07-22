@@ -19,9 +19,9 @@ struct SettingsPane<Content: View>: View {
             // Ignore the transparent-titlebar safe area and use one fixed `xxl` inset every side instead (the titlebar band is taller than the rhythm we want; traffic lights sit over the sidebar, so nothing collides).
             .padding(Theme.Spacing.xxl)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .hideNativeScrollers()
+            // Settings use the native thin overlay scroller (not the palette's SwiftUI `thinScrollbar`), matching the other windowed setting lists.
+            .overlayScroller()
         }
-        .thinScrollbar()
         .ignoresSafeArea(edges: .top)
     }
 }

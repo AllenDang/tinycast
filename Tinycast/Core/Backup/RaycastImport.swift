@@ -26,9 +26,10 @@ struct RaycastImportOptions: OptionSet, Sendable {
     static let menuBarVisibility = RaycastImportOptions(rawValue: 1 << 4)
     static let clipboardHistory = RaycastImportOptions(rawValue: 1 << 5)
     static let popToRoot = RaycastImportOptions(rawValue: 1 << 6)
+    static let compactMode = RaycastImportOptions(rawValue: 1 << 7)
     static let all: RaycastImportOptions = [
         .shortcuts, .favorites, .emojiSkinTone, .launchAtLogin, .menuBarVisibility, .clipboardHistory,
-        .popToRoot,
+        .popToRoot, .compactMode,
     ]
 }
 
@@ -63,6 +64,16 @@ enum RaycastImport {
             if options.contains(.popToRoot), let secs = backup.settings?.popToRootSeconds {
                 settings.popToRootSeconds = secs
                 hasSettings = true
+            }
+            if options.contains(.compactMode) {
+                if let compact = backup.settings?.compactMode {
+                    settings.compactMode = compact
+                    hasSettings = true
+                }
+                if let showFavorites = backup.settings?.showFavoritesInCompactMode {
+                    settings.showFavoritesInCompactMode = showFavorites
+                    hasSettings = true
+                }
             }
             if options.contains(.shortcuts) {
                 if let shift = backup.settings?.hyperKeyIncludesShift {
@@ -176,6 +187,15 @@ enum RaycastImport {
             let timeout = PopToRootTimeout(rawValue: secs)
         {
             data.popToRootSeconds = timeout.rawValue
+            mapped = true
+        }
+        // Raycast's window mode is a string ("compact"/"advanced"/…); Tinycast only has the compact toggle.
+        if let mode = general?["windowMode"] as? String {
+            data.compactMode = (mode == "compact")
+            mapped = true
+        }
+        if let showFavorites = general?["showFavoritesInCompactMode"] as? Bool {
+            data.showFavoritesInCompactMode = showFavorites
             mapped = true
         }
         return mapped ? data : nil
