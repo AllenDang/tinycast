@@ -44,11 +44,14 @@ final class PaletteViewModel: ObservableObject {
     @Published var focusToken = UUID()
     /// Changes only when `prepare` resets the palette, so the lists snap their scroll to the top even when query/mode were already at their defaults (`focusToken` can't serve: it bumps on every reopen, which must preserve a within-timeout scroll).
     @Published var resetToken = UUID()
+    /// Set by the compact bar's "…" overflow to expand into the full launcher without a query; cleared on every `prepare`.
+    @Published var forceExpanded = false
 
     func prepare(mode: PaletteMode) {
         self.mode = mode
         query = ""
         selection = 0
+        forceExpanded = false
         focusToken = UUID()
         resetToken = UUID()
     }
@@ -144,6 +147,24 @@ final class AppCore: ObservableObject {
 
     func hidePalette(restoreFocus: Bool = true) {
         windowController.hide(restoreFocus: restoreFocus)
+    }
+
+    /// True when the palette should render as the slim compact bar: compact mode on, launcher root, empty query, and not force-expanded via the "…" overflow.
+    var paletteIsCollapsed: Bool {
+        settings.compactMode
+            && !palette.forceExpanded
+            && palette.mode == .launcher
+            && palette.query.trimmingCharacters(in: .whitespaces).isEmpty
+    }
+
+    /// The compact bar's "…" overflow: expand into the full favorites-pinned launcher without typing.
+    func expandFromCompact() {
+        palette.forceExpanded = true
+    }
+
+    /// Resize the panel to match the current collapsed state; called by the view when `paletteIsCollapsed` flips while open.
+    func syncPaletteSize() {
+        windowController.applyCollapsed(paletteIsCollapsed)
     }
 
     /// Dock-icon / reopen: focus an open aux window (About/Settings/Onboarding), else summon the launcher. Decoupled from the individual show paths so activation always works.

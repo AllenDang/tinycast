@@ -21,6 +21,8 @@ struct SettingsBackup: Codable {
         var emojiSkinTone: String?
         var showInMenuBar: Bool?
         var popToRootSeconds: Int?
+        var compactMode: Bool?
+        var showFavoritesInCompactMode: Bool?
     }
 
     struct HotkeyBackup: Codable {
@@ -58,7 +60,9 @@ extension SettingsBackup {
             emojiSkinTone: s.emojiSkinTone.rawValue,
             showInMenuBar: UserDefaults.standard.object(forKey: SettingsKey.showInMenuBar) as? Bool
                 ?? true,
-            popToRootSeconds: s.popToRootTimeout.rawValue)
+            popToRootSeconds: s.popToRootTimeout.rawValue,
+            compactMode: s.compactMode,
+            showFavoritesInCompactMode: s.showFavoritesInCompactMode)
 
         let hk = core.hotKeys
         var hotkeys = HotkeyBackup()
@@ -142,6 +146,14 @@ extension SettingsBackup {
         }
         if let secs = s.popToRootSeconds, let timeout = PopToRootTimeout(rawValue: secs) {
             settings.popToRootTimeout = timeout
+            count += 1
+        }
+        if let flag = s.compactMode {
+            settings.compactMode = flag
+            count += 1
+        }
+        if let flag = s.showFavoritesInCompactMode {
+            settings.showFavoritesInCompactMode = flag
             count += 1
         }
         return count

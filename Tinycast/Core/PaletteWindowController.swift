@@ -7,6 +7,8 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
     private var panel: PalettePanel?
     private(set) var previousApp: NSRunningApplication?
     private var popToRootTimer: Timer?
+    /// Y of the panel's top edge, held fixed across compact↔expanded resizes so the search bar stays put and the list grows downward. Recomputed from the full panel height each show.
+    private var anchorTopY: CGFloat = 0
 
     init(core: AppCore) {
         self.core = core
@@ -21,7 +23,8 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
             previousApp = frontmost
         }
         let panel = ensurePanel()
-        center(panel)
+        // Size + place the panel to the current collapsed state before ordering front, so a compact summon never flashes at full size.
+        positionPanel(panel, collapsed: core.paletteIsCollapsed)
         // The `.nonactivatingPanel` takes key focus without activating the app, so summoning the palette never raises the app's Settings/onboarding windows behind it.
         panel.makeKeyAndOrderFront(nil)
         panel.orderFrontRegardless()
@@ -121,14 +124,22 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
         return panel
     }
 
-    private func center(_ panel: NSPanel) {
+    /// Resize the live panel to the given collapsed state, keeping the top edge anchored. No-op when the panel isn't up yet.
+    func applyCollapsed(_ collapsed: Bool) {
+        guard let panel, panel.isVisible else { return }
+        positionPanel(panel, collapsed: collapsed)
+    }
+
+    /// Size the panel to compact/expanded height (width fixed) and place it so its top edge sits at `anchorTopY` — recomputed from the full panel height so compact and expanded share one top. Resize is instant (no animation, matching Raycast).
+    private func positionPanel(_ panel: NSPanel, collapsed: Bool) {
         guard let screen = NSScreen.main else { return }
         let visible = screen.visibleFrame
-        let size = panel.frame.size
-        let origin = NSPoint(
-            x: visible.midX - size.width / 2,
-            y: visible.midY - size.height / 2 + visible.height * 0.08
-        )
-        panel.setFrameOrigin(origin)
+        let width = Theme.Size.panelWidth
+        let fullOrigin = visible.midY - Theme.Size.panelHeight / 2 + visible.height * 0.08
+        anchorTopY = fullOrigin + Theme.Size.panelHeight
+        let height = collapsed ? Theme.Size.compactHeight : Theme.Size.panelHeight
+        let frame = NSRect(
+            x: visible.midX - width / 2, y: anchorTopY - height, width: width, height: height)
+        panel.setFrame(frame, display: true)
     }
 }
