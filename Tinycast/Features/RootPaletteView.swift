@@ -772,20 +772,27 @@ private struct CompactFavoritesRow: View {
     let onOverflow: () -> Void
 
     var body: some View {
-        HStack(spacing: Theme.Spacing.sm) {
+        HStack(spacing: Theme.Spacing.xs) {
             ForEach(Array(slots.enumerated()), id: \.offset) { index, slot in
                 switch slot {
                 case .app(let app):
-                    CompactFavoriteButton(help: "\(app.name)  ⌘\(index + 1)") { onLaunch(app) } content: {
+                    CompactFavoriteButton(help: "\(app.name)  ⌘\(index + 1)") {
+                        onLaunch(app)
+                    } content: {
                         AppIconView(app: app)
                             .frame(width: Theme.Size.rowIcon, height: Theme.Size.rowIcon)
                     }
                 case .more:
                     CompactFavoriteButton(help: "Show all  ⌘\(index + 1)", action: onOverflow) {
                         Image(systemName: "ellipsis")
-                            .font(.system(size: 13, weight: .semibold))
+                            .font(.system(size: 10))
                             .foregroundStyle(Theme.Colors.textSecondary)
                             .frame(width: Theme.Size.rowIcon, height: Theme.Size.rowIcon)
+                            .background(
+                                RoundedRectangle(cornerRadius: 6, style: .continuous)
+                                    .fill(Theme.Colors.controlSurface)
+                                    .padding(Theme.Spacing.xxs)
+                            )
                     }
                 }
             }
