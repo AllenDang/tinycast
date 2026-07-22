@@ -172,3 +172,33 @@ jobs:
             git commit -m "${CASK} ${VERSION}"
             git push
           fi
+
+      # Announce the release in the Discord release channel. Colored embed per channel (beta amber,
+      # stable green); no-ops with a warning if the webhook secret isn't set.
+      - name: Announce on Discord
+        if: success()
+        env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          CHANNEL: ${{ github.event.inputs.channel }}
+          DISPLAY_NAME: ${{ steps.meta.outputs.display_name }}
+          VERSION: ${{ steps.meta.outputs.full_version }}
+          CASK: ${{ steps.meta.outputs.cask_name }}
+          TAG: v${{ steps.meta.outputs.full_version }}
+        run: |
+          if [ -z "${DISCORD_WEBHOOK_URL}" ]; then
+            echo "::warning::DISCORD_WEBHOOK_URL secret not set — skipping Discord announcement."
+            exit 0
+          fi
+          if [ "${CHANNEL}" = "stable" ]; then COLOR=3066993; else COLOR=15844367; fi
+          RELEASE_URL="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/releases/tag/${TAG}"
+          INSTALL="brew install --cask abue-ammar/tinycast/${CASK}"
+          DESC=$(printf '**Version:** \`%s\`\n**Channel:** %s\n\n**Install / update via Homebrew:**\n\`\`\`sh\n%s\n\`\`\`\n[Download DMG & release notes →](%s)' \
+            "${VERSION}" "${CHANNEL}" "${INSTALL}" "${RELEASE_URL}")
+          jq -n \
+            --arg title "🚀 ${DISPLAY_NAME} ${VERSION} released" \
+            --arg desc "${DESC}" \
+            --arg url "${RELEASE_URL}" \
+            --argjson color "${COLOR}" \
+            '{embeds: [{title: $title, description: $desc, url: $url, color: $color}]}' \
+            > payload.json
+          curl -fsS -X POST -H "Content-Type: application/json" -d @payload.json "${DISCORD_WEBHOOK_URL}"
