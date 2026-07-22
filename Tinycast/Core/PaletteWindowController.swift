@@ -124,9 +124,9 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
         return panel
     }
 
-    /// Resize the live panel to the given collapsed state, keeping the top edge anchored. No-op when the panel isn't up yet.
+    /// Resize the panel to the given collapsed state, keeping the top edge anchored. Applied even while hidden (e.g. compact toggled in Settings) so the window is already correctly sized before the next show — otherwise the list would mount at the stale size and open scrolled up.
     func applyCollapsed(_ collapsed: Bool) {
-        guard let panel, panel.isVisible else { return }
+        guard let panel else { return }
         positionPanel(panel, collapsed: collapsed)
     }
 

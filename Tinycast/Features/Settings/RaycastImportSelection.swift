@@ -19,6 +19,7 @@ struct RaycastImportSelection: View {
         .init(option: .menuBarVisibility, symbol: "menubar.rectangle", label: "Menu-bar icon"),
         .init(option: .clipboardHistory, symbol: "doc.on.clipboard", label: "Clipboard history"),
         .init(option: .popToRoot, symbol: "arrow.uturn.backward", label: "Pop to root"),
+        .init(option: .compactMode, symbol: "macwindow", label: "Compact mode"),
     ]
 
     private static let columns = Array(

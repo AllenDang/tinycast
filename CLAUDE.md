@@ -97,6 +97,8 @@ bars, scroll-driven edge dissolve, Liquid Glass only on floating controls — is
 `DESIGN.md` at the repo root. `Core/Theme.swift` is the single token source; read `DESIGN.md` before
 any restyle or new view.
 
+**Scrollbars.** The palette lists (App Launcher, Clipboard history, Emoji, Calculator history) use the SwiftUI `.thinScrollbar()` + `.hideNativeScrollers()`; the Clipboard preview (right pane) and every Settings pane use the native `.overlayScroller()`.
+
 **Focus restoration is load-bearing.** `PaletteWindowController` records `previousApp` (the frontmost
 app) on show. Paste then targets that app: `Paster.paste` activates it and posts a synthetic ⌘V via
 `CGEvent`; `Paster.pasteInPlace` posts ⌘V straight to the app's PID _without_ activating it, so the
