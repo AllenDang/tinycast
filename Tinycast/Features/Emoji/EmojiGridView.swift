@@ -217,26 +217,25 @@ private struct EmojiCell: View {
     }
 }
 
-/// Actions popover for an emoji/symbol cell, anchored bottom-right on right-click, mirroring `ClipboardActionsMenu`.
-struct EmojiActionsMenu: View {
-    let entry: EmojiEntry
-    let dismiss: () -> Void
-    @EnvironmentObject private var core: AppCore
-
-    var body: some View {
-        PopoverMenu(header: entry.displayName) {
-            PopoverMenuRow(title: "Paste", systemImage: "doc.on.clipboard", shortcut: "↵") {
-                core.pasteEmoji(entry)
-                dismiss()
-            }
-            PopoverMenuRow(title: "Copy to Clipboard", systemImage: "doc.on.doc", shortcut: "⌘↵") {
-                core.copyEmoji(entry)
-                dismiss()
-            }
-            PopoverMenuRow(title: "Paste & Keep Window Open", systemImage: "pin") {
-                core.pasteEmojiKeepingWindowOpen(entry)
-                dismiss()
-            }
-        }
+/// Actions menu content for an emoji/symbol cell, shown bottom-right on right-click, mirroring `ClipboardActionsMenu`.
+@MainActor
+enum EmojiActionsMenu {
+    static func content(entry: EmojiEntry, core: AppCore) -> PopoverMenuContent {
+        PopoverMenuContent(
+            header: entry.displayName,
+            items: [
+                PopoverMenuItem(title: "Paste", systemImage: "doc.on.clipboard", shortcut: "↵") {
+                    core.pasteEmoji(entry)
+                },
+                PopoverMenuItem(
+                    title: "Copy to Clipboard", systemImage: "doc.on.doc", shortcut: "⌘↵"
+                ) {
+                    core.copyEmoji(entry)
+                },
+                PopoverMenuItem(title: "Paste & Keep Window Open", systemImage: "pin") {
+                    core.pasteEmojiKeepingWindowOpen(entry)
+                },
+            ]
+        )
     }
 }

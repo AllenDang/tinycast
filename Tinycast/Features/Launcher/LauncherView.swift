@@ -213,47 +213,42 @@ private struct AppIconView: View {
     }
 }
 
-/// Actions popover content for a launcher app, anchored at the bottom-right on right-click or from the Actions pill.
-struct AppActionsMenu: View {
-    let app: AppEntry
-    let dismiss: () -> Void
-    @EnvironmentObject private var core: AppCore
-    @EnvironmentObject private var favorites: FavoritesStore
+/// Actions menu content for a launcher app, shown bottom-right on right-click or from the Actions pill.
+@MainActor
+enum AppActionsMenu {
+    static func content(app: AppEntry, core: AppCore, favorites: FavoritesStore)
+        -> PopoverMenuContent
+    {
+        var items: [PopoverMenuItem] = [
+            PopoverMenuItem(
+                title: openTitle(app), systemImage: "list.bullet.rectangle", shortcut: "↵"
+            ) { core.launch(app) }
+        ]
+        if favorites.isFavorite(app) {
+            items.append(
+                PopoverMenuItem(title: "Remove from Favorites", systemImage: "star.slash") {
+                    favorites.toggle(app)
+                })
+        } else {
+            items.append(
+                PopoverMenuItem(title: "Add to Favorites", systemImage: "star") {
+                    favorites.toggle(app)
+                })
+        }
+        if app.kind != .command {
+            items.append(
+                PopoverMenuItem(title: "Show in Finder", systemImage: "folder") {
+                    core.showInFinder(app)
+                })
+        }
+        return PopoverMenuContent(header: app.name, items: items)
+    }
 
-    private var openTitle: String {
+    private static func openTitle(_ app: AppEntry) -> String {
         switch app.kind {
         case .application: return "Open Application"
         case .systemSettings: return "Open"
         case .command: return "Run Command"
-        }
-    }
-
-    var body: some View {
-        PopoverMenu(header: app.name) {
-            PopoverMenuRow(
-                title: openTitle,
-                systemImage: "list.bullet.rectangle", shortcut: "↵"
-            ) {
-                core.launch(app)
-                dismiss()
-            }
-            if favorites.isFavorite(app) {
-                PopoverMenuRow(title: "Remove from Favorites", systemImage: "star.slash") {
-                    favorites.toggle(app)
-                    dismiss()
-                }
-            } else {
-                PopoverMenuRow(title: "Add to Favorites", systemImage: "star") {
-                    favorites.toggle(app)
-                    dismiss()
-                }
-            }
-            if app.kind != .command {
-                PopoverMenuRow(title: "Show in Finder", systemImage: "folder") {
-                    core.showInFinder(app)
-                    dismiss()
-                }
-            }
         }
     }
 }

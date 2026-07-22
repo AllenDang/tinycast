@@ -15,6 +15,8 @@ struct RootPaletteView: View {
     @FocusState private var searchFocused: Bool
     @State private var showActions = false
     @State private var showAppMenu = false
+    /// Highlighted row of whichever popover menu is open; reset to the first row on open, moved by ↑/↓ and hover, activated by ↵/click.
+    @State private var menuSelection = 0
     /// Bumped only when the selection should pull the scroll view with it (keyboard nav, list resets); mouse selection targets a visible row, so it leaves this and the list put.
     @State private var scrollToken = UUID()
 
@@ -53,6 +55,88 @@ struct RootPaletteView: View {
     /// Selection clamped into the current results — the single source of truth for highlight, preview and activation so the list and preview can never disagree.
     private var selection: Int { resultCount == 0 ? 0 : min(max(vm.selection, 0), resultCount - 1) }
 
+    private var menuOpen: Bool { showActions || showAppMenu }
+
+    // MARK: - Popover menu content
+    //
+    // These resolve the current selection for whichever menu is open. They are evaluated only inside the
+    // menu overlays (menu visible) or on a keypress (rare), so re-running the unmemoized `appResults`
+    // filter here is fine — the same idiom the other rare event handlers use.
+
+    /// The inline calc card sits at flat index 0 when present; only value payloads have a Copy action.
+    private var calcActionableResult: CalcResult? {
+        guard calcCount > 0, selection == 0, let calc = calcResult, calc.isActionable else {
+            return nil
+        }
+        return calc
+    }
+    private var selectedAppEntry: AppEntry? {
+        let index = selection - calcCount
+        return appResults.indices.contains(index) ? appResults[index] : nil
+    }
+    private var selectedClipItem: ClipboardItem? {
+        clipResults.indices.contains(selection) ? clipResults[selection] : nil
+    }
+    private var selectedHistEntry: CalcHistoryEntry? {
+        let index = selection - calcCount
+        return histResults.indices.contains(index) ? histResults[index] : nil
+    }
+    private var selectedEmojiEntry: EmojiEntry? {
+        emojiResults.indices.contains(selection) ? emojiResults[selection] : nil
+    }
+
+    /// The bottom-right Actions menu content for the current mode's selection, or nil when the selection has no actions.
+    private var actionsContent: PopoverMenuContent? {
+        switch vm.mode {
+        case .launcher:
+            if let calc = calcActionableResult {
+                return CalcActionsMenu.content(result: calc, core: core)
+            }
+            if let app = selectedAppEntry {
+                return AppActionsMenu.content(app: app, core: core, favorites: favorites)
+            }
+            return nil
+        case .clipboard:
+            if let clip = selectedClipItem {
+                return ClipboardActionsMenu.content(item: clip, core: core, store: store)
+            }
+            return nil
+        case .calculatorHistory:
+            if let calc = calcActionableResult {
+                return CalcActionsMenu.content(result: calc, core: core)
+            }
+            if let hist = selectedHistEntry {
+                return CalcHistoryActionsMenu.content(
+                    entry: hist, core: core, calcHistory: calcHistory)
+            }
+            return nil
+        case .emoji:
+            if let emoji = selectedEmojiEntry {
+                return EmojiActionsMenu.content(entry: emoji, core: core)
+            }
+            return nil
+        }
+    }
+
+    /// The bottom-left app menu content (About / Settings).
+    private var appMenuContent: PopoverMenuContent {
+        PopoverMenuContent(items: [
+            PopoverMenuItem(title: "About Tinycast", systemImage: "info.circle") {
+                core.showAbout()
+            },
+            PopoverMenuItem(title: "Settings", systemImage: "gearshape", shortcut: "⌘,") {
+                core.showSettings()
+            },
+        ])
+    }
+
+    /// Whichever menu is open (Actions takes precedence; the two are kept mutually exclusive) — the source for keyboard navigation and activation.
+    private var menuContent: PopoverMenuContent? {
+        if showActions { return actionsContent }
+        if showAppMenu { return appMenuContent }
+        return nil
+    }
+
     var body: some View {
         // Filter once per render for the active mode only, so the matcher/search doesn't run several times per render (rare event handlers use the computed properties above).
         let apps = vm.mode == .launcher ? appResults : []
@@ -73,9 +157,6 @@ struct RootPaletteView: View {
         let favoriteCount =
             showSections ? apps.prefix(while: { favorites.isFavorite($0) }).count : 0
         let selectedApp = apps.indices.contains(sel - offset) ? apps[sel - offset] : nil
-        let selectedClip = clips.indices.contains(sel) ? clips[sel] : nil
-        let selectedHist = hist.indices.contains(sel - offset) ? hist[sel - offset] : nil
-        let selectedEmoji = emojis.indices.contains(sel) ? emojis[sel] : nil
         // Derive the footer label from the already-resolved selection so `bottomBar` doesn't re-run `appResults` (its filter/sort aren't memoized). An error card selected in launcher/calc-history has no primary action, so the whole group is hidden.
         let pillLabel = actionPillLabel(selectedApp: selectedApp, calcActionable: calcActionable)
         let showActionGroup = !(calcSelected && !calcActionable)
@@ -99,16 +180,20 @@ struct RootPaletteView: View {
         }
         .overlay(alignment: .bottomLeading) {
             if showAppMenu {
-                appMenu
-                    .padding(Self.menuInset)
-                    .transition(Self.menuTransition(.bottomLeading))
+                let content = appMenuContent
+                PopoverMenu(
+                    header: content.header, items: content.items, selection: $menuSelection,
+                    onActivate: activateMenuItem
+                )
+                .padding(Self.menuInset)
+                .transition(Self.menuTransition(.bottomLeading))
             }
         }
         .overlay(alignment: .bottomTrailing) {
-            if showActions {
-                actionsMenu(
-                    app: selectedApp, clip: selectedClip, hist: selectedHist,
-                    emoji: selectedEmoji, calc: calcActionable ? calc : nil
+            if showActions, let content = actionsContent {
+                PopoverMenu(
+                    header: content.header, items: content.items, selection: $menuSelection,
+                    onActivate: activateMenuItem
                 )
                 .padding(Self.menuInset)
                 .transition(Self.menuTransition(.bottomTrailing))
@@ -137,6 +222,19 @@ struct RootPaletteView: View {
         .onChange(of: vm.resetToken) {
             scrollToken = UUID()
         }
+        // Opening either menu highlights its first row and closes the other, so exactly one menu is ever open and always has a highlight.
+        .onChange(of: showActions) {
+            if showActions {
+                showAppMenu = false
+                menuSelection = 0
+            }
+        }
+        .onChange(of: showAppMenu) {
+            if showAppMenu {
+                showActions = false
+                menuSelection = 0
+            }
+        }
         // A new top clip while the list is showing (promote-on-paste, live capture) pulls the highlight and scroll back to the row that just moved up.
         .onChange(of: clips.first?.id) { _, newTop in
             guard vm.mode == .clipboard, newTop != nil else { return }
@@ -145,26 +243,40 @@ struct RootPaletteView: View {
         }
         .onAppear { searchFocused = true }
         .onKeyPress(.downArrow) {
+            if menuOpen {
+                moveMenu(1)
+                return .handled
+            }
             if vm.mode == .emoji { moveEmojiRow(1) } else { move(1) }
             return .handled
         }
         .onKeyPress(.upArrow) {
+            if menuOpen {
+                moveMenu(-1)
+                return .handled
+            }
             if vm.mode == .emoji { moveEmojiRow(-1) } else { move(-1) }
             return .handled
         }
-        // Horizontal arrows step the emoji grid; everywhere else they stay with the field editor's caret.
+        // Horizontal arrows step the emoji grid; everywhere else they stay with the field editor's caret. An open menu swallows them so the list behind never moves.
         .onKeyPress(.leftArrow) {
+            if menuOpen { return .handled }
             guard vm.mode == .emoji else { return .ignored }
             move(-1)
             return .handled
         }
         .onKeyPress(.rightArrow) {
+            if menuOpen { return .handled }
             guard vm.mode == .emoji else { return .ignored }
             move(1)
             return .handled
         }
-        // ⌘↵ runs the selection's secondary copy action (each menu advertises it); ⌥↵ pastes an emoji in place. Plain ↵ falls through to the field's onSubmit.
+        // With a menu open, any ↵ activates its highlighted row. Otherwise: ⌘↵ runs the selection's secondary copy action (each menu advertises it), ⌥↵ pastes an emoji in place, and plain ↵ falls through to the field's onSubmit.
         .onKeyPress(keys: [.return], phases: .down) { press in
+            if menuOpen {
+                activateMenuItem(menuSelection)
+                return .handled
+            }
             let command = press.modifiers.contains(.command)
             let option = press.modifiers.contains(.option)
             guard command || option else { return .ignored }
@@ -198,6 +310,7 @@ struct RootPaletteView: View {
             return .handled
         }
         .onKeyPress(.tab) {
+            if menuOpen { return .handled }
             toggleMode()
             return .handled
         }
@@ -217,6 +330,7 @@ struct RootPaletteView: View {
         }
         // Bare backspace (back out of a sub-screen when the search is empty) is intercepted by PalettePanel.sendEvent — the field editor consumes it before onKeyPress could fire.
         .onKeyPress(keys: [.delete, .deleteForward], phases: .down) { press in
+            if menuOpen { return .handled }
             guard press.modifiers.contains(.command) else { return .ignored }
             switch vm.mode {
             case .clipboard:
@@ -379,45 +493,6 @@ struct RootPaletteView: View {
         }
     }
 
-    /// The bottom-right actions popover for the current mode's selection.
-    @ViewBuilder
-    private func actionsMenu(
-        app: AppEntry?, clip: ClipboardItem?, hist: CalcHistoryEntry?, emoji: EmojiEntry?,
-        calc: CalcResult?
-    ) -> some View {
-        switch vm.mode {
-        case .launcher:
-            if let calc {
-                CalcActionsMenu(result: calc) { closeMenus() }
-                    .environmentObject(core)
-            } else if let app {
-                AppActionsMenu(app: app) { closeMenus() }
-                    .environmentObject(core)
-                    .environmentObject(favorites)
-            }
-        case .clipboard:
-            if let clip {
-                ClipboardActionsMenu(item: clip) { closeMenus() }
-                    .environmentObject(core)
-                    .environmentObject(store)
-            }
-        case .calculatorHistory:
-            if let calc {
-                CalcActionsMenu(result: calc) { closeMenus() }
-                    .environmentObject(core)
-            } else if let hist {
-                CalcHistoryActionsMenu(entry: hist) { closeMenus() }
-                    .environmentObject(core)
-                    .environmentObject(calcHistory)
-            }
-        case .emoji:
-            if let emoji {
-                EmojiActionsMenu(entry: emoji) { closeMenus() }
-                    .environmentObject(core)
-            }
-        }
-    }
-
     private func bottomBar(pillLabel: String, showActionGroup: Bool) -> some View {
         // No bar — just floating glass controls over the list; the edge dissolve ghosts rows passing beneath, so the buttons read clearly without a hard-edged strip.
         HStack(spacing: 0) {
@@ -461,19 +536,6 @@ struct RootPaletteView: View {
         }
         .padding(Theme.Spacing.xs)
         .frosted(in: Capsule())
-    }
-
-    private var appMenu: some View {
-        PopoverMenu {
-            PopoverMenuRow(title: "About Tinycast", systemImage: "info.circle") {
-                closeMenus()
-                core.showAbout()
-            }
-            PopoverMenuRow(title: "Settings", systemImage: "gearshape", shortcut: "⌘,") {
-                closeMenus()
-                core.showSettings()
-            }
-        }
     }
 
     /// Pill label for the current selection, derived from the selection already resolved in `body` so it never re-runs the (unmemoized) `appResults` filter/sort.
@@ -525,6 +587,19 @@ struct RootPaletteView: View {
         guard resultCount > 0 else { return }
         vm.selection = min(max(selection + delta, 0), resultCount - 1)
         scrollToken = UUID()
+    }
+
+    /// Move the open menu's highlight, clamped at the ends (no wrap — consistent with `move`).
+    private func moveMenu(_ delta: Int) {
+        guard let count = menuContent?.items.count, count > 0 else { return }
+        menuSelection = min(max(menuSelection + delta, 0), count - 1)
+    }
+
+    /// The single activation path for a menu row, shared by a click and Return: run the row's action, then close.
+    private func activateMenuItem(_ index: Int) {
+        guard let items = menuContent?.items, items.indices.contains(index) else { return }
+        items[index].action()
+        closeMenus()
     }
 
     /// Vertical grid move: one visual row within a section, spilling into the neighbor while keeping the column.

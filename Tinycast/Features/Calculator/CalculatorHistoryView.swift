@@ -135,35 +135,32 @@ private struct CalcHistoryRow: View {
     }
 }
 
-/// Actions popover for a calculator-history entry, anchored bottom-right like the other modes.
-struct CalcHistoryActionsMenu: View {
-    let entry: CalcHistoryEntry
-    let dismiss: () -> Void
-    @EnvironmentObject private var core: AppCore
-    @EnvironmentObject private var calcHistory: CalculatorHistoryStore
-
-    var body: some View {
-        PopoverMenu(header: entry.expression) {
-            PopoverMenuRow(title: "Copy Answer", systemImage: "doc.on.doc", shortcut: "↵") {
-                core.copyHistoryEntry(entry)
-                dismiss()
-            }
-            PopoverMenuRow(
-                title: "Copy Expression", systemImage: "doc.on.doc.fill", shortcut: "⌘↵"
-            ) {
-                core.copyHistoryExpression(entry)
-                dismiss()
-            }
-            PopoverMenuRow(title: "Delete Entry", systemImage: "trash", isDestructive: true) {
-                calcHistory.remove(entry)
-                dismiss()
-            }
-            PopoverMenuRow(
-                title: "Delete All Entries", systemImage: "trash.fill", isDestructive: true
-            ) {
-                calcHistory.clearAll()
-                dismiss()
-            }
-        }
+/// Actions menu content for a calculator-history entry, shown bottom-right like the other modes.
+@MainActor
+enum CalcHistoryActionsMenu {
+    static func content(entry: CalcHistoryEntry, core: AppCore, calcHistory: CalculatorHistoryStore)
+        -> PopoverMenuContent
+    {
+        PopoverMenuContent(
+            header: entry.expression,
+            items: [
+                PopoverMenuItem(title: "Copy Answer", systemImage: "doc.on.doc", shortcut: "↵") {
+                    core.copyHistoryEntry(entry)
+                },
+                PopoverMenuItem(
+                    title: "Copy Expression", systemImage: "doc.on.doc.fill", shortcut: "⌘↵"
+                ) {
+                    core.copyHistoryExpression(entry)
+                },
+                PopoverMenuItem(title: "Delete Entry", systemImage: "trash", isDestructive: true) {
+                    calcHistory.remove(entry)
+                },
+                PopoverMenuItem(
+                    title: "Delete All Entries", systemImage: "trash.fill", isDestructive: true
+                ) {
+                    calcHistory.clearAll()
+                },
+            ]
+        )
     }
 }

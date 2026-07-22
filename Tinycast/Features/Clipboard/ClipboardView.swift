@@ -106,14 +106,43 @@ enum DateBucket: Int {
     }
 }
 
-/// Actions popover for a clipboard entry, anchored bottom-right on right-click, mirroring the launcher's `AppActionsMenu`.
-struct ClipboardActionsMenu: View {
-    let item: ClipboardItem
-    let dismiss: () -> Void
-    @EnvironmentObject private var core: AppCore
-    @EnvironmentObject private var store: ClipboardStore
+/// Actions menu content for a clipboard entry, shown bottom-right on right-click, mirroring `AppActionsMenu`.
+@MainActor
+enum ClipboardActionsMenu {
+    static func content(item: ClipboardItem, core: AppCore, store: ClipboardStore)
+        -> PopoverMenuContent
+    {
+        var items: [PopoverMenuItem] = [
+            PopoverMenuItem(title: "Paste", systemImage: "doc.on.clipboard", shortcut: "↵") {
+                core.paste(item)
+            },
+            PopoverMenuItem(title: "Copy to Clipboard", systemImage: "doc.on.doc", shortcut: "⌘↵") {
+                core.copyToClipboard(item)
+            },
+            PopoverMenuItem(title: "Paste & Keep Window Open", systemImage: "pin") {
+                core.pasteKeepingWindowOpen(item)
+            },
+        ]
+        if item.kind == .image {
+            items.append(
+                PopoverMenuItem(title: "Show in Finder", systemImage: "folder") {
+                    core.revealClipboardImage(item)
+                })
+        }
+        items.append(
+            PopoverMenuItem(title: "Delete Entry", systemImage: "trash", isDestructive: true) {
+                store.remove(item)
+            })
+        items.append(
+            PopoverMenuItem(
+                title: "Delete All Entries", systemImage: "trash.fill", isDestructive: true
+            ) {
+                store.clearAll()
+            })
+        return PopoverMenuContent(header: headerText(item), items: items)
+    }
 
-    private var headerText: String {
+    private static func headerText(_ item: ClipboardItem) -> String {
         switch item.kind {
         case .text:
             // Collapse whitespace/newlines to single spaces so a multi-line copy stays a clean one-line title.
@@ -121,39 +150,6 @@ struct ClipboardActionsMenu: View {
                 separator: " ")
             return String(oneLine.prefix(40))
         case .image: return "Image"
-        }
-    }
-
-    var body: some View {
-        PopoverMenu(header: headerText) {
-            PopoverMenuRow(title: "Paste", systemImage: "doc.on.clipboard", shortcut: "↵") {
-                core.paste(item)
-                dismiss()
-            }
-            PopoverMenuRow(title: "Copy to Clipboard", systemImage: "doc.on.doc", shortcut: "⌘↵") {
-                core.copyToClipboard(item)
-                dismiss()
-            }
-            PopoverMenuRow(title: "Paste & Keep Window Open", systemImage: "pin") {
-                core.pasteKeepingWindowOpen(item)
-                dismiss()
-            }
-            if item.kind == .image {
-                PopoverMenuRow(title: "Show in Finder", systemImage: "folder") {
-                    core.revealClipboardImage(item)
-                    dismiss()
-                }
-            }
-            PopoverMenuRow(title: "Delete Entry", systemImage: "trash", isDestructive: true) {
-                store.remove(item)
-                dismiss()
-            }
-            PopoverMenuRow(
-                title: "Delete All Entries", systemImage: "trash.fill", isDestructive: true
-            ) {
-                store.clearAll()
-                dismiss()
-            }
         }
     }
 }

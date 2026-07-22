@@ -70,18 +70,17 @@ struct CalculatorCard: View {
     }
 }
 
-/// Actions popover for the calculator card — only answers can be copied, so an error card gets no menu (the caller passes `calc` only for value payloads).
-struct CalcActionsMenu: View {
-    let result: CalcResult
-    let dismiss: () -> Void
-    @EnvironmentObject private var core: AppCore
-
-    var body: some View {
-        PopoverMenu(header: result.expression) {
-            PopoverMenuRow(title: "Copy Answer", systemImage: "doc.on.doc", shortcut: "↵") {
-                core.copyCalculatorResult(result)
-                dismiss()
-            }
-        }
+/// Actions menu content for the calculator card — only answers can be copied, so an error card gets no menu (the caller passes `calc` only for value payloads).
+@MainActor
+enum CalcActionsMenu {
+    static func content(result: CalcResult, core: AppCore) -> PopoverMenuContent {
+        PopoverMenuContent(
+            header: result.expression,
+            items: [
+                PopoverMenuItem(title: "Copy Answer", systemImage: "doc.on.doc", shortcut: "↵") {
+                    core.copyCalculatorResult(result)
+                }
+            ]
+        )
     }
 }
