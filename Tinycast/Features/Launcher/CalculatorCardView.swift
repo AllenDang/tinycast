@@ -31,15 +31,9 @@ struct CalculatorCard: View {
             case .value(let display, _):
                 HStack(spacing: 0) {
                     CalcColumn(text: result.expression, badge: result.sourceBadge, weight: .medium)
-                    ZStack {
-                        Rectangle()
-                            .fill(Theme.Colors.separator)
-                            .frame(width: 1)
-                        Image(systemName: "arrow.right")
-                            .font(.body.weight(.semibold))
-                            .foregroundStyle(.tertiary)
-                    }
-                    .frame(maxHeight: .infinity)
+                    Image(systemName: "arrow.right")
+                        .font(.title3.weight(.semibold))
+                        .foregroundStyle(.tertiary)
                     CalcColumn(text: display, badge: result.targetBadge, weight: .semibold)
                 }
                 .fixedSize(horizontal: false, vertical: true)
@@ -56,7 +50,7 @@ struct CalculatorCard: View {
             }
         }
         .padding(.horizontal, Theme.Spacing.xl)
-        .padding(.vertical, Theme.Spacing.xxl)
+        .padding(.vertical, Theme.Spacing.xxxl)
         .background(
             RoundedRectangle(cornerRadius: Theme.Radius.card, style: .continuous)
                 .fill(Theme.Colors.cardFill)
@@ -78,7 +72,7 @@ private struct CalcColumn: View {
     var body: some View {
         VStack(spacing: Theme.Spacing.md) {
             Text(text)
-                .font(.title2.weight(weight))
+                .font(Theme.Typography.calcResult.weight(weight))
                 .lineLimit(1)
                 .minimumScaleFactor(0.6)
             if let badge {

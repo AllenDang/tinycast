@@ -10,6 +10,8 @@ enum Theme {
         static let lg: CGFloat = 10
         static let xl: CGFloat = 12
         static let xxl: CGFloat = 20
+        /// Calculator answer card's roomier vertical breathing room.
+        static let xxxl: CGFloat = 28
     }
 
     enum Radius {
@@ -62,6 +64,8 @@ enum Theme {
         static let rowTitle = Font.body
         static let rowTrailing = Font.callout
         static let sectionHeader = Font.subheadline.weight(.medium)
+        /// The big value line on the calculator answer card (both source and target sides).
+        static let calcResult = Font.title
         static let keyCap = Font.caption
         static let bar = Font.callout.weight(.medium)
         static let menuRow = Font.body
