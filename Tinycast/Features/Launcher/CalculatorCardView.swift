@@ -30,20 +30,13 @@ struct CalculatorCard: View {
             switch result.payload {
             case .value(let display, _):
                 HStack(spacing: 0) {
-                    Text(result.expression)
-                        .font(.title2.weight(.medium))
-                        .foregroundStyle(.secondary)
-                        .lineLimit(1)
-                        .frame(maxWidth: .infinity)
+                    CalcColumn(text: result.expression, badge: result.sourceBadge, weight: .medium)
                     Image(systemName: "arrow.right")
-                        .font(.body.weight(.semibold))
+                        .font(.title3.weight(.semibold))
                         .foregroundStyle(.tertiary)
-                    Text(display)
-                        .font(.title2.weight(.semibold))
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.6)
-                        .frame(maxWidth: .infinity)
+                    CalcColumn(text: display, badge: result.targetBadge, weight: .semibold)
                 }
+                .fixedSize(horizontal: false, vertical: true)
             case .error(let message):
                 HStack(spacing: Theme.Spacing.md) {
                     Image(systemName: "exclamationmark.triangle")
@@ -57,7 +50,7 @@ struct CalculatorCard: View {
             }
         }
         .padding(.horizontal, Theme.Spacing.xl)
-        .padding(.vertical, Theme.Spacing.xxl)
+        .padding(.vertical, Theme.Spacing.xxxl)
         .background(
             RoundedRectangle(cornerRadius: Theme.Radius.card, style: .continuous)
                 .fill(Theme.Colors.cardFill)
@@ -67,6 +60,35 @@ struct CalculatorCard: View {
                 .fill(fill)
         )
         .onHover { hovered = $0 }
+    }
+}
+
+/// One side of the two-column answer card: the value line with an optional word-name badge pill beneath ("Meters", "9:00 AM").
+private struct CalcColumn: View {
+    let text: String
+    let badge: String?
+    let weight: Font.Weight
+
+    var body: some View {
+        VStack(spacing: Theme.Spacing.md) {
+            Text(text)
+                .font(Theme.Typography.calcResult.weight(weight))
+                .lineLimit(1)
+                .minimumScaleFactor(0.6)
+            if let badge {
+                Text(badge)
+                    .font(Theme.Typography.keyCap)
+                    .foregroundStyle(.secondary)
+                    .padding(.horizontal, Theme.Spacing.sm)
+                    .padding(.vertical, Theme.Spacing.xxs)
+                    .background(
+                        RoundedRectangle(cornerRadius: Theme.Radius.keyCap, style: .continuous)
+                            .fill(Theme.Colors.controlSurface)
+                    )
+            }
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.horizontal, Theme.Spacing.md)
     }
 }
 

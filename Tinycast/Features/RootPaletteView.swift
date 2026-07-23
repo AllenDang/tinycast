@@ -19,6 +19,8 @@ struct RootPaletteView: View {
     @State private var menuSelection = 0
     /// Bumped only when the selection should pull the scroll view with it (keyboard nav, list resets); mouse selection targets a visible row, so it leaves this and the list put.
     @State private var scrollToken = UUID()
+    /// The emoji grid's scroll request — the lazy grid needs distinct reset/follow scroll ops, unlike the 1-D lists that recenter fine on `scrollToken`.
+    @State private var emojiScroll = EmojiScrollIntent(kind: .top)
 
     private var isQueryEmpty: Bool { vm.query.trimmingCharacters(in: .whitespaces).isEmpty }
 
@@ -231,15 +233,18 @@ struct RootPaletteView: View {
         .onChange(of: vm.query) {
             vm.selection = 0
             scrollToken = UUID()
+            emojiScroll = EmojiScrollIntent(kind: .top)
         }
         .onChange(of: vm.mode) {
             vm.selection = 0
             showActions = false
             scrollToken = UUID()
+            emojiScroll = EmojiScrollIntent(kind: .top)
         }
         // Pop-to-root: `prepare` clears query/selection, but if both were already at their defaults the handlers above never fire — this token guarantees the scroll itself snaps back to the top.
         .onChange(of: vm.resetToken) {
             scrollToken = UUID()
+            emojiScroll = EmojiScrollIntent(kind: .top)
         }
         // Opening either menu highlights its first row and closes the other, so exactly one menu is ever open and always has a highlight.
         .onChange(of: showActions) {
@@ -393,6 +398,7 @@ struct RootPaletteView: View {
                         .font(Theme.Typography.headerIcon)
                         .symbolRenderingMode(.hierarchical)
                         .foregroundStyle(.secondary)
+                        .frame(width: Theme.Size.headerIconSlot)
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
@@ -401,6 +407,7 @@ struct RootPaletteView: View {
                     .font(Theme.Typography.headerIcon)
                     .symbolRenderingMode(.hierarchical)
                     .foregroundStyle(.secondary)
+                    .frame(width: Theme.Size.headerIconSlot)
             }
             searchField
             // Compact bar pins favorites to the right of the field; expanded shows them as list rows instead.
@@ -417,9 +424,9 @@ struct RootPaletteView: View {
         }
         // Align the search icon with the list rows and section headers below (list inset + row inset).
         .padding(.horizontal, Theme.Spacing.md * 2)
-        // Collapsed: the bar is the whole window, so it takes the taller compact height (no top-only padding); expanded: the floating header height.
-        .frame(height: isCollapsed ? Theme.Size.compactHeight : Theme.Size.headerHeight)
-        .padding(.top, isCollapsed ? 0 : Theme.Spacing.md)
+        // Fixed row height + top padding, identical in both states, so typing (which flips compact→expanded) can't move the search bar. Compact centers the row in symmetric slack; expanded floats the same row over the list.
+        .frame(height: Theme.Size.headerHeight)
+        .padding(.top, Theme.Size.headerPadding)
         .frame(maxWidth: .infinity)
     }
 
@@ -431,6 +438,7 @@ struct RootPaletteView: View {
         )
         .textFieldStyle(.plain)
         .font(Theme.Typography.searchField)
+        .tint(.white)
         .focused($searchFocused)
         .onSubmit(activateSelection)
     }
@@ -538,7 +546,7 @@ struct RootPaletteView: View {
                     sections: emojiSections,
                     selection: selection,
                     tone: settings.emojiSkinTone,
-                    scrollToken: scrollToken,
+                    scroll: emojiScroll,
                     onSelect: { vm.selection = $0 },
                     onActivate: activateSelection,
                     onActions: { flat in
@@ -644,6 +652,7 @@ struct RootPaletteView: View {
         guard resultCount > 0 else { return }
         vm.selection = min(max(selection + delta, 0), resultCount - 1)
         scrollToken = UUID()
+        emojiScroll = EmojiScrollIntent(kind: .follow)
     }
 
     /// Move the open menu's highlight, clamped at the ends (no wrap — consistent with `move`).
@@ -665,7 +674,7 @@ struct RootPaletteView: View {
             counts: emojiSections.map(\.entries.count), columns: EmojiGrid.columns)
         guard resultCount > 0 else { return }
         vm.selection = delta > 0 ? geometry.down(from: selection) : geometry.up(from: selection)
-        scrollToken = UUID()
+        emojiScroll = EmojiScrollIntent(kind: .follow)
     }
 
     /// Tab flips launcher↔clipboard; Calculator History (entered via its command) exits back to the launcher rather than joining the cycle.

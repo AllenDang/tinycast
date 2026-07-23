@@ -62,13 +62,15 @@ enum IconCache {
     }
 
     /// A freshly-decoded, thereafter-immutable `NSImage` is safe to move across the actor boundary.
-    private struct Decoded: @unchecked Sendable { let image: NSImage }
+    private struct Decoded: @unchecked Sendable { let image: NSImage? }
 
-    /// Return the decode directly (not a cache re-read) so an `NSCache` purge mid-decode can't strand a row on its placeholder.
+    /// Return the decode directly (not a cache re-read) so an `NSCache` purge mid-decode can't strand a row on its placeholder. A missing path returns nil — not `NSWorkspace`'s broken-document icon — and never caches, so an uninstalled app can't leave a broken icon behind.
     static func loadAsync(forFile path: String) async -> NSImage? {
         if let cached = cached(forFile: path) { return cached }
-        return await Task.detached(priority: .userInitiated) { Decoded(image: icon(forFile: path)) }
-            .value.image
+        return await Task.detached(priority: .userInitiated) { () -> Decoded in
+            guard FileManager.default.fileExists(atPath: path) else { return Decoded(image: nil) }
+            return Decoded(image: icon(forFile: path))
+        }.value.image
     }
     static func loadSymbolAsync(named name: String) async -> NSImage? {
         if let cached = cachedSymbol(named: name) { return cached }
@@ -150,8 +152,15 @@ final class AppIndex: ObservableObject {
     /// One-entry memo so repeated renders for the same query reuse the ranking instead of re-matching every frame.
     private var matchCache: (query: String, result: [AppEntry])?
 
+    private var isRefreshing = false
+
+    /// Re-scan (called on every launcher open); the in-flight guard drops overlapping reopens and `apps` is only re-published when the set changed, so an unchanged reopen does no UI work.
     func refresh() async {
+        guard !isRefreshing else { return }
+        isRefreshing = true
+        defer { isRefreshing = false }
         let found = await Task.detached(priority: .utility) { AppIndex.scan() }.value
+        guard found != apps else { return }
         apps = found
         matchCache = nil
     }

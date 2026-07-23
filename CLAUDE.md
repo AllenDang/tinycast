@@ -71,7 +71,11 @@ are methods on `AppCore` that the SwiftUI views call.
 **Two entry points, mostly AppKit windows.** `TinycastApp` (`@main`) declares only a `MenuBarExtra`
 scene; everything visible is driven imperatively from AppKit. The command palette is a borderless
 floating `NSPanel` (`Core/PalettePanel.swift`) hosting SwiftUI via `NSHostingView`, managed by
-`PaletteWindowController`. Settings/About are plain `NSWindow`s via `AuxWindowController`
+`PaletteWindowController`. It toggles between a compact bar and the full launcher by resizing the
+window: `PaletteWindowController` solely owns the frame (resolved once per show to a top-left anchor so
+it grows downward), and the hosting view sets `sizingOptions = []` so SwiftUI never drives the window
+size — without that the hosting view resizes the panel to fit content and the top edge drifts on the
+compact↔expanded swap. Settings/About are plain `NSWindow`s via `AuxWindowController`
 (in `Features/About/AboutView.swift`) — the SwiftUI `Settings`/`Window` scenes are unreliable for
 accessory apps, so this is deliberate. The app forces `.darkAqua` appearance globally; the Liquid Glass
 material is tuned for a dark surface only.
@@ -85,12 +89,19 @@ panel and `AppCore`. Showing the palette calls `prepare(mode:)`, which resets st
 flat `selection` index is the single source of truth for highlight/activation and must always match the
 visible row order, including the inline calculator card at index 0 when present (see below).
 
-**Inline calculator.** `Core/Calculator/` is a Foundation-only engine (parser → evaluator → formatter,
-with unit conversion) fronted by `CalcMemo`, a one-deep memo mirroring `AppIndex`'s. When the launcher
-or Calculator History query evaluates to a result, a `CalculatorCard` is pinned at the top of the list
-(flat selection index 0, shifting rows by one) and Enter copies the answer + records it to
-`CalculatorHistoryStore`. Keep the engine AppKit/SwiftUI-free so the `calc-test.swift` harness can
-compile the real sources.
+**Inline calculator.** `Core/Calculator/` is a Foundation-only engine fronted by `CalcMemo`, a one-deep
+memo mirroring `AppIndex`'s. `CalcEngine.evaluate` runs a pipeline: natural-language date/time
+(`CalcDateTime`, e.g. `hrs till 9am`, `days till 9april`, `today + 3 weeks`) → numeric reject →
+tokenize → base conversion → explicit unit conversion (`10km to mi`) → **bare-unit auto-conversion**
+(`1m` → feet+inches, `1hr` → 60 min, via `CalcUnits.parseBareConversion` + the `autoTargets` map) →
+plain arithmetic. Date/time depends on the clock, so it takes an injected `now`/`calendar` — the public
+`evaluate(_:)` uses the live clock, and `evaluate(_:now:calendar:)` lets `calc-test.swift` assert exact
+strings against a fixed clock. `CalcResult` carries an `expression` (left), a `display`/`copyText`
+payload (right), and optional `sourceBadge`/`targetBadge` word-name pills; `CalculatorCard` renders it as
+a two-column card. When the launcher or Calculator History query evaluates to a result the card is
+pinned at the top of the list (flat selection index 0, shifting rows by one) and Enter copies the answer
++ records it to `CalculatorHistoryStore`. Keep the whole engine (incl. `CalcDateTime`) AppKit/SwiftUI-free
+so the `calc-test.swift` harness compiles the real sources.
 
 **Visual design.** The palette/settings look — forced-dark, white-alpha ramp, floating transparent
 bars, scroll-driven edge dissolve, Liquid Glass only on floating controls — is documented in

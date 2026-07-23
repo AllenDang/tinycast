@@ -56,13 +56,27 @@ private enum EmojiGridItem: Identifiable {
     }
 }
 
+/// A grid scroll request: reset and follow need different, estimation-safe scroll ops on the lazy grid, so the caller states which it wants instead of the grid guessing from one shared token.
+struct EmojiScrollIntent: Equatable {
+    enum Kind {
+        /// Reset: clamp to the true top. `.top` on the first item is estimation-proof — nothing sits above it, so its offset can only be 0.
+        case top
+        /// Keyboard nav: minimal scroll-to-visible (nil anchor), which never repositions an already-visible row.
+        case follow
+    }
+
+    var kind: Kind
+    /// Distinguishes back-to-back intents of the same kind so `onChange` still fires.
+    var nonce = UUID()
+}
+
 struct EmojiGridView: View {
     let sections: [EmojiGridSection]
     /// Flat selection index across all sections in order — the same single-source-of-truth contract as the list modes.
     let selection: Int
     let tone: EmojiSkinTone
-    /// Changes only when the grid should scroll to follow the selection (keyboard nav / reset), so mouse selection never yanks the scroll position.
-    let scrollToken: UUID
+    /// The pending scroll request; mouse selection leaves it untouched so clicking a row never yanks the scroll position.
+    let scroll: EmojiScrollIntent
     let onSelect: (Int) -> Void
     let onActivate: () -> Void
     let onActions: (Int) -> Void
@@ -97,6 +111,10 @@ struct EmojiGridView: View {
         return section.id + "-row-\((selection - section.start) / EmojiGrid.columns)"
     }
 
+    /// First header and first row, ID'd the same way as `items`; the header is the scroll-to-top target.
+    private var firstItemID: String? { sections.first.map { $0.id + "-header" } }
+    private var firstRowID: String? { sections.first.map { $0.id + "-row-0" } }
+
     var body: some View {
         ScrollViewReader { proxy in
             ScrollView {
@@ -120,8 +138,19 @@ struct EmojiGridView: View {
             }
             .edgeDissolve()
             .thinScrollbar()
-            .onChange(of: scrollToken) {
-                if let selectedRowID { proxy.scrollTo(selectedRowID, anchor: .center) }
+            .onChange(of: scroll) { _, scroll in
+                switch scroll.kind {
+                case .top:
+                    if let firstItemID { proxy.scrollTo(firstItemID, anchor: .top) }
+                case .follow:
+                    guard let selectedRowID else { return }
+                    // On the first row, snap to the top so its header shows too — a nil anchor won't, since the row is already visible.
+                    if selectedRowID == firstRowID, let firstItemID {
+                        proxy.scrollTo(firstItemID, anchor: .top)
+                    } else {
+                        proxy.scrollTo(selectedRowID, anchor: nil)
+                    }
+                }
             }
         }
     }

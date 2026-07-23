@@ -17,6 +17,19 @@ enum CalcFormatter {
         return String(format: "%.10g", v)
     }
 
+    /// A length in feet rendered as whole feet + remaining inches ("3 feet 3.370078740 inches"); used only for the bare metric-length auto-conversion. Sub-foot values drop the feet part.
+    static func compoundFeetInches(_ feet: Double) -> String {
+        let sign = feet < 0 ? "-" : ""
+        let magnitude = abs(feet)
+        let wholeFeet = magnitude.rounded(.towardZero)
+        let inches = (magnitude - wholeFeet) * 12
+        let feetPart = wholeFeet == 0 ? "" : "\(sign)\(display(wholeFeet)) \(wholeFeet == 1 ? "foot" : "feet")"
+        let inchText = display(inches)
+        let inchPart = "\(inchText) \(inchText == "1" ? "inch" : "inches")"
+        if feetPart.isEmpty { return "\(sign)\(inchPart)" }
+        return "\(feetPart) \(inchPart)"
+    }
+
     /// Insert `,` every three integer digits. Exponent-form strings pass through untouched.
     static func grouped(_ text: String) -> String {
         guard !text.contains("e"), !text.contains("E") else { return text }

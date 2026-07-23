@@ -145,6 +145,8 @@ final class AppCore: ObservableObject {
             palette.prepare(mode: mode)
         }
         windowController.show()
+        // Re-scan on open so an app uninstalled since the last scan drops out of the launcher.
+        if palette.mode == .launcher { Task { await appIndex.refresh() } }
     }
 
     func hidePalette(restoreFocus: Bool = true) {

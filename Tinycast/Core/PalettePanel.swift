@@ -39,6 +39,8 @@ final class PalettePanel: NSPanel {
 
         let hosting = NSHostingView(rootView: rootView)
         hosting.wantsLayer = true
+        // The controller owns the frame: without this the hosting view resizes the panel to fit the SwiftUI content, dropping the top edge on the first compact→expanded mount.
+        hosting.sizingOptions = []
         contentView = hosting
     }
 
