@@ -56,17 +56,17 @@ private enum EmojiGridItem: Identifiable {
     }
 }
 
-/// A grid scroll request. Reset and follow need different, lazy-estimation-safe operations, so the caller states which it wants rather than the grid guessing from one shared token — the guessing is what let the top row over-scroll under the header, or the grid jump when crossing a section boundary.
+/// A grid scroll request: reset and follow need different, estimation-safe scroll ops on the lazy grid, so the caller states which it wants instead of the grid guessing from one shared token.
 struct EmojiScrollIntent: Equatable {
     enum Kind {
-        /// Open / mode / query change: clamp to the true top. Anchoring the first item to `.top` is estimation-proof — nothing sits above it, so its offset can only be 0, no matter how the lazy rows below are estimated.
+        /// Reset: clamp to the true top. `.top` on the first item is estimation-proof — nothing sits above it, so its offset can only be 0.
         case top
-        /// Keyboard navigation: minimal scroll to keep the selection on screen. A nil anchor never repositions an already-visible row, so it can't recenter or jump the grid.
+        /// Keyboard nav: minimal scroll-to-visible (nil anchor), which never repositions an already-visible row.
         case follow
     }
 
     var kind: Kind
-    /// Makes back-to-back intents of the same kind (two navigations in a row) distinct so `onChange` still fires.
+    /// Distinguishes back-to-back intents of the same kind so `onChange` still fires.
     var nonce = UUID()
 }
 
@@ -111,7 +111,7 @@ struct EmojiGridView: View {
         return section.id + "-row-\((selection - section.start) / EmojiGrid.columns)"
     }
 
-    /// The grid's first render item (a section header) and its first row, built the same way as `items` — the header is the estimation-proof scroll-to-top target.
+    /// First header and first row, ID'd the same way as `items`; the header is the scroll-to-top target.
     private var firstItemID: String? { sections.first.map { $0.id + "-header" } }
     private var firstRowID: String? { sections.first.map { $0.id + "-row-0" } }
 
@@ -144,7 +144,7 @@ struct EmojiGridView: View {
                     if let firstItemID { proxy.scrollTo(firstItemID, anchor: .top) }
                 case .follow:
                     guard let selectedRowID else { return }
-                    // Reaching the first row should bring its section header fully into view, which a nil anchor won't do (the row is already visible) — snap to the true top instead, mirroring the reset case.
+                    // On the first row, snap to the top so its header shows too — a nil anchor won't, since the row is already visible.
                     if selectedRowID == firstRowID, let firstItemID {
                         proxy.scrollTo(firstItemID, anchor: .top)
                     } else {

@@ -19,7 +19,7 @@ struct RootPaletteView: View {
     @State private var menuSelection = 0
     /// Bumped only when the selection should pull the scroll view with it (keyboard nav, list resets); mouse selection targets a visible row, so it leaves this and the list put.
     @State private var scrollToken = UUID()
-    /// The emoji grid's scroll request. Unlike the 1-D lists (which recenter fine on `scrollToken`), the grid's reset and follow cases need distinct, lazy-estimation-safe operations, so the intent is stated explicitly rather than inferred from a bare pulse.
+    /// The emoji grid's scroll request — the lazy grid needs distinct reset/follow scroll ops, unlike the 1-D lists that recenter fine on `scrollToken`.
     @State private var emojiScroll = EmojiScrollIntent(kind: .top)
 
     private var isQueryEmpty: Bool { vm.query.trimmingCharacters(in: .whitespaces).isEmpty }
