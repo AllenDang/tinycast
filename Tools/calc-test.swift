@@ -117,11 +117,110 @@ struct CalcTests {
         expectExpression("3*3", "3×3")
         expectExpression("10km to mi", "10 km")
 
+        // Badges on explicit conversions
+        expectBadges("10km to mi", source: "Kilometers", target: "Miles")
+        expectBadges("100 C to F", source: "Celsius", target: "Fahrenheit")
+
+        // Bare-unit auto-conversion (no connector)
+        expectDisplay("1m", "3 feet 3.37007874 inches")
+        expectExpression("1m", "1 m")
+        expectBadges("1m", source: "Meters", target: "Feet")
+        expectDisplay("1hr", "60 min")
+        expectBadges("1hr", source: "Hours", target: "Minutes")
+        expectDisplay("5ft", "1.524 m")
+        expectDisplay("100g", "3.527396195 oz")
+        expectDisplay("2*3 kg", "13.22773573 lb")  // value side is a full expression
+        expectDisplay("20 celsius", "68 °F")
+        expectDisplay("50cm", "19.68503937 in")
+        // Ambiguous single-letter aliases stay app searches, not bare temperatures
+        expectNil("5k")
+        expectNil("100 c")
+        expectNil("32f")
+
+        // Date/time — evaluated against a fixed clock: Fri 2026-07-24 00:18 UTC
+        expectDisplayAt("hrs till 9am", "8.7 hours")
+        expectBadgesAt("hrs till 9am", source: "12:18 AM", target: "9:00 AM")
+        expectDisplayAt("hrs till july", "8,207.7 hours")
+        expectBadgesAt("hrs till july", source: "12:18 AM", target: "12:00 AM")
+        expectDisplayAt("days till 9april", "259 days")
+        expectBadgesAt(
+            "days till 9april", source: "Friday, 24 July", target: "Friday, 9 April, 2027")
+        expectDisplayAt("days till july", "342 days")
+        expectBadgesAt(
+            "days till july", source: "Friday, 24 July", target: "Thursday, 1 July, 2027")
+        expectDisplayAt("days until tomorrow", "1 day")
+        expectDisplayAt("weeks till 9april", "37 weeks")  // 259 / 7
+        expectDisplayAt("today + 3 weeks", "Friday, 14 August")
+        expectDisplayAt("now + 90 min", "Friday, 24 July at 1:48 AM")
+        expectDisplayAt("jul 4 - today", "345 days")
+        expectBadgesAt("jul 4 - today", source: "Sunday, 4 July, 2027", target: "Friday, 24 July")
+        // Arithmetic with spaced operators must still be plain math, not date math
+        expectDisplayAt("10 - 3", "7")
+        expectDisplayAt("450 + 20%", "540")
+        // Bare date/unit words alone are app searches, not cards
+        expectNilAt("today")
+        expectNilAt("july")
+        expectNilAt("tomorrow")
+
         print("\n\(passes) passed, \(failures) failed")
         exit(failures == 0 ? 0 : 1)
     }
 
+    // MARK: - Fixed clock for deterministic date/time tests (Fri 2026-07-24 00:18:00 UTC)
+
+    static let clock: (now: Date, calendar: Calendar) = {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(identifier: "UTC")!
+        calendar.locale = Locale(identifier: "en_US")
+        var components = DateComponents()
+        components.year = 2026
+        components.month = 7
+        components.day = 24
+        components.hour = 0
+        components.minute = 18
+        components.second = 0
+        return (calendar.date(from: components)!, calendar)
+    }()
+
     // MARK: - Helpers
+
+    static func expectDisplayAt(_ query: String, _ expected: String) {
+        guard
+            case .value(let display, _)? = CalcEngine.evaluate(
+                query, now: clock.now, calendar: clock.calendar)?.payload
+        else {
+            fail(query, expected: expected, got: "nil / error")
+            return
+        }
+        check(query, expected: expected, got: display)
+    }
+
+    static func expectBadgesAt(_ query: String, source: String, target: String) {
+        guard let result = CalcEngine.evaluate(query, now: clock.now, calendar: clock.calendar)
+        else {
+            fail(query, expected: "\(source) → \(target)", got: "nil")
+            return
+        }
+        check(query + " [source badge]", expected: source, got: result.sourceBadge ?? "nil")
+        check(query + " [target badge]", expected: target, got: result.targetBadge ?? "nil")
+    }
+
+    static func expectNilAt(_ query: String) {
+        if let result = CalcEngine.evaluate(query, now: clock.now, calendar: clock.calendar) {
+            fail(query, expected: "nil", got: "\(result.payload)")
+        } else {
+            passes += 1
+        }
+    }
+
+    static func expectBadges(_ query: String, source: String, target: String) {
+        guard let result = CalcEngine.evaluate(query) else {
+            fail(query, expected: "\(source) → \(target)", got: "nil")
+            return
+        }
+        check(query + " [source badge]", expected: source, got: result.sourceBadge ?? "nil")
+        check(query + " [target badge]", expected: target, got: result.targetBadge ?? "nil")
+    }
 
     static func expectDisplay(_ query: String, _ expected: String) {
         guard case .value(let display, _)? = CalcEngine.evaluate(query)?.payload else {

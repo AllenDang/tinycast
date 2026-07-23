@@ -11,7 +11,17 @@ struct CalcResult: Equatable, Sendable {
 
     /// Normalized echo of what was evaluated, shown on the card's left side ("3×3", "10 km").
     let expression: String
+    /// Optional word-name pills beneath each side of the card ("Meters"→"Feet", "12:18 AM"→"9:00 AM"); nil for plain arithmetic.
+    let sourceBadge: String?
+    let targetBadge: String?
     let payload: Payload
+
+    init(expression: String, sourceBadge: String? = nil, targetBadge: String? = nil, payload: Payload) {
+        self.expression = expression
+        self.sourceBadge = sourceBadge
+        self.targetBadge = targetBadge
+        self.payload = payload
+    }
 
     /// True only for a copyable value — error cards are informational and have no primary action or actions menu.
     var isActionable: Bool {
@@ -22,10 +32,20 @@ struct CalcResult: Equatable, Sendable {
 
 /// Entry point turning a raw query into a calculator answer (or nil when it isn't calculator input), via a pure pre-filter → base → unit → arithmetic pipeline; kept Foundation-only so `Tools/calc-test.swift` compiles it standalone.
 enum CalcEngine {
+    /// Public entry: evaluates against the live clock.
     static func evaluate(_ raw: String) -> CalcResult? {
+        evaluate(raw, now: Date(), calendar: .current)
+    }
+
+    /// `now`/`calendar` are injected so the date/time paths are deterministic under `Tools/calc-test.swift`.
+    static func evaluate(_ raw: String, now: Date, calendar: Calendar) -> CalcResult? {
         let query = raw.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !query.isEmpty, query.count <= 256 else { return nil }
-        // Cheap reject before tokenizing: calculator input always carries a digit or a constant, keeping the common app-search case near-free.
+
+        // Date/time first: `hrs till july` carries no digit, so it must run before the numeric reject below.
+        if let dateTime = CalcDateTime.evaluate(query, now: now, calendar: calendar) { return dateTime }
+
+        // Cheap reject before tokenizing: remaining calculator input always carries a digit or a constant, keeping the common app-search case near-free.
         guard
             query.contains(where: { $0.isASCII && $0.isNumber })
                 || query.lowercased().contains("e") || query.contains("π")
@@ -51,6 +71,8 @@ enum CalcEngine {
             case .value(let input, let from, let to, let output):
                 return CalcResult(
                     expression: "\(CalcFormatter.display(input)) \(from.symbol)",
+                    sourceBadge: from.name,
+                    targetBadge: to.name,
                     payload: .value(
                         display: "\(CalcFormatter.display(output)) \(to.symbol)",
                         copyText: "\(CalcFormatter.copyText(output)) \(to.symbol)"))
@@ -62,6 +84,22 @@ enum CalcEngine {
                             "Cannot convert \(from.category.displayName) to \(to.category.displayName)."
                     ))
             }
+        }
+
+        // Keyword-less conversion: `1m` → feet+inches, `1hr` → 60 min.
+        if let bare = CalcUnits.parseBareConversion(tokens) {
+            let display =
+                bare.compound
+                ? CalcFormatter.compoundFeetInches(bare.output)
+                : "\(CalcFormatter.display(bare.output)) \(bare.to.symbol)"
+            let copyText =
+                bare.compound
+                ? display : "\(CalcFormatter.copyText(bare.output)) \(bare.to.symbol)"
+            return CalcResult(
+                expression: "\(CalcFormatter.display(bare.input)) \(bare.from.symbol)",
+                sourceBadge: bare.from.name,
+                targetBadge: bare.to.name,
+                payload: .value(display: display, copyText: copyText))
         }
 
         guard let value = CalcParser.evaluate(tokens) else { return nil }
