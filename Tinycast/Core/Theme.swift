@@ -29,9 +29,11 @@ enum Theme {
     enum Size {
         static let panelWidth: CGFloat = 750
         static let panelHeight: CGFloat = 475
-        /// Height of the collapsed compact search bar (headerHeight + symmetric padding for the favorite icons).
-        static let compactHeight: CGFloat = 64
         static let headerHeight: CGFloat = 44
+        /// Vertical breathing room above the search row — constant across compact/expanded so the bar never shifts when typing flips the state; also the compact bar's symmetric top/bottom slack.
+        static let headerPadding: CGFloat = 10
+        /// Collapsed compact bar: the search row centered in symmetric `headerPadding` slack.
+        static let compactHeight: CGFloat = headerHeight + headerPadding * 2
         static let bottomBarHeight: CGFloat = 52
         static let rowIcon: CGFloat = 24
         static let keyCap: CGFloat = 18

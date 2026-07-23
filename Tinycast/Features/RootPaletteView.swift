@@ -417,9 +417,9 @@ struct RootPaletteView: View {
         }
         // Align the search icon with the list rows and section headers below (list inset + row inset).
         .padding(.horizontal, Theme.Spacing.md * 2)
-        // Collapsed: the bar is the whole window, so it takes the taller compact height (no top-only padding); expanded: the floating header height.
-        .frame(height: isCollapsed ? Theme.Size.compactHeight : Theme.Size.headerHeight)
-        .padding(.top, isCollapsed ? 0 : Theme.Spacing.md)
+        // Fixed row height + top padding, identical in both states, so typing (which flips compact→expanded) can't move the search bar. Compact centers the row in symmetric slack; expanded floats the same row over the list.
+        .frame(height: Theme.Size.headerHeight)
+        .padding(.top, Theme.Size.headerPadding)
         .frame(maxWidth: .infinity)
     }
 
