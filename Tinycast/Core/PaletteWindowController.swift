@@ -27,6 +27,8 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
         anchor = nil
         // Size + place the panel to the current collapsed state before ordering front, so a compact summon never flashes at full size.
         positionPanel(panel, collapsed: core.paletteIsCollapsed)
+        // Flush the hosting view's first-mount layout while still off-screen, so the one-time safe-area settle of the `safeAreaInset` header doesn't nudge the search placeholder on the first visible frame.
+        panel.contentView?.layoutSubtreeIfNeeded()
         // The `.nonactivatingPanel` takes key focus without activating the app, so summoning the palette never raises the app's Settings/onboarding windows behind it.
         panel.makeKeyAndOrderFront(nil)
         panel.orderFrontRegardless()
