@@ -7,8 +7,8 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
     private var panel: PalettePanel?
     private(set) var previousApp: NSRunningApplication?
     private var popToRootTimer: Timer?
-    /// Y of the panel's top edge, held fixed across compact↔expanded resizes so the search bar stays put and the list grows downward. Recomputed from the full panel height each show.
-    private var anchorTopY: CGFloat = 0
+    /// Left/top edge of the panel, resolved once per show and reused across compact↔expanded resizes so both states share an exact top edge (only the height changes). Cleared on hide so the next summon re-resolves for the current screen.
+    private var anchor: (x: CGFloat, topEdgeY: CGFloat)?
 
     init(core: AppCore) {
         self.core = core
@@ -23,6 +23,8 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
             previousApp = frontmost
         }
         let panel = ensurePanel()
+        // Re-resolve the anchor for wherever the user is summoning now, then hold it for the whole session so compact↔expanded resizes never move the window.
+        anchor = nil
         // Size + place the panel to the current collapsed state before ordering front, so a compact summon never flashes at full size.
         positionPanel(panel, collapsed: core.paletteIsCollapsed)
         // The `.nonactivatingPanel` takes key focus without activating the app, so summoning the palette never raises the app's Settings/onboarding windows behind it.
@@ -37,6 +39,8 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
 
     func hide(restoreFocus: Bool) {
         panel?.orderOut(nil)
+        // Drop the session anchor so the next summon re-resolves for the screen the user is on then.
+        anchor = nil
         // Drop the multi-MB clipboard preview bitmaps now the window is gone, so idle RAM returns near baseline (row thumbnails stay cached).
         ImageThumbnail.purgePreviews()
         schedulePopToRoot()
@@ -130,16 +134,25 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
         positionPanel(panel, collapsed: collapsed)
     }
 
-    /// Size the panel to compact/expanded height (width fixed) and place it so its top edge sits at `anchorTopY` — recomputed from the full panel height so compact and expanded share one top. Resize is instant (no animation, matching Raycast).
+    /// Size the panel to compact/expanded height (width fixed) and place it against the session anchor so its top edge stays put and the list grows downward. Resize is instant (no animation, matching Raycast).
     private func positionPanel(_ panel: NSPanel, collapsed: Bool) {
-        guard let screen = NSScreen.main else { return }
-        let visible = screen.visibleFrame
-        let width = Theme.Size.panelWidth
-        let fullOrigin = visible.midY - Theme.Size.panelHeight / 2 + visible.height * 0.08
-        anchorTopY = fullOrigin + Theme.Size.panelHeight
+        guard let anchor = resolveAnchor() else { return }
         let height = collapsed ? Theme.Size.compactHeight : Theme.Size.panelHeight
         let frame = NSRect(
-            x: visible.midX - width / 2, y: anchorTopY - height, width: width, height: height)
+            x: anchor.x, y: anchor.topEdgeY - height, width: Theme.Size.panelWidth, height: height)
         panel.setFrame(frame, display: true)
+    }
+
+    /// The current session's anchor, resolved from the active screen on first use and cached until hide — so compact and expanded placements can never read a different `visibleFrame`.
+    private func resolveAnchor() -> (x: CGFloat, topEdgeY: CGFloat)? {
+        if let anchor { return anchor }
+        guard let screen = NSScreen.main else { return nil }
+        let visible = screen.visibleFrame
+        let resolved = (
+            x: visible.midX - Theme.Size.panelWidth / 2,
+            topEdgeY: visible.maxY - visible.height * Theme.Size.paletteTopMarginFraction
+        )
+        anchor = resolved
+        return resolved
     }
 }
