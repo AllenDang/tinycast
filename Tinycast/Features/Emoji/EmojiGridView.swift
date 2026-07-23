@@ -97,6 +97,9 @@ struct EmojiGridView: View {
         return section.id + "-row-\((selection - section.start) / EmojiGrid.columns)"
     }
 
+    /// Namespace of the grid's first section, used to derive its header/first-row IDs the same way `items` does.
+    private var firstSectionID: String? { sections.first?.id }
+
     var body: some View {
         ScrollViewReader { proxy in
             ScrollView {
@@ -121,7 +124,13 @@ struct EmojiGridView: View {
             .edgeDissolve()
             .thinScrollbar()
             .onChange(of: scrollToken) {
-                if let selectedRowID { proxy.scrollTo(selectedRowID, anchor: .center) }
+                guard let selectedRowID else { return }
+                // The first row rests naturally below the floating header; centering it over the lazily-estimated grid over-scrolls it up under the header, so top-align to its section header instead (fresh open / arrow back to top).
+                if let firstSectionID, selectedRowID == firstSectionID + "-row-0" {
+                    proxy.scrollTo(firstSectionID + "-header", anchor: .top)
+                } else {
+                    proxy.scrollTo(selectedRowID, anchor: .center)
+                }
             }
         }
     }
