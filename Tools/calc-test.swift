@@ -157,6 +157,13 @@ struct CalcTests {
         // Arithmetic with spaced operators must still be plain math, not date math
         expectDisplayAt("10 - 3", "7")
         expectDisplayAt("450 + 20%", "540")
+        // Letter-free `m/d - m/d` is fraction math, not a date difference (both operands are valid arithmetic)
+        expectDisplayAt("5/2 - 1/2", "2")
+        expectDisplayAt("3/4 - 1/4", "0.5")
+        expectDisplayAt("1/2 - 1/4", "0.25")
+        // A slash date still reads as a date when the other side names a keyword
+        expectDisplayAt("9/4 - today", "42 days")
+        expectDisplayAt("today - 9/4", "-42 days")
         // Bare date/unit words alone are app searches, not cards
         expectNilAt("today")
         expectNilAt("july")

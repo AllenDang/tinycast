@@ -5,7 +5,9 @@ import Foundation
 ///   B. a moment ± a duration — `today + 3 weeks`, `now + 90 min`
 ///   C. difference between two moments — `jul 4 - today`
 enum CalcDateTime {
-    static func evaluate(_ raw: String, now: Date = Date(), calendar: Calendar = .current) -> CalcResult? {
+    static func evaluate(_ raw: String, now: Date = Date(), calendar: Calendar = .current)
+        -> CalcResult?
+    {
         let echo = raw.trimmingCharacters(in: .whitespacesAndNewlines)
         let query = echo.lowercased()
         guard !query.isEmpty else { return nil }
@@ -82,9 +84,9 @@ enum CalcDateTime {
         let minus = query.range(of: " - ")
         let (opRange, op): (Range<String.Index>, Character)
         switch (plus, minus) {
-        case let (p?, m?): (opRange, op) = p.lowerBound < m.lowerBound ? (p, "+") : (m, "-")
-        case let (p?, nil): (opRange, op) = (p, "+")
-        case let (nil, m?): (opRange, op) = (m, "-")
+        case (let p?, let m?): (opRange, op) = p.lowerBound < m.lowerBound ? (p, "+") : (m, "-")
+        case (let p?, nil): (opRange, op) = (p, "+")
+        case (nil, let m?): (opRange, op) = (m, "-")
         default: return nil
         }
 
@@ -95,7 +97,9 @@ enum CalcDateTime {
         // B: moment ± duration → a new moment.
         if let duration = parseDurationPhrase(right) {
             let signed = op == "-" ? -duration.count : duration.count
-            guard let result = calendar.date(byAdding: duration.component, value: signed, to: base.date)
+            guard
+                let result = calendar.date(
+                    byAdding: duration.component, value: signed, to: base.date)
             else { return nil }
             let hasTime = base.hasTime || duration.subDay
             let display = momentString(result, hasTime: hasTime, now: now, calendar: calendar)
@@ -103,8 +107,11 @@ enum CalcDateTime {
                 expression: echo, payload: .value(display: display, copyText: display))
         }
 
-        // C: moment − moment → a whole-day difference.
-        guard op == "-", let other = parseMoment(right, now: now, calendar: calendar) else {
+        // C: moment − moment → a whole-day difference. A real date subtraction always names a month/weekday/keyword; two letter-free operands (`5/2 - 1/2`) are equally valid as arithmetic, so defer to the calculator rather than silently reading them as dates.
+        guard op == "-",
+            left.contains(where: \.isLetter) || right.contains(where: \.isLetter),
+            let other = parseMoment(right, now: now, calendar: calendar)
+        else {
             return nil
         }
         let days =
@@ -145,8 +152,10 @@ enum CalcDateTime {
         switch atom {
         case "now": return Moment(date: now, hasTime: true)
         case "today": return Moment(date: sod, hasTime: false)
-        case "tomorrow": return shift(sod, days: 1, calendar: calendar).map { Moment(date: $0, hasTime: false) }
-        case "yesterday": return shift(sod, days: -1, calendar: calendar).map { Moment(date: $0, hasTime: false) }
+        case "tomorrow":
+            return shift(sod, days: 1, calendar: calendar).map { Moment(date: $0, hasTime: false) }
+        case "yesterday":
+            return shift(sod, days: -1, calendar: calendar).map { Moment(date: $0, hasTime: false) }
         case "noon": return clockMoment(hour: 12, minute: 0, now: now, calendar: calendar)
         case "midnight": return clockMoment(hour: 0, minute: 0, now: now, calendar: calendar)
         default: break
@@ -160,7 +169,9 @@ enum CalcDateTime {
         return parseDateAtom(atom, now: now, calendar: calendar)
     }
 
-    private static func parsePair(_ a: String, _ b: String, now: Date, calendar: Calendar) -> Moment? {
+    private static func parsePair(_ a: String, _ b: String, now: Date, calendar: Calendar)
+        -> Moment?
+    {
         // number + month  /  month + number  →  a day in that month
         if let month = monthByName[b], let day = Int(a) {
             return monthDayMoment(month: month, day: day, now: now, calendar: calendar)
@@ -218,7 +229,9 @@ enum CalcDateTime {
 
     // MARK: - Moment builders
 
-    private static func clockMoment(hour: Int, minute: Int, now: Date, calendar: Calendar) -> Moment? {
+    private static func clockMoment(hour: Int, minute: Int, now: Date, calendar: Calendar)
+        -> Moment?
+    {
         guard (0...23).contains(hour), (0...59).contains(minute) else { return nil }
         let sod = calendar.startOfDay(for: now)
         guard var date = calendar.date(bySettingHour: hour, minute: minute, second: 0, of: sod)
@@ -228,10 +241,14 @@ enum CalcDateTime {
     }
 
     /// The given day of `month`, this year if still ahead, otherwise next year (matches Raycast's "upcoming" reading of a bare date).
-    private static func monthDayMoment(month: Int, day: Int, now: Date, calendar: Calendar) -> Moment? {
+    private static func monthDayMoment(month: Int, day: Int, now: Date, calendar: Calendar)
+        -> Moment?
+    {
         let year = calendar.component(.year, from: now)
         guard let thisYear = makeDate(year, month, day, calendar) else { return nil }
-        if thisYear >= calendar.startOfDay(for: now) { return Moment(date: thisYear, hasTime: false) }
+        if thisYear >= calendar.startOfDay(for: now) {
+            return Moment(date: thisYear, hasTime: false)
+        }
         guard let nextYear = makeDate(year + 1, month, day, calendar) else { return nil }
         return Moment(date: nextYear, hasTime: false)
     }
@@ -244,7 +261,9 @@ enum CalcDateTime {
         if past {
             var back = (today - weekday + 7) % 7
             if back == 0 { back = 7 }
-            return shift(sod, days: -back, calendar: calendar).map { Moment(date: $0, hasTime: false) }
+            return shift(sod, days: -back, calendar: calendar).map {
+                Moment(date: $0, hasTime: false)
+            }
         }
         var ahead = (weekday - today + 7) % 7
         if ahead == 0 && offsetToFuture { ahead = 7 }
@@ -282,7 +301,9 @@ enum CalcDateTime {
     }
 
     /// `<n> <unit>` for date arithmetic; weeks fold to days so `date(byAdding:)` stays DST-safe.
-    private static func parseDurationPhrase(_ phrase: String) -> (count: Int, component: Calendar.Component, subDay: Bool)? {
+    private static func parseDurationPhrase(_ phrase: String) -> (
+        count: Int, component: Calendar.Component, subDay: Bool
+    )? {
         let atoms = atomize(phrase)
         guard atoms.count == 2, let count = Int(atoms[0]) else { return nil }
         switch atoms[1] {
@@ -297,7 +318,9 @@ enum CalcDateTime {
 
     // MARK: - Formatting
 
-    private static func momentString(_ date: Date, hasTime: Bool, now: Date, calendar: Calendar) -> String {
+    private static func momentString(_ date: Date, hasTime: Bool, now: Date, calendar: Calendar)
+        -> String
+    {
         let day = dateString(date, now: now, calendar: calendar)
         return hasTime ? "\(day) at \(timeString(date, calendar: calendar))" : day
     }
@@ -305,7 +328,8 @@ enum CalcDateTime {
     private static func dateString(_ date: Date, now: Date, calendar: Calendar) -> String {
         let sameYear =
             calendar.component(.year, from: date) == calendar.component(.year, from: now)
-        return format(date, calendar: calendar, pattern: sameYear ? "EEEE, d MMMM" : "EEEE, d MMMM, yyyy")
+        return format(
+            date, calendar: calendar, pattern: sameYear ? "EEEE, d MMMM" : "EEEE, d MMMM, yyyy")
     }
 
     private static func timeString(_ date: Date, calendar: Calendar) -> String {
@@ -316,7 +340,8 @@ enum CalcDateTime {
         let formatter = DateFormatter()
         formatter.calendar = calendar
         formatter.timeZone = calendar.timeZone
-        formatter.locale = Locale(identifier: "en_US")
+        // Follow the injected calendar's locale so weekday/month names match the user's language; the test clock pins en_US for deterministic assertions.
+        formatter.locale = calendar.locale ?? Locale(identifier: "en_US")
         formatter.dateFormat = pattern
         return formatter.string(from: date)
     }
@@ -370,7 +395,9 @@ enum CalcDateTime {
         return (hour, 0)
     }
 
-    private static func makeDate(_ year: Int, _ month: Int, _ day: Int, _ calendar: Calendar) -> Date? {
+    private static func makeDate(_ year: Int, _ month: Int, _ day: Int, _ calendar: Calendar)
+        -> Date?
+    {
         guard (1...12).contains(month), (1...31).contains(day) else { return nil }
         var components = DateComponents()
         components.year = year
