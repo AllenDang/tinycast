@@ -398,6 +398,7 @@ struct RootPaletteView: View {
                         .font(Theme.Typography.headerIcon)
                         .symbolRenderingMode(.hierarchical)
                         .foregroundStyle(.secondary)
+                        .frame(width: Theme.Size.headerIconSlot)
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
@@ -406,6 +407,7 @@ struct RootPaletteView: View {
                     .font(Theme.Typography.headerIcon)
                     .symbolRenderingMode(.hierarchical)
                     .foregroundStyle(.secondary)
+                    .frame(width: Theme.Size.headerIconSlot)
             }
             searchField
             // Compact bar pins favorites to the right of the field; expanded shows them as list rows instead.
@@ -436,6 +438,7 @@ struct RootPaletteView: View {
         )
         .textFieldStyle(.plain)
         .font(Theme.Typography.searchField)
+        .tint(.white)
         .focused($searchFocused)
         .onSubmit(activateSelection)
     }

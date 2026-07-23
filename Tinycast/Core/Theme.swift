@@ -32,6 +32,8 @@ enum Theme {
         /// Fraction of the active screen's visible height between the top of the visible area and the palette's top edge; the window grows downward from this edge (Spotlight-style upper placement).
         static let paletteTopMarginFraction: CGFloat = 0.18
         static let headerHeight: CGFloat = 44
+        /// Fixed slot for the header leading glyph (search / back chevron / mode icon) so the search field starts at the same x in every mode — glyphs have different intrinsic widths (chevron 14, magnifyingglass 22). Sized to the magnifyingglass so the launcher spacing is unchanged.
+        static let headerIconSlot: CGFloat = 22
         /// Vertical breathing room above the search row — constant across compact/expanded so the bar never shifts when typing flips the state; also the compact bar's symmetric top/bottom slack.
         static let headerPadding: CGFloat = 10
         /// Collapsed compact bar: the search row centered in symmetric `headerPadding` slack.
