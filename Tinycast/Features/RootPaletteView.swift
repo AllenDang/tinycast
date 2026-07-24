@@ -252,12 +252,14 @@ struct RootPaletteView: View {
                 showAppMenu = false
                 menuSelection = 0
             }
+            vm.menuOpen = menuOpen
         }
         .onChange(of: showAppMenu) {
             if showAppMenu {
                 showActions = false
                 menuSelection = 0
             }
+            vm.menuOpen = menuOpen
         }
         // A new top clip while the list is showing (promote-on-paste, live capture) pulls the highlight and scroll back to the row that just moved up.
         .onChange(of: clips.first?.id) { _, newTop in
@@ -314,14 +316,14 @@ struct RootPaletteView: View {
             move(1)
             return .handled
         }
-        // With a menu open, any ↵ activates its highlighted row. Otherwise: ⌘↵ runs the selection's secondary copy action (each menu advertises it), ⌥↵ pastes an emoji in place, and plain ↵ falls through to the field's onSubmit.
+        // With a menu open, plain ↵ activates its highlighted row. A modified ↵ always runs the selection's own action regardless of menu state: ⌘↵ the secondary copy action (each menu advertises it), ⌥↵ paste-in-place; plain ↵ (no menu) falls through to the field's onSubmit.
         .onKeyPress(keys: [.return], phases: .down) { press in
-            if menuOpen {
+            let command = press.modifiers.contains(.command)
+            let option = press.modifiers.contains(.option)
+            if menuOpen, !command, !option {
                 activateMenuItem(menuSelection)
                 return .handled
             }
-            let command = press.modifiers.contains(.command)
-            let option = press.modifiers.contains(.option)
             guard command || option else { return .ignored }
             switch vm.mode {
             case .emoji:
