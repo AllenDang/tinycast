@@ -246,8 +246,8 @@ enum AppActionsMenu {
     private static func openTitle(_ app: AppEntry) -> String {
         switch app.kind {
         case .application: return "Open Application"
-        case .systemSettings: return "Open"
-        case .command: return "Run Command"
+        case .systemSettings: return "Open System Setting"
+        case .command: return "Open Command"
         }
     }
 }

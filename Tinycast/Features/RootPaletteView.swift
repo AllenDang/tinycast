@@ -169,9 +169,9 @@ struct RootPaletteView: View {
         let favoriteCount =
             showSections ? apps.prefix(while: { favorites.isFavorite($0) }).count : 0
         let selectedApp = apps.indices.contains(sel - offset) ? apps[sel - offset] : nil
-        // Derive the footer label from the already-resolved selection so `bottomBar` doesn't re-run `appResults` (its filter/sort aren't memoized). An error card selected in launcher/calc-history has no primary action, so the whole group is hidden.
+        // Derive the footer label from the already-resolved selection so `bottomBar` doesn't re-run `appResults` (its filter/sort aren't memoized). The primary/Actions group is hidden when there's nothing to act on: no results in any mode, or an error calc card (selectable but action-less).
         let pillLabel = actionPillLabel(selectedApp: selectedApp, calcActionable: calcActionable)
-        let showActionGroup = !(calcSelected && !calcActionable)
+        let showActionGroup = count > 0 && !(calcSelected && !calcActionable)
 
         // The `header` (and its single search field) is always attached in the same position via safeAreaInset so its focus survives the compact↔expanded swap — only the results below it toggle. Collapsed shows the bar alone; expanded floats header + action bar over the list with edge-dissolve (see DESIGN.md).
         return Group {
@@ -615,8 +615,8 @@ struct RootPaletteView: View {
         case .launcher:
             if calcActionable { return "Copy Answer" }
             switch selectedApp?.kind {
-            case .systemSettings: return "Open"
-            case .command: return "Run Command"
+            case .systemSettings: return "Open System Setting"
+            case .command: return "Open Command"
             default: return "Open Application"
             }
         }
