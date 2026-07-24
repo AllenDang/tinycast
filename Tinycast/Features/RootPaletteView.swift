@@ -790,6 +790,14 @@ struct EmptyResults: View {
 enum CompactFavoriteSlot {
     case app(AppEntry)
     case more
+
+    // Stable identity so a slot keeps its icon tied to its app, not its position, when favorites reorder.
+    var id: String {
+        switch self {
+        case .app(let app): return app.id
+        case .more: return "__tinycast.more__"
+        }
+    }
 }
 
 /// The compact bar's favorites strip — up to 5 icon buttons, ⌘1–⌘5 mirrored in each tooltip.
@@ -800,7 +808,7 @@ private struct CompactFavoritesRow: View {
 
     var body: some View {
         HStack(spacing: Theme.Spacing.xs) {
-            ForEach(Array(slots.enumerated()), id: \.offset) { index, slot in
+            ForEach(Array(slots.enumerated()), id: \.element.id) { index, slot in
                 switch slot {
                 case .app(let app):
                     CompactFavoriteButton(help: "\(app.name)  ⌘\(index + 1)") {

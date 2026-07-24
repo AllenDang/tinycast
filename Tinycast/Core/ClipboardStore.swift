@@ -330,10 +330,11 @@ final class ClipboardStore: ObservableObject {
         let cutoff = Date().addingTimeInterval(-maxAge)
         if let imagesStmt = staleImagesStmt, let deleteStmt = deleteStaleStmt {
             sqlite3_bind_double(imagesStmt, 1, cutoff.timeIntervalSince1970)
+            var staleOwnedPaths: [String] = []
             while sqlite3_step(imagesStmt) == SQLITE_ROW {
                 // Only delete files we own; external references (e.g. imported) just lose their row.
                 if let path = Self.columnString(imagesStmt, 0), owns(path) {
-                    try? FileManager.default.removeItem(atPath: path)
+                    staleOwnedPaths.append(path)
                 }
             }
             sqlite3_reset(imagesStmt)
@@ -342,6 +343,14 @@ final class ClipboardStore: ObservableObject {
             sqlite3_step(deleteStmt)
             sqlite3_reset(deleteStmt)
             sqlite3_clear_bindings(deleteStmt)
+            // A retention cut can strand hundreds of files; delete them off the main actor so capture-time prune doesn't hitch.
+            if !staleOwnedPaths.isEmpty {
+                Task.detached(priority: .utility) {
+                    for path in staleOwnedPaths {
+                        try? FileManager.default.removeItem(atPath: path)
+                    }
+                }
+            }
         }
         if items.last.map({ $0.createdAt < cutoff }) == true {
             items.removeAll { $0.createdAt < cutoff }
