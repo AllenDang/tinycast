@@ -10,7 +10,7 @@ How to build, test, package, and release Tinycast.
 ## First-time setup
 
 Create the `Tinycast Self-Signed` code-signing identity once — builds sign with it, which keeps the
-macOS Accessibility grant from being forgotten every rebuild. Follow **[SIGNING.md](SIGNING.md) §1**
+macOS Accessibility grant from being forgotten every rebuild. Follow **[signing.md](signing.md) §1**
 (a few `openssl`/`security` commands).
 
 ## Build & run
@@ -82,7 +82,7 @@ below and [`.github/workflows/release.yml`](../.github/workflows/release.yml).
 Both local builds and CI releases sign with the same stable `Tinycast Self-Signed` identity (not an
 Apple Developer ID), so macOS quarantines a directly-downloaded DMG — the Homebrew cask strips that
 automatically, and direct downloaders run `xattr -dr com.apple.quarantine "…/Tinycast.app"` once.
-Full details in [SIGNING.md](SIGNING.md).
+Full details in [signing.md](signing.md).
 
 ## CI releases
 

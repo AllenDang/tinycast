@@ -173,7 +173,7 @@ struct RootPaletteView: View {
         let pillLabel = actionPillLabel(selectedApp: selectedApp, calcActionable: calcActionable)
         let showActionGroup = count > 0 && !(calcSelected && !calcActionable)
 
-        // The `header` (and its single search field) is always attached in the same position via safeAreaInset so its focus survives the compact↔expanded swap — only the results below it toggle. Collapsed shows the bar alone; expanded floats header + action bar over the list with edge-dissolve (see DESIGN.md).
+        // The `header` (and its single search field) is always attached in the same position via safeAreaInset so its focus survives the compact↔expanded swap — only the results below it toggle. Collapsed shows the bar alone; expanded floats header + action bar over the list with edge-dissolve (see docs/ui.md).
         return Group {
             if isCollapsed {
                 Color.clear

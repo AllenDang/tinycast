@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// Scroll-driven edge dissolve for a scroll view underlapping the palette's floating bars, a port of Raycast's scroll-area mask (see `DESIGN.md` → The edge dissolve).
+/// Scroll-driven edge dissolve for a scroll view underlapping the palette's floating bars, a port of Raycast's scroll-area mask (see `docs/ui.md` → The edge dissolve).
 struct EdgeDissolveMask: ViewModifier {
     /// Band lengths: the bar's occupied height plus Raycast's overshoot into the list (32px below the header, 28px above the footer).
     var topFade: CGFloat = Theme.Size.headerHeight + Theme.Size.headerPadding + 32

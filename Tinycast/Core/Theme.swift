@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// Central design tokens for the palette UI (dark design system per `DESIGN.md`; the app forces `.darkAqua`, so colors are literal white/black alphas).
+/// Central design tokens for the palette UI (dark design system per `docs/ui.md`; the app forces `.darkAqua`, so colors are literal white/black alphas).
 enum Theme {
     enum Spacing {
         static let xxs: CGFloat = 2

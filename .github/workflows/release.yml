@@ -61,7 +61,7 @@ jobs:
 
       # Import the stable self-signed identity into a temp keychain so every release is signed with
       # the SAME cert — that constant signature is what keeps users' Accessibility (TCC) grant alive
-      # across updates. Generate/rotate the secrets per docs/SIGNING.md.
+      # across updates. Generate/rotate the secrets per docs/signing.md.
       - name: Import signing certificate
         env:
           P12_BASE64: ${{ secrets.SIGNING_P12_BASE64 }}
