@@ -148,6 +148,8 @@ enum CalcDateTime {
 
         // C: moment ± duration → a new moment.
         if let duration = parseDurationPhrase(right) {
+            // Negating Int.min traps; degrade to no card on that edge.
+            guard op == "+" || duration.count != .min else { return nil }
             let signed = op == "-" ? -duration.count : duration.count
             guard
                 let result = calendar.date(
@@ -255,7 +257,9 @@ enum CalcDateTime {
                     calendar: calendar)
             }
             if let month = monthByName[b] {
-                return monthDayMoment(month: month, day: 1, now: now, calendar: calendar)
+                return monthDayMoment(
+                    month: month, day: 1, now: now, calendar: calendar,
+                    bias: a == "last" ? .past : .future)
             }
         }
         return nil
@@ -387,7 +391,10 @@ enum CalcDateTime {
         case "min", "mins", "minute", "minutes": return (count, .minute, true)
         case "h", "hr", "hrs", "hour", "hours": return (count, .hour, true)
         case "d", "day", "days": return (count, .day, false)
-        case "wk", "week", "weeks": return (count * 7, .day, false)
+        case "wk", "week", "weeks":
+            // Absurd counts overflow the fold to days; degrade to no card rather than trap.
+            let (days, overflow) = count.multipliedReportingOverflow(by: 7)
+            return overflow ? nil : (days, .day, false)
         default: return nil
         }
     }
