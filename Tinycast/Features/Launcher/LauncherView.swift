@@ -157,8 +157,8 @@ private struct AppRow: View {
                     if running {
                         Circle()
                             .fill(.secondary)
-                            .frame(width: 4, height: 4)
-                            .offset(y: 4)
+                            .frame(width: 3, height: 3)
+                            .offset(y: 3)
                     }
                 }
             Text(app.name)
