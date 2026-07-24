@@ -47,13 +47,14 @@ struct CalculatorHistoryList: View {
     }
 
     var body: some View {
-        ScrollViewReader { proxy in
+        let rows = rows
+        return ScrollViewReader { proxy in
             ScrollView {
                 LazyVStack(spacing: 0) {
                     ForEach(rows) { row in
                         switch row {
                         case .header(let title):
-                            SectionHeader(title: title)
+                            SectionHeader(title: title, isFirst: row.id == rows.first?.id)
                         case .calc(let result):
                             CalculatorCard(result: result, selected: calcSelected)
                                 .contentShape(Rectangle())

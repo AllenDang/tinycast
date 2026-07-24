@@ -57,7 +57,8 @@ struct LauncherList: View {
     }
 
     var body: some View {
-        Group {
+        let rows = rows
+        return Group {
             if results.isEmpty && calc == nil {
                 EmptyResults(text: "No apps found")
             } else {
@@ -67,7 +68,7 @@ struct LauncherList: View {
                             ForEach(rows) { row in
                                 switch row {
                                 case .header(let title):
-                                    SectionHeader(title: title)
+                                    SectionHeader(title: title, isFirst: row.id == rows.first?.id)
                                 case .calc(let result):
                                     CalculatorCard(result: result, selected: calcSelected)
                                         .contentShape(Rectangle())
@@ -107,16 +108,18 @@ struct LauncherList: View {
     }
 }
 
-/// Section label above a group of rows, shared by the launcher and clipboard so both lists use one identical header + row layout.
+/// Section label above a group of rows, shared by every palette list so they use one identical header + row layout.
 struct SectionHeader: View {
     let title: String
+    /// The list's first header hugs the top; every later header gets `sectionSpacing` above it, which reads as bottom padding on the section that just ended.
+    var isFirst = false
     var body: some View {
         Text(title)
             .font(Theme.Typography.sectionHeader)
             .foregroundStyle(.secondary)
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.horizontal, Theme.Spacing.md)
-            .padding(.top, Theme.Spacing.xs)
+            .padding(.top, isFirst ? Theme.Spacing.xs : Theme.Spacing.sectionSpacing)
             .padding(.bottom, Theme.Spacing.sectionHeaderBottom)
     }
 }

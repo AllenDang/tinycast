@@ -89,6 +89,15 @@ panel and `AppCore`. Showing the palette calls `prepare(mode:)`, which resets st
 flat `selection` index is the single source of truth for highlight/activation and must always match the
 visible row order, including the inline calculator card at index 0 when present (see below).
 
+**Menu-open input freeze.** While a footer popover menu (⌘K Actions / app menu) is open the search field
+reads as inert but **never resigns first responder** — resigning makes the `NSTextField` swap between its
+field-editor and cell rendering, shifting the text/placeholder a point or two, so focus stays put. Input
+is frozen instead: `RootPaletteView` mirrors the open state into `PaletteViewModel.menuOpen`, whose
+`didSet` fires `onMenuOpenChanged`; `PalettePanel.sendEvent` then swallows text-editing keystrokes while
+`menuOpen` (letting ⌘/⌥ chords and menu-nav keys through to SwiftUI `onKeyPress`), and the caret is hidden
+by clearing SwiftUI's **own** live field editor's `insertionPointColor` (SwiftUI force-casts its field
+editor to a private subclass, so vending a custom one crashes — only the existing one can be tuned).
+
 **Inline calculator.** `Core/Calculator/` is a Foundation-only engine fronted by `CalcMemo`, a one-deep
 memo mirroring `AppIndex`'s. `CalcEngine.evaluate` runs a pipeline: natural-language date/time
 (`CalcDateTime`, e.g. `hrs till 9am`, `days till 9april`, `today + 3 weeks`) → numeric reject →
@@ -109,6 +118,8 @@ bars, scroll-driven edge dissolve, Liquid Glass only on floating controls — is
 any restyle or new view.
 
 **Scrollbars.** The palette lists (App Launcher, Clipboard history, Emoji, Calculator history) use the SwiftUI `.thinScrollbar()` + `.hideNativeScrollers()`; the Clipboard preview (right pane) and every Settings pane use the native `.overlayScroller()`.
+
+**Section headers.** All four palette lists render category labels through one shared `SectionHeader` (`Features/Launcher/LauncherView.swift`); the launcher shows a single "Results" header over search matches and per-kind sections (Favorites/Applications/System Settings/Commands) for the empty query. Its spacing lives in `Theme.Spacing`: `sectionHeaderBottom` (header→first row) and `sectionSpacing` (gap above every header **except the list's first**, which reads as the previous section's closing padding). Each list passes `isFirst: row.id == <rows>.first?.id` so only the very first row skips the leading gap; headers are non-selectable display rows, so selection (keyed by id) is unaffected.
 
 **Focus restoration is load-bearing.** `PaletteWindowController` records `previousApp` (the frontmost
 app) on show. Paste then targets that app: `Paster.paste` activates it and posts a synthetic ⌘V via
