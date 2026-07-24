@@ -59,7 +59,7 @@ struct CalculatorCard: View {
             RoundedRectangle(cornerRadius: Theme.Radius.card, style: .continuous)
                 .fill(fill)
         )
-        .onHover { hovered = $0 }
+        .armedHover($hovered)
     }
 }
 

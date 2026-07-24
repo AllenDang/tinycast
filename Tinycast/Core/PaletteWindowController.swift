@@ -23,6 +23,8 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
             previousApp = frontmost
         }
         let panel = ensurePanel()
+        // Open disarmed: the pointer may already sit over a row, but nothing should be highlighted until the user actually moves it.
+        core.palette.hoverHighlightArmed = false
         // Re-resolve the anchor for wherever the user is summoning now, then hold it for the whole session so compact↔expanded resizes never move the window.
         anchor = nil
         // Size + place the panel to the current collapsed state before ordering front, so a compact summon never flashes at full size.
@@ -118,6 +120,7 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
             .environmentObject(core.hotKeys)
         let panel = PalettePanel(rootView: root)
         panel.delegate = self
+        panel.paletteViewModel = core.palette
         // Backspace in an already-empty search backs out of a sub-screen to a fresh root launcher; `prepare` clears state and re-focuses the field.
         panel.onBareBackspace = { [weak self] in
             guard let vm = self?.core.palette, vm.mode != .launcher, vm.query.isEmpty else {

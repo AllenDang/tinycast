@@ -46,12 +46,15 @@ final class PaletteViewModel: ObservableObject {
     @Published var resetToken = UUID()
     /// Set by the compact bar's "…" overflow to expand into the full launcher without a query; cleared on every `prepare`.
     @Published var forceExpanded = false
+    /// Gates the mouse-hover highlight: true only while the pointer is physically moving (armed on `.mouseMoved`, disarmed on any `.keyDown` in `PalettePanel.sendEvent`). Plain, not `@Published` — read at hover time, never drives a re-render.
+    var hoverHighlightArmed = false
 
     func prepare(mode: PaletteMode) {
         self.mode = mode
         query = ""
         selection = 0
         forceExpanded = false
+        hoverHighlightArmed = false
         focusToken = UUID()
         resetToken = UUID()
     }

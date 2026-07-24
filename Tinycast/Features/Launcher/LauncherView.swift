@@ -122,12 +122,11 @@ private struct AppRow: View {
     let app: AppEntry
     let selected: Bool
     let running: Bool
-    /// Hover lives on the row itself, so a mouse sweep repaints only the rows entering/leaving, never the parent list body.
-    @State private var hovered = false
     /// Observed so a hotkey set/cleared in Settings re-renders the row's keycaps immediately.
     @EnvironmentObject private var hotKeys: HotKeyManager
     /// Observed for the same reason: the Hyper Key display settings (✦ collapse, Include Shift) change how `keycaps` renders.
     @ObservedObject private var settings = AppCore.shared.settings
+    @State private var hovered = false
 
     /// Selection wins over hover when a row is both; otherwise hover shows its fainter layer.
     private var fill: Color {
@@ -177,7 +176,7 @@ private struct AppRow: View {
             RoundedRectangle(cornerRadius: Theme.Radius.row, style: .continuous)
                 .fill(fill)
         )
-        .onHover { hovered = $0 }
+        .armedHover($hovered)
     }
 }
 

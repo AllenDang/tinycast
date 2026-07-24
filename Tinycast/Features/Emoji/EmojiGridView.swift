@@ -205,10 +205,13 @@ private struct EmojiGridRowView: View {
         .onRightClick { point in
             if let column = column(at: point) { onActions(row.start + column) }
         }
+        // Column hover, gated on real pointer movement like `armedHover`: cleared unless `hoverHighlightArmed`.
         .onContinuousHover(coordinateSpace: .local) { phase in
             switch phase {
-            case .active(let point): hoveredColumn = column(at: point)
-            case .ended: hoveredColumn = nil
+            case .active(let point):
+                hoveredColumn = AppCore.shared.palette.hoverHighlightArmed ? column(at: point) : nil
+            case .ended:
+                hoveredColumn = nil
             }
         }
     }
