@@ -95,7 +95,7 @@ struct CalculatorHistoryList: View {
 private struct CalcHistoryRow: View {
     let entry: CalcHistoryEntry
     let selected: Bool
-    /// Hover lives on the row itself so a mouse sweep repaints only the rows entering/leaving.
+    /// Faint mouse-hover layer, shown only once the pointer actually moves (see `armedHover`).
     @State private var hovered = false
 
     private var fill: Color {
@@ -131,7 +131,7 @@ private struct CalcHistoryRow: View {
             RoundedRectangle(cornerRadius: Theme.Radius.row, style: .continuous)
                 .fill(fill)
         )
-        .onHover { hovered = $0 }
+        .armedHover($hovered)
     }
 }
 

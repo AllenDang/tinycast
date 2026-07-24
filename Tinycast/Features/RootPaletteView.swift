@@ -760,6 +760,18 @@ private struct BarButton<Label: View>: View {
     }
 }
 
+extension View {
+    /// Faint mouse-hover highlight for a palette row, gated on real pointer movement: `hovered` goes true only on an `onContinuousHover` tick while `hoverSelectionArmed` (a physical mouse-move happened), so the hover never lights up merely because the pointer sits over a row on open, nor because rows slid under a still pointer during keyboard nav. Left independent of the keyboard selection, so both indicators coexist as before.
+    func armedHover(_ hovered: Binding<Bool>) -> some View {
+        onContinuousHover(coordinateSpace: .local) { phase in
+            switch phase {
+            case .active: hovered.wrappedValue = AppCore.shared.palette.hoverSelectionArmed
+            case .ended: hovered.wrappedValue = false
+            }
+        }
+    }
+}
+
 struct EmptyResults: View {
     let text: String
     var body: some View {

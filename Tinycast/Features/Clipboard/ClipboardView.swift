@@ -158,7 +158,7 @@ private struct ClipboardRow: View {
     let item: ClipboardItem
     let selected: Bool
     let imageURL: URL?
-    /// Hover lives on the row itself so a mouse sweep repaints only the rows entering/leaving, mirroring the launcher's `AppRow`.
+    /// Faint mouse-hover layer, shown only once the pointer actually moves (see `armedHover`).
     @State private var hovered = false
 
     /// Selection wins over hover when a row is both; otherwise hover shows its fainter layer.
@@ -183,7 +183,7 @@ private struct ClipboardRow: View {
             RoundedRectangle(cornerRadius: Theme.Radius.row, style: .continuous)
                 .fill(fill)
         )
-        .onHover { hovered = $0 }
+        .armedHover($hovered)
     }
 
     private var previewText: String {

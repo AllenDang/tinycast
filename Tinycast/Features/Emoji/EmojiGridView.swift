@@ -205,10 +205,13 @@ private struct EmojiGridRowView: View {
         .onRightClick { point in
             if let column = column(at: point) { onActions(row.start + column) }
         }
+        // Faint hover follows the pointer only while it's physically moving (`hoverSelectionArmed`); a still pointer on open or cells sliding under it during keyboard nav leave it clear.
         .onContinuousHover(coordinateSpace: .local) { phase in
             switch phase {
-            case .active(let point): hoveredColumn = column(at: point)
-            case .ended: hoveredColumn = nil
+            case .active(let point):
+                hoveredColumn = AppCore.shared.palette.hoverSelectionArmed ? column(at: point) : nil
+            case .ended:
+                hoveredColumn = nil
             }
         }
     }
