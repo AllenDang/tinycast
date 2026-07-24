@@ -173,8 +173,9 @@ jobs:
             git push
           fi
 
-      # Announce the release in the Discord release channel. Colored embed per channel (beta amber,
-      # stable green); no-ops with a warning if the webhook secret isn't set.
+      # Announce the release in the Discord release channel. A Components V2 (flags 32768) card:
+      # channel-tinted container, title + right-aligned Download button, Homebrew install block.
+      # No-ops with a warning if the webhook secret isn't set.
       - name: Announce on Discord
         if: success()
         env:
@@ -192,13 +193,26 @@ jobs:
           if [ "${CHANNEL}" = "stable" ]; then COLOR=3066993; else COLOR=15844367; fi
           RELEASE_URL="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/releases/tag/${TAG}"
           INSTALL="brew install --cask abue-ammar/tinycast/${CASK}"
-          DESC=$(printf '**Version:** \`%s\`\n**Channel:** %s\n\n**Install / update via Homebrew:**\n\`\`\`sh\n%s\n\`\`\`\n[Download DMG & release notes →](%s)' \
-            "${VERSION}" "${CHANNEL}" "${INSTALL}" "${RELEASE_URL}")
+          # Build with jq so backticks stay literal (printf in single quotes escaped them,
+          # which Discord rendered as verbatim backticks instead of a code block).
           jq -n \
-            --arg title "🚀 ${DISPLAY_NAME} ${VERSION} released" \
-            --arg desc "${DESC}" \
-            --arg url "${RELEASE_URL}" \
             --argjson color "${COLOR}" \
-            '{embeds: [{title: $title, description: $desc, url: $url, color: $color}]}' \
-            > payload.json
-          curl -fsS -X POST -H "Content-Type: application/json" -d @payload.json "${DISCORD_WEBHOOK_URL}"
+            --arg heading "## 🚀 ${DISPLAY_NAME} ${VERSION}" \
+            --arg sub "Now available on the **${CHANNEL}** channel." \
+            --arg install "${INSTALL}" \
+            --arg url "${RELEASE_URL}" \
+            '{
+              flags: 32768,
+              components: [
+                { type: 17, accent_color: $color, components: [
+                  { type: 9,
+                    components: [ { type: 10, content: ($heading + "\n" + $sub) } ],
+                    accessory: { type: 2, style: 5, label: "Download", url: $url }
+                  },
+                  { type: 14 },
+                  { type: 10, content: ("**Install / update via Homebrew**\n```\n" + $install + "\n```") }
+                ] }
+              ]
+            }' > payload.json
+          curl -fsS -X POST -H "Content-Type: application/json" -d @payload.json \
+            "${DISCORD_WEBHOOK_URL}?with_components=true"
