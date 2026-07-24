@@ -23,8 +23,8 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
             previousApp = frontmost
         }
         let panel = ensurePanel()
-        // Open disarmed: the pointer may already sit over a row, but nothing should be mouse-selected until the user actually moves it.
-        core.palette.hoverSelectionArmed = false
+        // Open disarmed: the pointer may already sit over a row, but nothing should be highlighted until the user actually moves it.
+        core.palette.hoverHighlightArmed = false
         // Re-resolve the anchor for wherever the user is summoning now, then hold it for the whole session so compact↔expanded resizes never move the window.
         anchor = nil
         // Size + place the panel to the current collapsed state before ordering front, so a compact summon never flashes at full size.

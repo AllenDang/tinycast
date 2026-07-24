@@ -6,13 +6,13 @@ import SwiftUI
 final class PalettePanel: NSPanel {
     /// Called for a bare backspace before it reaches the field editor (return true to consume); the field editor swallows plain backspace itself, so SwiftUI `onKeyPress` up the hierarchy never sees it.
     var onBareBackspace: (() -> Bool)?
-    /// Drives Raycast-style hover-to-select: arm on real pointer movement, disarm on any key. `sendEvent` is the one place both event streams pass through (mouse-moved needs `acceptsMouseMovedEvents`), so the arm state stays screen-space true — a keyboard-driven scroll that slides rows under a still pointer never fires `.mouseMoved`, so hover stays disarmed.
+    /// Arms the hover highlight from `sendEvent` — the one place both event streams pass through, so a keyboard-driven scroll under a still pointer never fires `.mouseMoved` and hover stays disarmed.
     weak var paletteViewModel: PaletteViewModel?
 
     override func sendEvent(_ event: NSEvent) {
         switch event.type {
-        case .mouseMoved: paletteViewModel?.hoverSelectionArmed = true
-        case .keyDown: paletteViewModel?.hoverSelectionArmed = false
+        case .mouseMoved: paletteViewModel?.hoverHighlightArmed = true
+        case .keyDown: paletteViewModel?.hoverHighlightArmed = false
         default: break
         }
         if event.type == .keyDown,

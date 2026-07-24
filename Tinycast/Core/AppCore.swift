@@ -46,15 +46,15 @@ final class PaletteViewModel: ObservableObject {
     @Published var resetToken = UUID()
     /// Set by the compact bar's "…" overflow to expand into the full launcher without a query; cleared on every `prepare`.
     @Published var forceExpanded = false
-    /// True only while the pointer is physically moving (armed by `PalettePanel.sendEvent` on `.mouseMoved`, disarmed on any `.keyDown`). Gates hover-to-select so a row is highlighted by the mouse only on real movement — never merely because the pointer sits over it on open, nor because rows scrolled under a stationary pointer during keyboard nav. Plain (not `@Published`): read at hover time, never drives a re-render itself.
-    var hoverSelectionArmed = false
+    /// Gates the mouse-hover highlight: true only while the pointer is physically moving (armed on `.mouseMoved`, disarmed on any `.keyDown` in `PalettePanel.sendEvent`). Plain, not `@Published` — read at hover time, never drives a re-render.
+    var hoverHighlightArmed = false
 
     func prepare(mode: PaletteMode) {
         self.mode = mode
         query = ""
         selection = 0
         forceExpanded = false
-        hoverSelectionArmed = false
+        hoverHighlightArmed = false
         focusToken = UUID()
         resetToken = UUID()
     }

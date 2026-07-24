@@ -158,7 +158,6 @@ private struct ClipboardRow: View {
     let item: ClipboardItem
     let selected: Bool
     let imageURL: URL?
-    /// Faint mouse-hover layer, shown only once the pointer actually moves (see `armedHover`).
     @State private var hovered = false
 
     /// Selection wins over hover when a row is both; otherwise hover shows its fainter layer.

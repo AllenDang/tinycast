@@ -126,7 +126,6 @@ private struct AppRow: View {
     @EnvironmentObject private var hotKeys: HotKeyManager
     /// Observed for the same reason: the Hyper Key display settings (✦ collapse, Include Shift) change how `keycaps` renders.
     @ObservedObject private var settings = AppCore.shared.settings
-    /// Faint mouse-hover layer, shown only once the pointer actually moves (see `armedHover`); independent of the keyboard selection.
     @State private var hovered = false
 
     /// Selection wins over hover when a row is both; otherwise hover shows its fainter layer.

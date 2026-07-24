@@ -95,7 +95,6 @@ struct CalculatorHistoryList: View {
 private struct CalcHistoryRow: View {
     let entry: CalcHistoryEntry
     let selected: Bool
-    /// Faint mouse-hover layer, shown only once the pointer actually moves (see `armedHover`).
     @State private var hovered = false
 
     private var fill: Color {

@@ -17,7 +17,6 @@ enum CalcMemo {
 struct CalculatorCard: View {
     let result: CalcResult
     let selected: Bool
-    /// Faint mouse-hover layer, shown only once the pointer actually moves (see `armedHover`).
     @State private var hovered = false
 
     private var fill: Color {
