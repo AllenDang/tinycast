@@ -1,8 +1,8 @@
-# DESIGN.md
+# UI & Design System
 
 The design system for Tinycast's UI, written so an agent restyling or extending it stays consistent
 with what's already there. This documents **Tinycast as built** — every rule here maps to code in
-`Tinycast/`.
+`Tinycast/`. `Core/Theme.swift` is the single design-token source.
 
 Read this before touching any view body, `Theme` value, or the panel chrome.
 
@@ -35,7 +35,6 @@ These are the things that quietly break the look if changed. Preserve them unles
 - **Forced dark.** `AppCore.start()` sets `NSApp.appearance = .darkAqua`. All colors are literal white/black alphas, not adaptive `Color`s. Don't introduce semantic/adaptive colors or a light variant.
 - **No grays, no opaque fills on the surface.** Reach for `Theme.Colors.*` (white-alpha) instead of `.gray`, `NSColor.windowBackground`, etc.
 - **No hard dividers between the list and the bars.** The header and bottom bar are `safeAreaInset` overlays with no background; separation comes from `edgeDissolve()`, nothing else. (One deliberate exception: the vertical hairline between the clipboard list and its preview pane.)
-- **Menus are in-window overlays, not system popovers.** `.contextMenu`/`NSMenu` stall clicks for seconds inside a `LazyVStack` and spill outside the panel. Use `PopoverMenu` anchored to a bottom corner via `.overlay`, inset `menuInset` (8pt) so its own corner isn't clipped by the panel's.
 - **The panel corner is clipped once, at the root.** `RootPaletteView.body` ends with `.background(black 40%) → .background(VisualEffectView()) → .clipShape(RoundedRectangle(26, .continuous))`. Keep that order; the scrim goes _over_ the vibrancy, and the clip is last.
 - **Don't use the native scroll edge effect.** Inside a transparent panel it renders a hard-bounded rectangle. Use `edgeDissolve()`.
 - **Test over a light desktop.** Transparency and corner masking bugs only show over bright wallpaper. Dark wallpaper hides them.
@@ -54,6 +53,10 @@ Add a token rather than a magic number when introducing a new value.
 `xxs` is the tight gap between adjacent keycap chips (used everywhere keycaps sit side by side).
 
 Row content insets are `md`; list horizontal inset is `md`; the search icon aligns with rows via `md * 2`.
+
+Section-header rhythm has two dedicated tokens: `sectionHeaderBottom` (header → first row) and
+`sectionSpacing` (gap above every header **except the list's first**, which reads as the previous
+section's closing padding). See "Section headers" below.
 
 ### Radius (`Theme.Radius`)
 
@@ -128,9 +131,21 @@ All lists share one row grammar so launcher and clipboard look identical:
 - `HStack(spacing: lg)`: leading 24pt icon/thumbnail, title (`.body`, `lineLimit(1)`), optional trailing keycaps/kind label, `Spacer`. Insets: `.horizontal md`, `.vertical sm`.
 - Background is a `RoundedRectangle(row, .continuous)` filled by `fill`: **selection → hover → clear**, in that precedence. This `fill` computed property is copy-identical across `AppRow`, `ClipboardRow`, `CalculatorCard` — keep them in sync.
 - **Hover state lives on the row**, not the list, so a mouse sweep repaints only the rows entering/leaving (a list-level hover rebuilds every row per move — don't do that).
-- **`SectionHeader`** (`.subheadline.medium`, secondary) labels groups: launcher uses Favorites/Applications/System Settings/Commands; clipboard/history use date buckets (Today/Yesterday/…).
-- **Keycaps** use `KeyCapChip`: `.outline` (white-0.20 border) for hotkey hints on rows, `.filled` (white-0.10 fill) for footer shortcuts.
 - **Scroll follows selection only on keyboard nav/reset**, driven by a `scrollToken` UUID — mouse selection targets a visible row and never yanks scroll.
+- **Keycaps** use `KeyCapChip`: `.outline` (white-0.20 border) for hotkey hints on rows, `.filled` (white-0.10 fill) for footer shortcuts.
+
+### Section headers
+
+All four palette lists (App Launcher, Clipboard, Emoji, Calculator History) render category labels
+through one shared **`SectionHeader`** (`.subheadline.medium`, secondary — `Features/Launcher/LauncherView.swift`).
+The launcher shows a single "Results" header over search matches, and per-kind sections
+(Favorites / Applications / System Settings / Commands) for the empty query; clipboard/history use
+date buckets (Today / Yesterday / …).
+
+Spacing lives in `Theme.Spacing`: `sectionHeaderBottom` (header → first row) and `sectionSpacing`
+(gap above every header **except the list's first**, which reads as the previous section's closing
+padding). Each list passes `isFirst: row.id == <rows>.first?.id` so only the very first row skips the
+leading gap. Headers are non-selectable display rows, so selection (keyed by id) is unaffected.
 
 ---
 
@@ -139,18 +154,22 @@ All lists share one row grammar so launcher and clipboard look identical:
 Glass is **only** for floating controls, never the main surface.
 
 - `View.frosted(in:)` = `glassEffect(.regular.interactive().tint(glassFrost), in:)` + `.tint(.clear)` — interactive lensing with a whitish frost tint (`glassFrost`) so the glass reads brighter than clear. Used on the action-group capsule and the menu circle; tune the frost amount via the `glassFrost` token, not per call site.
+- **Menus are in-window overlays, not system popovers.** `.contextMenu`/`NSMenu` stall clicks for seconds inside a `LazyVStack` and spill outside the panel. Use `PopoverMenu` anchored to a bottom corner via `.overlay`, inset `menuInset` (8pt) so its own corner isn't clipped by the panel's.
 - **`PopoverMenu`** uses `glassEffect(.regular, in: RoundedRectangle(menuPanel 16))` with **no hand-tuned shadow** — Tahoe glass carries its own elevation; adding a drop shadow reads heavy and non-native.
 - `PopoverMenuRow`: leading SF Symbol (`hierarchical`, secondary — or **red** when `isDestructive`), label, trailing shortcut glyph, `menuHover` fill on hover, `menuRow 10` corner. Menus animate in with `.opacity + .scale(0.96)` from the anchored corner, `easeOut 0.14`.
 
 ---
 
-## Scrollbar — `Core/ThinScrollbar.swift`
+## Scrollbars — `Core/ThinScrollbar.swift`
 
 Custom thin overlay scrollbar (the native one flashes and reserves a gutter inside a transparent panel).
 `.hideNativeScrollers()` on the scroll _content_ forces the backing `NSScrollView` to a hidden `.overlay`
 style; `.thinScrollbar()` on the scroll view draws a hairline thumb (`Color.primary` alpha 0.30 rest →
 0.42 hover → 0.5 drag) that fattens on hover, with a faint rail revealed only while hovering/dragging.
-Don't reintroduce native scrollers.
+
+Routing: the palette lists (App Launcher, Clipboard history, Emoji, Calculator history) use
+`.thinScrollbar()` + `.hideNativeScrollers()`; the Clipboard preview (right pane) and every Settings
+pane use the native `.overlayScroller()`. Don't reintroduce native scrollers on the palette lists.
 
 ---
 
@@ -173,6 +192,4 @@ The calculator's inline `CalculatorCard` reuses this card language (`cardFill` +
 - **Don't add behavior that wasn't requested.** A restyle changes appearance, not interaction — keep selection/scroll/dismiss/focus flows exactly as they are unless the task is about them.
 - **New tokens go in `Theme`**, referenced everywhere. No magic numbers in views.
 - **Keep the shared grammar shared.** If you change row insets, the `fill` precedence, section-header style, or keycap style, change it for _all_ lists — divergence is the bug, not the feature.
-- **Build & verify** with the real toolchain (see CLAUDE.md → Build & run); a design change that doesn't compile under Swift 6 mode isn't done.
-  </content>
-  </invoke>
+- **Build & verify** with the real toolchain (see [`development.md`](development.md)); a design change that doesn't compile under Swift 6 mode isn't done.

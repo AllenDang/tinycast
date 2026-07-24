@@ -116,13 +116,14 @@ struct EmojiGridView: View {
     private var firstRowID: String? { sections.first.map { $0.id + "-row-0" } }
 
     var body: some View {
-        ScrollViewReader { proxy in
+        let items = items
+        return ScrollViewReader { proxy in
             ScrollView {
                 LazyVStack(spacing: 0) {
                     ForEach(items) { item in
                         switch item {
                         case .header(_, let title):
-                            SectionHeader(title: title)
+                            SectionHeader(title: title, isFirst: item.id == items.first?.id)
                         case .row(let row):
                             EmojiGridRowView(
                                 row: row, selection: selection, tone: tone,

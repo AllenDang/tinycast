@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// Central design tokens for the palette UI (dark design system per `DESIGN.md`; the app forces `.darkAqua`, so colors are literal white/black alphas).
+/// Central design tokens for the palette UI (dark design system per `docs/ui.md`; the app forces `.darkAqua`, so colors are literal white/black alphas).
 enum Theme {
     enum Spacing {
         static let xxs: CGFloat = 2
@@ -12,6 +12,10 @@ enum Theme {
         static let xxl: CGFloat = 20
         /// Calculator answer card's roomier vertical breathing room.
         static let xxxl: CGFloat = 28
+        /// Gap under a category header before its first row; shared by every palette list's `SectionHeader` (launcher, clipboard, emoji, calculator history).
+        static let sectionHeaderBottom: CGFloat = 4
+        /// Space above a category header (every header except the list's first), which reads as bottom padding closing the previous section — shared by every palette list.
+        static let sectionSpacing: CGFloat = 12
     }
 
     enum Radius {

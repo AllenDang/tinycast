@@ -38,13 +38,14 @@ struct ClipboardList: View {
     }
 
     var body: some View {
-        ScrollViewReader { proxy in
+        let rows = rows
+        return ScrollViewReader { proxy in
             ScrollView {
                 LazyVStack(spacing: 0) {
                     ForEach(rows) { row in
                         switch row {
                         case .header(let title):
-                            SectionHeader(title: title)
+                            SectionHeader(title: title, isFirst: row.id == rows.first?.id)
                         case .item(let item):
                             ClipboardRow(
                                 item: item, selected: item.id == selectedID,

@@ -169,11 +169,11 @@ struct RootPaletteView: View {
         let favoriteCount =
             showSections ? apps.prefix(while: { favorites.isFavorite($0) }).count : 0
         let selectedApp = apps.indices.contains(sel - offset) ? apps[sel - offset] : nil
-        // Derive the footer label from the already-resolved selection so `bottomBar` doesn't re-run `appResults` (its filter/sort aren't memoized). An error card selected in launcher/calc-history has no primary action, so the whole group is hidden.
+        // Derive the footer label from the already-resolved selection so `bottomBar` doesn't re-run `appResults` (its filter/sort aren't memoized). The primary/Actions group is hidden when there's nothing to act on: no results in any mode, or an error calc card (selectable but action-less).
         let pillLabel = actionPillLabel(selectedApp: selectedApp, calcActionable: calcActionable)
-        let showActionGroup = !(calcSelected && !calcActionable)
+        let showActionGroup = count > 0 && !(calcSelected && !calcActionable)
 
-        // The `header` (and its single search field) is always attached in the same position via safeAreaInset so its focus survives the compact↔expanded swap — only the results below it toggle. Collapsed shows the bar alone; expanded floats header + action bar over the list with edge-dissolve (see DESIGN.md).
+        // The `header` (and its single search field) is always attached in the same position via safeAreaInset so its focus survives the compact↔expanded swap — only the results below it toggle. Collapsed shows the bar alone; expanded floats header + action bar over the list with edge-dissolve (see docs/ui.md).
         return Group {
             if isCollapsed {
                 Color.clear
@@ -252,12 +252,14 @@ struct RootPaletteView: View {
                 showAppMenu = false
                 menuSelection = 0
             }
+            vm.menuOpen = menuOpen
         }
         .onChange(of: showAppMenu) {
             if showAppMenu {
                 showActions = false
                 menuSelection = 0
             }
+            vm.menuOpen = menuOpen
         }
         // A new top clip while the list is showing (promote-on-paste, live capture) pulls the highlight and scroll back to the row that just moved up.
         .onChange(of: clips.first?.id) { _, newTop in
@@ -314,14 +316,14 @@ struct RootPaletteView: View {
             move(1)
             return .handled
         }
-        // With a menu open, any ↵ activates its highlighted row. Otherwise: ⌘↵ runs the selection's secondary copy action (each menu advertises it), ⌥↵ pastes an emoji in place, and plain ↵ falls through to the field's onSubmit.
+        // With a menu open, plain ↵ activates its highlighted row. A modified ↵ always runs the selection's own action regardless of menu state: ⌘↵ the secondary copy action (each menu advertises it), ⌥↵ paste-in-place; plain ↵ (no menu) falls through to the field's onSubmit.
         .onKeyPress(keys: [.return], phases: .down) { press in
-            if menuOpen {
+            let command = press.modifiers.contains(.command)
+            let option = press.modifiers.contains(.option)
+            if menuOpen, !command, !option {
                 activateMenuItem(menuSelection)
                 return .handled
             }
-            let command = press.modifiers.contains(.command)
-            let option = press.modifiers.contains(.option)
             guard command || option else { return .ignored }
             switch vm.mode {
             case .emoji:
@@ -613,8 +615,8 @@ struct RootPaletteView: View {
         case .launcher:
             if calcActionable { return "Copy Answer" }
             switch selectedApp?.kind {
-            case .systemSettings: return "Open"
-            case .command: return "Run Command"
+            case .systemSettings: return "Open System Setting"
+            case .command: return "Open Command"
             default: return "Open Application"
             }
         }
