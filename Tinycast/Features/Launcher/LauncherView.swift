@@ -34,7 +34,10 @@ struct LauncherList: View {
     private var rows: [Row] {
         var calcRows: [Row] = []
         if let calc { calcRows = [.header("Calculator"), .calc(calc)] }
-        guard showSections else { return calcRows + results.map(Row.app) }
+        guard showSections else {
+            guard !results.isEmpty else { return calcRows }
+            return calcRows + [.header("Results")] + results.map(Row.app)
+        }
         var rows: [Row] = calcRows
         let favorites = results.prefix(favoriteCount)
         let rest = results.dropFirst(favoriteCount)
@@ -114,7 +117,7 @@ struct SectionHeader: View {
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.horizontal, Theme.Spacing.md)
             .padding(.top, Theme.Spacing.xs)
-            .padding(.bottom, Theme.Spacing.xs / 2)
+            .padding(.bottom, Theme.Spacing.sectionHeaderBottom)
     }
 }
 

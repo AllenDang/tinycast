@@ -12,6 +12,8 @@ enum Theme {
         static let xxl: CGFloat = 20
         /// Calculator answer card's roomier vertical breathing room.
         static let xxxl: CGFloat = 28
+        /// Gap under a category header before its first row; shared by every palette list's `SectionHeader` (launcher, clipboard, emoji, calculator history).
+        static let sectionHeaderBottom: CGFloat = 4
     }
 
     enum Radius {
