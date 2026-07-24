@@ -2,6 +2,7 @@ import Foundation
 
 enum UnitCategory: String, CaseIterable, Sendable {
     case length, weight, temperature, time, area, volume, digitalStorage
+    case angle, speed, pressure, dataRate
 
     var displayName: String {
         switch self {
@@ -12,6 +13,10 @@ enum UnitCategory: String, CaseIterable, Sendable {
         case .area: return "Area"
         case .volume: return "Volume"
         case .digitalStorage: return "Digital Storage"
+        case .angle: return "Angle"
+        case .speed: return "Speed"
+        case .pressure: return "Pressure"
+        case .dataRate: return "Data Transfer Rate"
         }
     }
 }
@@ -48,9 +53,9 @@ enum CalcUnits {
         let compound: Bool
     }
 
-    /// Detects `expr unit (to|in|->) unit` (connector second-to-last, known unit last), returning `.mismatch` only when both units are known but incompatible; matching the last position lets "in" double as inches.
+    /// Detects `expr unit (to|in|->) unit` (connector second-to-last, known unit last), returning `.mismatch` only when both units are known but incompatible; matching the last position lets "in" double as inches. A missing value defaults to 1, so `day to s` reads as `1 day to s`.
     static func parseConversion(_ tokens: [CalcToken]) -> ConversionParse? {
-        guard tokens.count >= 4, isConnector(tokens[tokens.count - 2]),
+        guard tokens.count >= 3, isConnector(tokens[tokens.count - 2]),
             case .ident(let toName) = tokens[tokens.count - 1],
             let to = byName[toName],
             case .ident(let fromName) = tokens[tokens.count - 3],
@@ -58,12 +63,32 @@ enum CalcUnits {
         else { return nil }
 
         let valueTokens = Array(tokens[0..<(tokens.count - 3)])
-        guard let input = CalcParser.evaluate(valueTokens) else { return nil }
+        let input: Double
+        if valueTokens.isEmpty {
+            input = 1
+        } else if let value = CalcParser.evaluate(valueTokens) {
+            input = value
+        } else {
+            return nil
+        }
 
         guard from.category == to.category else { return .mismatch(from: from, to: to) }
         let output = (input * from.factor + from.offset - to.offset) / to.factor
         guard output.isFinite else { return nil }
         return .value(input: input, from: from, to: to, output: output)
+    }
+
+    /// A no-connector two-unit query (`day s`, `km mi`) → `1 <first>` in `<second>`. Both must be known units in the same category; anything else returns nil so coincidental two-word searches don't produce a card.
+    static func parseUnitPairConversion(_ tokens: [CalcToken]) -> ConversionParse? {
+        guard tokens.count == 2,
+            case .ident(let fromName) = tokens[0], let from = byName[fromName],
+            case .ident(let toName) = tokens[1], let to = byName[toName],
+            from.category == to.category
+        else { return nil }
+
+        let output = (1 * from.factor + from.offset - to.offset) / to.factor
+        guard output.isFinite else { return nil }
+        return .value(input: 1, from: from, to: to, output: output)
     }
 
     /// Detects `expr unit` with no connector (`1m`, `2*3 kg`) and converts to a curated counterpart from `autoTargets`. Single-letter temperature aliases (c/f/k) are excluded so `5k` stays an app search rather than "5 Kelvin".
@@ -115,6 +140,16 @@ enum CalcUnits {
         "bit": ("b", false), "B": ("bit", false), "kB": ("kib", false), "MB": ("mib", false),
         "GB": ("gib", false), "TB": ("tib", false), "PB": ("tb", false), "KiB": ("kb", false),
         "MiB": ("mb", false), "GiB": ("gb", false), "TiB": ("tb", false),
+        // Angle
+        "deg": ("rad", false), "rad": ("deg", false), "grad": ("deg", false),
+        "turn": ("deg", false), "arcmin": ("deg", false), "arcsec": ("deg", false),
+        // Speed
+        "km/h": ("mph", false), "mph": ("kmh", false), "m/s": ("kmh", false),
+        "kn": ("kmh", false), "ft/s": ("mph", false),
+        // Pressure
+        "bar": ("psi", false), "psi": ("bar", false), "atm": ("psi", false),
+        // Data transfer rate
+        "Mbps": ("kbps", false), "Gbps": ("mbps", false), "Kbps": ("bps", false),
     ]
 
     /// Lookup by lowercased, `²`-folded name (the tokenizer's ident form).
@@ -213,6 +248,39 @@ enum CalcUnits {
         add(
             UnitDef("TiB", "Tebibytes", .digitalStorage, 1_099_511_627_776),
             ["tib", "tebibyte", "tebibytes"])
+
+        // Angle (base: radian) — `deg` is also a trig postfix in CalcParser; the conversion path only fires for a standalone `<n> deg`.
+        add(UnitDef("rad", "Radians", .angle, 1), ["rad", "radian", "radians"])
+        add(UnitDef("deg", "Degrees", .angle, .pi / 180), ["deg", "degree", "degrees"])
+        add(UnitDef("grad", "Gradians", .angle, .pi / 200), ["grad", "grads", "gradian", "gradians", "gon"])
+        add(UnitDef("arcmin", "Arcminutes", .angle, .pi / 10800), ["arcmin", "arcminute", "arcminutes"])
+        add(UnitDef("arcsec", "Arcseconds", .angle, .pi / 648000), ["arcsec", "arcsecond", "arcseconds"])
+        add(UnitDef("turn", "Turns", .angle, 2 * .pi), ["turn", "turns", "rev", "revolution", "revolutions"])
+
+        // Speed (base: meter/second) — slash-free aliases; symbols keep the pretty "/".
+        add(UnitDef("m/s", "Meters per Second", .speed, 1), ["mps"])
+        add(UnitDef("km/h", "Kilometers per Hour", .speed, 1000.0 / 3600), ["kmh", "kph"])
+        add(UnitDef("mph", "Miles per Hour", .speed, 1609.344 / 3600), ["mph"])
+        add(UnitDef("ft/s", "Feet per Second", .speed, 0.3048), ["fps"])
+        add(UnitDef("kn", "Knots", .speed, 1852.0 / 3600), ["kn", "knot", "knots"])
+
+        // Pressure (base: pascal)
+        add(UnitDef("Pa", "Pascals", .pressure, 1), ["pa", "pascal", "pascals"])
+        add(UnitDef("hPa", "Hectopascals", .pressure, 100), ["hpa"])
+        add(UnitDef("kPa", "Kilopascals", .pressure, 1000), ["kpa"])
+        add(UnitDef("bar", "Bar", .pressure, 100000), ["bar", "bars"])
+        add(UnitDef("mbar", "Millibar", .pressure, 100), ["mbar", "millibar", "millibars"])
+        add(UnitDef("psi", "PSI", .pressure, 6894.757293168), ["psi"])
+        add(UnitDef("atm", "Atmospheres", .pressure, 101325), ["atm", "atmosphere", "atmospheres"])
+        add(UnitDef("mmHg", "Millimeters of Mercury", .pressure, 133.322387415), ["mmhg"])
+        add(UnitDef("Torr", "Torr", .pressure, 101325.0 / 760), ["torr"])
+
+        // Data transfer rate (base: bit/second) — SI (1000ⁿ) bit rates.
+        add(UnitDef("bps", "Bits per Second", .dataRate, 1), ["bps"])
+        add(UnitDef("Kbps", "Kilobits per Second", .dataRate, 1e3), ["kbps"])
+        add(UnitDef("Mbps", "Megabits per Second", .dataRate, 1e6), ["mbps"])
+        add(UnitDef("Gbps", "Gigabits per Second", .dataRate, 1e9), ["gbps"])
+        add(UnitDef("Tbps", "Terabits per Second", .dataRate, 1e12), ["tbps"])
 
         return table
     }()

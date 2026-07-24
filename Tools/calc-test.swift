@@ -169,6 +169,52 @@ struct CalcTests {
         expectNilAt("july")
         expectNilAt("tomorrow")
 
+        // Angle units (deg is a real unit now, not just a trig postfix)
+        expectDisplay("1 deg", "0.01745329252 rad")
+        expectExpression("1 deg", "1 deg")
+        expectBadges("1 deg", source: "Degrees", target: "Radians")
+        expectDisplay("90 deg to rad", "1.570796327 rad")
+        expectDisplay("1 rad to deg", "57.29577951 deg")
+        expectDisplay("1 turn to deg", "360 deg")
+        expectDisplay("200 grad to deg", "180 deg")
+        expectDisplay("sin(30deg)", "0.5")  // trig postfix still works inside parens
+
+        // Implied quantity of 1 for number-less conversions
+        expectDisplay("day to s", "86,400 s")
+        expectDisplay("deg to rad", "0.01745329252 rad")
+        expectDisplay("m to ft", "3.280839895 ft")
+
+        // `unit unit` shorthand → 1 of the first in the second
+        expectDisplay("day s", "86,400 s")
+        expectBadges("day s", source: "Days", target: "Seconds")
+        expectDisplay("days s", "86,400 s")
+        expectDisplay("hr min", "60 min")
+        expectNil("m s")  // different categories → no card, no error
+
+        // Extra unit categories: speed / pressure / data rate
+        expectDisplay("100 kmh to mph", "62.13711922 mph")
+        expectDisplay("60 mph to kmh", "96.56064 km/h")
+        expectDisplay("100 mbps to kbps", "100,000 Kbps")
+        expectBadges("100 kmh to mph", source: "Kilometers per Hour", target: "Miles per Hour")
+
+        // Percentage phrasings
+        expectDisplay("20% off 500", "400")
+        expectDisplay("50 as % of 200", "25%")
+
+        // Badges on paths that previously had none
+        expectBadges("255 to hex", source: "Decimal", target: "Hexadecimal")
+        expectBadges("0xff to decimal", source: "Hexadecimal", target: "Decimal")
+        expectBadges("3*3", source: "Expression", target: "Result")
+        expectBadges("20% off 500", source: "Expression", target: "Result")
+
+        // days since — past elapsed, against the fixed clock (Fri 2026-07-24)
+        expectDisplayAt("days since 9jul", "15 days")
+        expectBadgesAt("days since 9jul", source: "Thursday, 9 July", target: "Friday, 24 July")
+        expectDisplayAt("weeks since 3jul", "3 weeks")
+        expectDisplayAt("days since yesterday", "1 day")
+        // Date ± duration now carries the resolved start as a source badge
+        expectBadgesAt("today + 3 weeks", source: "Friday, 24 July", target: "Result")
+
         print("\n\(passes) passed, \(failures) failed")
         exit(failures == 0 ? 0 : 1)
     }

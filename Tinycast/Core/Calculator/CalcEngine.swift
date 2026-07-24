@@ -45,12 +45,6 @@ enum CalcEngine {
         // Date/time first: `hrs till july` carries no digit, so it must run before the numeric reject below.
         if let dateTime = CalcDateTime.evaluate(query, now: now, calendar: calendar) { return dateTime }
 
-        // Cheap reject before tokenizing: remaining calculator input always carries a digit or a constant, keeping the common app-search case near-free.
-        guard
-            query.contains(where: { $0.isASCII && $0.isNumber })
-                || query.lowercased().contains("e") || query.contains("π")
-        else { return nil }
-
         guard let tokens = CalcTokenizer.tokenize(query), !tokens.isEmpty else { return nil }
 
         // A lone literal or constant is more likely an app search than a calculation, so no card — except a radix literal ("0xff"), where echoing the decimal is useful.
@@ -59,6 +53,7 @@ enum CalcEngine {
                 let display = CalcFormatter.grouped(String(value))
                 return CalcResult(
                     expression: query,
+                    sourceBadge: "Hexadecimal", targetBadge: "Decimal",
                     payload: .value(display: display, copyText: String(value)))
             }
             return nil
@@ -66,7 +61,8 @@ enum CalcEngine {
 
         if let base = baseConversion(tokens, query: query) { return base }
 
-        if let conversion = CalcUnits.parseConversion(tokens) {
+        // Conversions run before the numeric reject below: `m to ft`, `day s` carry no digit.
+        if let conversion = CalcUnits.parseConversion(tokens) ?? CalcUnits.parseUnitPairConversion(tokens) {
             switch conversion {
             case .value(let input, let from, let to, let output):
                 return CalcResult(
@@ -102,9 +98,20 @@ enum CalcEngine {
                 payload: .value(display: display, copyText: copyText))
         }
 
+        // Natural-language percent: `20% off 500`, `50 as % of 200`.
+        if let percent = CalcPercent.evaluate(tokens, query: query) { return percent }
+
+        // Cheap reject for the arithmetic fallback: plain math always carries a digit or a constant, keeping the common app-search case a no-card.
+        guard
+            query.contains(where: { $0.isASCII && $0.isNumber })
+                || query.lowercased().contains("e") || query.contains("π")
+        else { return nil }
+
         guard let value = CalcParser.evaluate(tokens) else { return nil }
         return CalcResult(
             expression: prettyExpression(query),
+            sourceBadge: "Expression",
+            targetBadge: "Result",
             payload: .value(
                 display: CalcFormatter.display(value),
                 copyText: CalcFormatter.copyText(value)))
@@ -119,34 +126,53 @@ enum CalcEngine {
         else { return nil }
 
         let source: UInt64
+        let sourceBadge: String
         switch tokens[0] {
-        case .intLiteral(let value, _):
+        case .intLiteral(let value, let radix):
             source = value
+            sourceBadge = baseName(forRadix: radix)
         case .number(let value)
         where value >= 0 && value.rounded() == value && value <= 9_007_199_254_740_992:
             source = UInt64(value)
+            sourceBadge = "Decimal"
         default:
             return nil
         }
 
         let output: String
+        let targetBadge: String
         switch target {
         case "hex", "hexadecimal":
             output = "0x" + String(source, radix: 16, uppercase: true)
+            targetBadge = "Hexadecimal"
         case "binary", "bin":
             output = "0b" + String(source, radix: 2)
+            targetBadge = "Binary"
         case "octal", "oct":
             output = "0o" + String(source, radix: 8)
+            targetBadge = "Octal"
         case "decimal", "dec":
             output = CalcFormatter.grouped(String(source))
+            targetBadge = "Decimal"
         default:
             return nil
         }
         let sourceText = query.split(whereSeparator: \.isWhitespace).first.map(String.init) ?? query
         return CalcResult(
             expression: sourceText,
+            sourceBadge: sourceBadge,
+            targetBadge: targetBadge,
             payload: .value(
                 display: output, copyText: output.replacingOccurrences(of: ",", with: "")))
+    }
+
+    private static func baseName(forRadix radix: Int) -> String {
+        switch radix {
+        case 16: return "Hexadecimal"
+        case 2: return "Binary"
+        case 8: return "Octal"
+        default: return "Decimal"
+        }
     }
 
     /// Light cleanup of the typed expression for the card: collapse whitespace and use pretty operator glyphs, otherwise keep what the user wrote.
