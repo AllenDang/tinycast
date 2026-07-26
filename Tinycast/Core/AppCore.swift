@@ -34,6 +34,21 @@ enum PaletteMode: String, CaseIterable, Identifiable {
     }
 }
 
+/// The app a paste will land in, resolved once per palette show so the footer pill and menu rows can name it without re-reading `NSWorkspace` on every render.
+struct PasteTarget: Equatable {
+    let name: String
+    /// Bundle path for `IconCache` — nil for a target with no on-disk bundle.
+    let iconPath: String?
+
+    init?(app: NSRunningApplication?) {
+        guard let app, let name = app.localizedName else { return nil }
+        self.name = name
+        iconPath = app.bundleURL?.path
+    }
+
+    var pasteTitle: String { "Paste to \(name)" }
+}
+
 /// View-model shared between the panel's SwiftUI tree and the coordinator.
 @MainActor
 final class PaletteViewModel: ObservableObject {
@@ -46,6 +61,8 @@ final class PaletteViewModel: ObservableObject {
     @Published var resetToken = UUID()
     /// Set by the compact bar's "…" overflow to expand into the full launcher without a query; cleared on every `prepare`.
     @Published var forceExpanded = false
+    /// The app a paste would land in, mirrored from `PaletteWindowController.previousApp` on every show. Deliberately *not* cleared by `prepare` — pop-to-root resets the screen, not the paste target.
+    @Published var pasteTarget: PasteTarget?
     /// Gates the mouse-hover highlight: true only while the pointer is physically moving (armed on `.mouseMoved`, disarmed on any `.keyDown` in `PalettePanel.sendEvent`). Plain, not `@Published` — read at hover time, never drives a re-render.
     var hoverHighlightArmed = false
     /// True while a footer popover menu (⌘K Actions or the app menu) is open, so `PalettePanel.sendEvent` swallows text-editing keystrokes the field editor would otherwise consume — the query must stay frozen while a menu owns the keyboard (matches Raycast). Plain, not `@Published` — read at event time, mirrored from the view's menu state.

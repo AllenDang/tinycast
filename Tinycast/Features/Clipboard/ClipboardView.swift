@@ -110,17 +110,22 @@ enum DateBucket: Int {
 /// Actions menu content for a clipboard entry, shown bottom-right on right-click, mirroring `AppActionsMenu`.
 @MainActor
 enum ClipboardActionsMenu {
-    static func content(item: ClipboardItem, core: AppCore, store: ClipboardStore)
-        -> PopoverMenuContent
-    {
+    static func content(
+        item: ClipboardItem, core: AppCore, store: ClipboardStore, target: PasteTarget?
+    ) -> PopoverMenuContent {
         var items: [PopoverMenuItem] = [
-            PopoverMenuItem(title: "Paste", systemImage: "doc.on.clipboard", shortcut: "↵") {
+            PopoverMenuItem(
+                title: target?.pasteTitle ?? "Paste",
+                icon: .paste(target, fallback: "doc.on.clipboard"), shortcut: "↵"
+            ) {
                 core.paste(item)
             },
             PopoverMenuItem(title: "Copy to Clipboard", systemImage: "doc.on.doc", shortcut: "⌘↵") {
                 core.copyToClipboard(item)
             },
-            PopoverMenuItem(title: "Paste & Keep Window Open", systemImage: "pin") {
+            PopoverMenuItem(
+                title: "Paste & Keep Window Open", icon: .paste(target, fallback: "pin")
+            ) {
                 core.pasteKeepingWindowOpen(item)
             },
         ]

@@ -45,3 +45,8 @@ app:
   stay open and frontmost (used by "paste keeping window open").
 
 Both require the Accessibility permission (`Permissions.ensureAccessibility()`).
+
+The same show also mirrors that app into `PaletteViewModel.pasteTarget` (a `PasteTarget`: localized
+name + bundle path), so Clipboard and Emoji can name it — the footer pill reads "Paste to Notes" and
+the ⌘K paste rows carry the app's icon. Resolved once per summon, never per render, and deliberately
+not cleared by `prepare` (pop-to-root resets the screen, not the target).

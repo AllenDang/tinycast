@@ -53,7 +53,8 @@ enum Theme {
         static let clipboardListWidth: CGFloat = 290
         static let emojiCell: CGFloat = 56
         static let menuWidth: CGFloat = 276
-        static let menuIcon: CGFloat = 16
+        /// Square slot for a popover-menu row's leading glyph. 20 (not the 16 the artwork suggests) because an `IconCache` app icon only paints ~85% of its canvas: at 20 its visible artwork is 17pt, matching the 17–18pt a `.body` SF Symbol renders at, so symbol and app-icon rows read the same size.
+        static let menuIcon: CGFloat = 20
         /// Settings window: sidebar column width and the small icon used in setting rows.
         static let settingsSidebar: CGFloat = 184
         static let settingsRowIcon: CGFloat = 20

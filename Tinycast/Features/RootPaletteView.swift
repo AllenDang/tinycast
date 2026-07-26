@@ -110,7 +110,8 @@ struct RootPaletteView: View {
             return nil
         case .clipboard:
             if let clip = selectedClipItem {
-                return ClipboardActionsMenu.content(item: clip, core: core, store: store)
+                return ClipboardActionsMenu.content(
+                    item: clip, core: core, store: store, target: vm.pasteTarget)
             }
             return nil
         case .calculatorHistory:
@@ -124,7 +125,8 @@ struct RootPaletteView: View {
             return nil
         case .emoji:
             if let emoji = selectedEmojiEntry {
-                return EmojiActionsMenu.content(entry: emoji, core: core)
+                return EmojiActionsMenu.content(
+                    entry: emoji, core: core, target: vm.pasteTarget)
             }
             return nil
         }
@@ -609,7 +611,7 @@ struct RootPaletteView: View {
     private func actionPillLabel(selectedApp: AppEntry?, calcActionable: Bool) -> String {
         switch vm.mode {
         case .clipboard, .emoji:
-            return "Paste"
+            return vm.pasteTarget?.pasteTitle ?? "Paste"
         case .calculatorHistory:
             return "Copy Answer"
         case .launcher:

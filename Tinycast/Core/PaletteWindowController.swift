@@ -22,6 +22,8 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
         if frontmost?.processIdentifier != NSRunningApplication.current.processIdentifier {
             previousApp = frontmost
         }
+        // Resolve the name/icon path once per summon rather than per render; reading `previousApp` (not `frontmost`) keeps the label naming the same app paste will actually target.
+        core.palette.pasteTarget = PasteTarget(app: previousApp)
         let panel = ensurePanel()
         // Open disarmed: the pointer may already sit over a row, but nothing should be highlighted until the user actually moves it.
         core.palette.hoverHighlightArmed = false
