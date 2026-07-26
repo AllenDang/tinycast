@@ -9,6 +9,9 @@ builds with the **Xcode 26** toolchain.
   `project.yml`. After editing `project.yml`, run `xcodegen generate` and commit. There is **no**
   `Package.swift` / SwiftPM. Full build/test/sign/release steps: [`docs/development.md`](docs/development.md),
   [`docs/signing.md`](docs/signing.md).
+- **Channels:** Debug builds are their own channel — `Tinycast Dev.app` / `com.tinycast.app.dev` — so a
+  local run never shares prefs, caches, TCC grants or login item with an installed stable/beta.
+  Anything newly persisted must stay keyed by `Bundle.main.bundleIdentifier`.
 - **Tests:** no XCTest target — standalone `swiftc` harnesses in `Tools/` (see Critical Invariants and
   `docs/development.md`).
 

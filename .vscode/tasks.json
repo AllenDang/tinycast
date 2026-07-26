@@ -23,7 +23,7 @@
       // Rebuild, then relaunch the menu-bar app. Default build task (⌘⇧B).
       "label": "Build & Run Tinycast (debug)",
       "type": "shell",
-      "command": "killall Tinycast 2>/dev/null; open build/DerivedData/Build/Products/Debug/Tinycast.app",
+      "command": "killall 'Tinycast Dev' 2>/dev/null; open 'build/DerivedData/Build/Products/Debug/Tinycast Dev.app'",
       "options": { "cwd": "${workspaceFolder}" },
       "dependsOn": "Build Tinycast.app (debug)",
       "group": { "kind": "build", "isDefault": true },

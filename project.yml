@@ -42,3 +42,10 @@ targets:
         LD_RUNPATH_SEARCH_PATHS:
           - "$(inherited)"
           - "@executable_path/../Frameworks"
+      configs:
+        # Debug is its own channel, like beta/stable in release.yml: a distinct bundle id means a
+        # locally-run build gets its own prefs, caches, TCC grants and login item instead of
+        # inheriting — and corrupting — the installed app's state.
+        Debug:
+          PRODUCT_NAME: Tinycast Dev
+          PRODUCT_BUNDLE_IDENTIFIER: com.tinycast.app.dev

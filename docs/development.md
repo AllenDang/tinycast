@@ -35,6 +35,26 @@ Xcode, prefix with `DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer` (t
 [XcodeGen](https://github.com/yonaskolb/XcodeGen) — after changing project settings in `project.yml`,
 run `xcodegen generate` and commit the result.
 
+### The dev channel
+
+Debug builds are a separate channel: **`Tinycast Dev.app`**, bundle id `com.tinycast.app.dev`. Since
+every persisted thing is keyed by bundle
+id — `~/Library/Preferences/<id>.plist` (settings + hotkey bindings),
+`~/Library/Caches/<id>/` (clipboard history, calculator history, frequent emoji),
+`~/Library/Application Support/<id>/` (the onboarding marker), the `SMAppService` login item, and the
+Accessibility / Input Monitoring (TCC) grants — a build you run locally can't read or clobber the
+installed app's state, and both can run side-by-side.
+
+Consequences worth knowing:
+
+- The dev build asks for Accessibility on its own the first time, and starts with **no** hotkeys bound
+  and onboarding unseen. Grant + bind once; it persists across rebuilds (the fixed build path and the
+  `Tinycast Self-Signed` identity keep the TCC grant alive).
+- Don't bind the same global hotkey in both — whichever registered first wins.
+- The Hyper Key's Caps Lock remap is `hidutil` state, which is **system-wide, not per-bundle**:
+  quitting one build clears the remap for the other, which then needs a rebind (or relaunch) to
+  restore it.
+
 ### Editor (VS Code) code-intelligence
 
 Autocomplete / go-to-definition come from SourceKit-LSP driven by a `buildServer.json`. Generate it
@@ -90,7 +110,8 @@ Full details in [signing.md](signing.md).
 needed. Run it from the **Actions** tab (`Release` → **Run workflow**) and pick:
 
 - **channel** — `beta` or `stable`. Each builds a distinct app
-  (`Tinycast Beta.app` / `Tinycast.app`) with its own bundle id.
+  (`Tinycast Beta.app` / `Tinycast.app`) with its own bundle id, alongside the local
+  `Tinycast Dev.app` (above).
   Beta gets an auto-incrementing `-beta.N` suffix (`N` = the Actions run number)
   so re-running never collides; stable ships the version as-is.
 - **version** — base semver, e.g. `0.2.0`.
