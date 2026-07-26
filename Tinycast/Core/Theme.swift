@@ -111,11 +111,15 @@ struct KeyCapChip: View {
     let text: String
     var style: Style = .filled
 
+    /// "↵" is absent from SF Pro and falls back to Lucida Grande UI, which seats it 1.1pt higher in the line box than the SF caps — visibly top-heavy in a chip. Nudging via `offset` is render-only, so the chip keeps the same footprint as every other cap.
+    private static let returnGlyphDrop: CGFloat = 1.1
+
     var body: some View {
         let shape = RoundedRectangle(cornerRadius: Theme.Radius.keyCap, style: .continuous)
         Text(text)
             .font(Theme.Typography.keyCap)
             .foregroundStyle(Theme.Colors.textSecondary)
+            .offset(y: text == "↵" ? Self.returnGlyphDrop : 0)
             .padding(.horizontal, Theme.Spacing.xs)
             .frame(minWidth: Theme.Size.keyCap, minHeight: Theme.Size.keyCap)
             .background {
