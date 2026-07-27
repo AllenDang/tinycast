@@ -44,6 +44,10 @@ const isSign = (s) => [...s].length === 1 && !/[\p{L}\p{N}]/u.test(s);
 // Capitalise each word without touching the rest, so "UAE dirham" survives as "UAE Dirham".
 const titleCase = (s) => s.replace(/(^|[\s(])(\p{Ll})/gu, (_, lead, c) => lead + c.toUpperCase());
 
+// The noun is taken as the last word of the name, which only fails where that word isn't a noun for
+// the money itself: nobody asks to convert "1 rights". Naming the exceptions beats parsing grammar.
+const NOT_NOUNS = new Set(["rights"]);
+
 /// The card's badge is a small pill, so prefer whichever CLDR form is shorter: `displayName` is the
 /// title-cased label ("US Dollar"), but for a few currencies the singular is far tighter
 /// ("United Arab Emirates Dirham" vs "UAE dirham").
@@ -110,7 +114,7 @@ async function main() {
     // both as written and folded, so "krónur" and "kronur" both resolve without a US keyboard.
     for (const field of ["displayName-count-one", "displayName-count-other"]) {
       const word = (cldrEntry[field] || "").toLowerCase().split(/\s+/).filter(Boolean).pop() || "";
-      if (word.length < 3 || !/^\p{L}+$/u.test(word)) continue;
+      if (word.length < 3 || !/^\p{L}+$/u.test(word) || NOT_NOUNS.has(word)) continue;
       for (const form of new Set([word, fold(word), fold(word).replace(/[^a-z]/g, "")]))
         if (form.length >= 3) claim(wordClaims, form, code);
     }

@@ -306,7 +306,6 @@ enum CurrencyData {
         "reals": "BRL",
         "riel": "KHR",
         "riels": "KHR",
-        "rights": "XDR",
         "ringgit": "MYR",
         "ringgits": "MYR",
         "rufiyaa": "MVR",

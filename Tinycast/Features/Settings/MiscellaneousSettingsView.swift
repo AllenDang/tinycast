@@ -6,6 +6,7 @@ struct MiscellaneousSettingsView: View {
     @ObservedObject private var currencyRates = AppCore.shared.currencyRates
     @State private var askingConsent = false
     @State private var refreshing = false
+    @State private var refreshFailed = false
 
     var body: some View {
         SettingsPane(
@@ -15,9 +16,7 @@ struct MiscellaneousSettingsView: View {
             SettingsCard(header: "Calculator") {
                 SettingsRow(
                     title: "Currency Conversion",
-                    subtitle:
-                        "Convert currencies inline — \"100 dollars to yen\", \"€20 to GBP\". "
-                        + "Needs exchange rates from an external service.",
+                    subtitle: conversionStatus,
                     systemImage: "dollarsign.arrow.circlepath",
                     tint: .green,
                     statusDot: currencyRates.isEnabled ? .green : nil
@@ -52,35 +51,14 @@ struct MiscellaneousSettingsView: View {
                         Button("Update Now") {
                             refreshing = true
                             Task {
-                                await currencyRates.refreshNow()
+                                let landed = await currencyRates.refreshNow()
+                                refreshFailed = !landed
                                 refreshing = false
                             }
                         }
                         .disabled(refreshing)
                     }
                 }
-            }
-
-            if currencyRates.isEnabled {
-                SettingsCallout(
-                    title: "Rates come from \(CurrencyRateStore.provider).",
-                    message:
-                        "Tinycast requests the published rate table roughly every six hours and "
-                        + "caches it locally. The request carries nothing about you or what you type.",
-                    systemImage: "network",
-                    tint: .green
-                ) {
-                    Link("Learn More", destination: CurrencyRateStore.providerURL)
-                }
-            } else {
-                SettingsCallout(
-                    title: "Currency conversion is off.",
-                    message:
-                        "Tinycast won't contact the exchange-rate service until you turn this on, "
-                        + "and the calculator simply won't answer currency questions.",
-                    systemImage: "wifi.slash",
-                    tint: .secondary
-                )
             }
         }
         .sheet(isPresented: $askingConsent) {
@@ -93,17 +71,26 @@ struct MiscellaneousSettingsView: View {
         }
     }
 
+    /// Carries the off-state promise that used to need its own callout: nothing is contacted until
+    /// the switch is on.
+    private var conversionStatus: String {
+        let examples = "Convert inline — \"100 dollars to yen\", \"€20 to GBP\"."
+        return currencyRates.isEnabled ? examples : "\(examples) Off — no service is contacted."
+    }
+
     private var ratesStatus: String {
+        if refreshing { return "Updating…" }
+        if refreshFailed { return "Couldn't reach \(CurrencyRateStore.provider). Try again." }
         guard let fetched = currencyRates.rates?.fetchedAt else {
-            return "Not downloaded yet — conversions will say so until the first update lands."
+            return "\(CurrencyRateStore.provider) · not downloaded yet."
         }
         let stamp = fetched.formatted(date: .abbreviated, time: .shortened)
-        return "Last updated \(stamp). Refreshes automatically every six hours."
+        return "\(CurrencyRateStore.provider) · updated \(stamp). Refreshes daily."
     }
 }
 
-/// The consent step. Spells out what enabling actually does — which service is contacted, how often,
-/// what leaves the machine — and links to the provider so the claim is checkable before agreeing.
+/// The consent step. Three facts are the ones that actually decide the answer — who is contacted, how
+/// often, and that nothing personal goes with it — plus the provider link so the claim is checkable.
 private struct CurrencyConsentSheet: View {
     let onCancel: () -> Void
     let onAccept: () -> Void
@@ -114,36 +101,18 @@ private struct CurrencyConsentSheet: View {
                 Image(systemName: "network")
                     .font(.system(size: 22, weight: .medium))
                     .foregroundStyle(.green)
-                VStack(alignment: .leading, spacing: Theme.Spacing.xs / 2) {
-                    Text("Turn on currency conversion?")
-                        .font(.headline)
-                    Text("It needs an internet connection to fetch exchange rates.")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
+                Text("Turn on currency conversion?")
+                    .font(.headline)
             }
 
-            VStack(alignment: .leading, spacing: Theme.Spacing.md) {
-                ConsentPoint(
-                    systemImage: "arrow.down.circle",
-                    text:
-                        "Tinycast will download exchange rates from \(CurrencyRateStore.provider), "
-                        + "an open-source service that publishes rates from central banks.")
-                ConsentPoint(
-                    systemImage: "clock",
-                    text:
-                        "It asks for the published rate table about every six hours while Tinycast "
-                        + "is running, and keeps a copy on your Mac so it still answers offline.")
-                ConsentPoint(
-                    systemImage: "eye.slash",
-                    text:
-                        "The request contains no account, no identifier, and nothing you type into "
-                        + "the calculator — the whole table is fetched and the maths happens locally.")
-                ConsentPoint(
-                    systemImage: "arrow.uturn.backward",
-                    text:
-                        "Turning this off later stops all requests and deletes the cached rates.")
-            }
+            Text(
+                "Tinycast downloads exchange rates from \(CurrencyRateStore.provider) once a day and "
+                + "keeps a copy on your Mac. No account, no identifiers, nothing you type. "
+                + "Turning it off deletes the cached rates."
+            )
+            .font(.callout)
+            .foregroundStyle(.secondary)
+            .fixedSize(horizontal: false, vertical: true)
 
             HStack(spacing: Theme.Spacing.lg) {
                 Link(destination: CurrencyRateStore.providerURL) {
@@ -161,26 +130,6 @@ private struct CurrencyConsentSheet: View {
             }
         }
         .padding(Theme.Spacing.xxl)
-        .frame(width: 460)
-    }
-}
-
-/// One bullet in the consent sheet: symbol plus a line of plain-language explanation.
-private struct ConsentPoint: View {
-    let systemImage: String
-    let text: String
-
-    var body: some View {
-        HStack(alignment: .top, spacing: Theme.Spacing.lg) {
-            Image(systemName: systemImage)
-                .font(.system(size: 12, weight: .medium))
-                .foregroundStyle(.secondary)
-                .frame(width: Theme.Size.settingsRowIcon)
-            Text(text)
-                .font(.callout)
-                .foregroundStyle(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
-            Spacer(minLength: 0)
-        }
+        .frame(width: 420)
     }
 }

@@ -281,6 +281,12 @@ struct CalcTests {
         // Slang is no longer carried: CLDR has no "quid", and we don't hand-maintain synonyms
         expectNil("50 quid to usd")
         expectNil("100 bucks to eur")
+        // The last word of a name isn't always its noun — "Special Drawing Rights" is not a "rights"
+        expectNil("1 rights to usd")
+        // A result too small to show at all reads as a clean zero, never "-0.00"
+        expectDisplay("-0.0000000000001 usd to eur", "0.00 EUR")
+        expectDisplay("0 usd to eur", "0.00 EUR")
+        expectDisplay("-5 usd to eur", "-4.60 EUR")
         // CUP (Cuban peso) is a generated code that collides with a unit; volume still wins
         expectDisplay("1 cup to ml", "236.5882365 mL")
         expectDisplay("1 cup to tbsp", "16 tbsp")

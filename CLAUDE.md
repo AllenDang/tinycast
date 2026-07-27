@@ -80,7 +80,9 @@ Never break these without an explicit task to do so.
   be withdrawn mid-flight. Consent flags live on the owning store, never in `AppSettings`
   (`SettingsBackup` mirrors that type, and an import must not grant network access). Model the gate
   so the *safe* state is the default: `CalcEngine.evaluate`'s `currency:` parameter defaults to
-  `.off`, so forgetting to pass one disables the feature rather than enabling it.
+  `.off`, so forgetting to pass one disables the feature rather than enabling it. Fetch on a private
+  **cacheless** `URLSession` (`.ephemeral`, `urlCache = nil`), never `URLSession.shared` — a cacheable
+  response would leave a second copy in the on-disk `URLCache` that opting out doesn't delete.
   `CurrencyRateStore` is the reference implementation — follow it rather than inventing a second shape.
 - **Swift 6 language mode: data-race violations are hard errors.** Almost everything is `@MainActor`;
   cross-actor model types are `Sendable`; heavy / IO work (app scan, image decode) is pushed off-main

@@ -19,13 +19,12 @@ enum CalcFormatter {
 
     /// Money rounding for currency answers: two decimals, widening to four significant digits below a cent so a small cross-rate never collapses to "0.00". Deliberately not `%g` — a satoshi-scale rate must read "0.00001551", never "1.551e-05". Ungrouped; the display side wraps this in `grouped`.
     static func currency(_ value: Double) -> String {
-        let v = value == 0 ? 0 : value  // normalize -0
-        let magnitude = abs(v)
-        guard magnitude > 0, magnitude < 0.01 else { return String(format: "%.2f", v) }
-        // Below ~1e-9 even four significant digits are noise, so fall back to plain cents.
-        let decimals = 3 - Int(floor(log10(magnitude)))
-        guard decimals <= 12 else { return String(format: "%.2f", v) }
-        var text = String(format: "%.\(decimals)f", v)
+        let magnitude = abs(value)
+        // Below ~1e-9 even four significant digits are noise. Answering with a literal "0.00" also
+        // keeps a tiny negative from printing as "-0.00", which `%.2f` would happily do.
+        guard magnitude >= 1e-9 else { return "0.00" }
+        guard magnitude < 0.01 else { return String(format: "%.2f", value) }
+        var text = String(format: "%.\(3 - Int(floor(log10(magnitude))))f", value)
         while text.hasSuffix("0") { text.removeLast() }
         return text
     }

@@ -16,7 +16,10 @@ final class CurrencyRateStore: ObservableObject {
     static let providerURL = URL(string: "https://frankfurter.dev")!
     private nonisolated static let endpoint = URL(
         string: "https://api.frankfurter.dev/v2/rates?base=USD")!
-    static let refreshInterval: TimeInterval = 6 * 3600
+    /// Daily. The feed republishes about once a day, so asking more often just costs requests without
+    /// getting newer numbers — and the age is measured from the persisted snapshot, so relaunching
+    /// Tinycast repeatedly doesn't re-fetch.
+    static let refreshInterval: TimeInterval = 24 * 3600
     /// Shorter retry so a machine that was offline at launch picks rates up soon after it reconnects.
     private static let retryInterval: TimeInterval = 15 * 60
 
@@ -56,11 +59,15 @@ final class CurrencyRateStore: ObservableObject {
     /// otherwise sleep exactly until it expires. A failed fetch keeps the stale snapshot and retries
     /// sooner. Guard 3 — no consent, no loop, so `AppCore.start()` can call this unconditionally.
     func start() {
-        guard isEnabled, pump == nil else { return }
+        guard isEnabled else { return }
+        // Replace rather than bail on a live pump: a loop that has already exited still leaves a
+        // non-nil task behind, and a `pump == nil` guard would let that dead task block every restart.
+        pump?.cancel()
         pump = Task { [weak self] in
-            while !Task.isCancelled {
-                guard let self, self.isEnabled else { return }
-                let age = self.rates.map { Date().timeIntervalSince($0.fetchedAt) } ?? .infinity
+            while !Task.isCancelled, let self, self.isEnabled {
+                // Clamped: a snapshot stamped in the future (clock skew, an edited cache file) must
+                // not park the loop for longer than one interval.
+                let age = max(0, self.rates.map { Date().timeIntervalSince($0.fetchedAt) } ?? .infinity)
                 guard age >= Self.refreshInterval else {
                     try? await Task.sleep(for: .seconds(Self.refreshInterval - age))
                     continue
@@ -88,13 +95,13 @@ final class CurrencyRateStore: ObservableObject {
         }
     }
 
-    /// Manual "Update Now" from Settings; a no-op without consent.
-    func refreshNow() async {
-        guard isEnabled else { return }
-        await fetchAndStore()
+    /// Manual "Update Now" from Settings. Returns whether a fresh table landed, so the pane can say
+    /// the fetch failed instead of leaving the button to spring back with nothing changed.
+    func refreshNow() async -> Bool {
+        guard isEnabled else { return false }
+        return await fetchAndStore()
     }
 
-    @discardableResult
     private func fetchAndStore() async -> Bool {
         // Guard 4 — re-checked at the network boundary itself: the pump may have been sleeping when
         // the user revoked consent, and this is the last line before a request goes out.
@@ -109,11 +116,19 @@ final class CurrencyRateStore: ObservableObject {
         return true
     }
 
+    /// Deliberately not `URLSession.shared`: the provider serves the table `Cache-Control: public,
+    /// max-age=…`, so the shared session would write a second copy into the on-disk `URLCache` that
+    /// `setEnabled(false)` never deletes. Cacheless, so revoking consent really does leave nothing behind.
+    private nonisolated static let session: URLSession = {
+        let config = URLSessionConfiguration.ephemeral
+        config.urlCache = nil
+        return URLSession(configuration: config)
+    }()
+
     /// Off-main by way of `URLSession`'s async API; the decoded table is a plain value, so nothing but `CurrencyRates` crosses back.
     private nonisolated static func fetch() async throws -> CurrencyRates {
-        var request = URLRequest(url: endpoint, timeoutInterval: 20)
-        request.cachePolicy = .reloadIgnoringLocalCacheData
-        let (data, response) = try await URLSession.shared.data(for: request)
+        let request = URLRequest(url: endpoint, timeoutInterval: 20)
+        let (data, response) = try await session.data(for: request)
         guard let http = response as? HTTPURLResponse, http.statusCode == 200 else {
             throw URLError(.badServerResponse)
         }
