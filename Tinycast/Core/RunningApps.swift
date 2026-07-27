@@ -27,8 +27,10 @@ final class RunningAppsMonitor: ObservableObject {
         return runningBundleIDs.contains(bundleID)
     }
 
+    /// Launch/terminate fire for helpers and agents the launcher never lists, so republish only on a real change — an unconditional assign would invalidate every observer for nothing.
     private func refresh() {
-        runningBundleIDs = Set(
-            NSWorkspace.shared.runningApplications.compactMap(\.bundleIdentifier))
+        let next = Set(NSWorkspace.shared.runningApplications.compactMap(\.bundleIdentifier))
+        guard next != runningBundleIDs else { return }
+        runningBundleIDs = next
     }
 }

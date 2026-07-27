@@ -38,7 +38,7 @@ enum CommandID: String, CaseIterable, Sendable {
         case .importFromRaycast: return "arrow.down.doc"
         case .settings: return "gearshape"
         case .about: return "info.circle"
-        case .quitAllApps: return "xmark.app"
+        case .quitAllApps: return "xmark.circle"
         case .quit: return "power"
         }
     }
