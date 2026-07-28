@@ -72,17 +72,23 @@ app; changes always apply (fixed build path — no need to delete `build/`).
 
 ## Tests
 
-There's no XCTest target. Two standalone harnesses:
+There's no XCTest target. Standalone harnesses:
 
 ```sh
 swift Tools/fuzz-test.swift                                        # launcher fuzzy matcher
 swiftc Tinycast/Core/Calculator/*.swift Tools/calc-test.swift \
     -o /tmp/calc-test && /tmp/calc-test                           # calculator engine
+swiftc -swift-version 6 Tinycast/Core/ClipboardStore.swift Tools/clipboard-test.swift \
+    -o /tmp/clipboard-test && /tmp/clipboard-test                 # clipboard store
 ```
 
 `Tools/fuzz-test.swift` holds a **copy** of `FuzzyMatch` from `Tinycast/Core/AppIndex.swift` —
 change the scoring in one and mirror it in the other. The calc harness compiles the real engine
 sources, which is why `Tinycast/Core/Calculator/` must stay Foundation-only.
+
+The clipboard harness likewise compiles the real `ClipboardStore.swift`, so that file must keep to
+Foundation + SQLite3 and depend on no other app source. Each case drives a store rooted in a
+throwaway temp directory (`ClipboardStore(directory:)`), so a run can never reach a real history.
 
 ## Generated data
 
