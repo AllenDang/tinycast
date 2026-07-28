@@ -38,6 +38,12 @@ final class AppSettings: ObservableObject {
         static let popToRootTimeout = "popToRootTimeout"
         static let compactMode = "compactMode"
         static let showFavoritesInCompactMode = "showFavoritesInCompactMode"
+        static let searchScopes = "launcherSearchScopes"
+    }
+
+    /// Folders (and individual `.app` bundles) `AppIndex` scans, in scan order. Editing this re-indexes — `AppIndex.start(settings:)` observes it.
+    @Published var searchScopes: [String] {
+        didSet { defaults.set(searchScopes, forKey: Key.searchScopes) }
     }
 
     @Published var clipboardRetention: ClipboardRetention {
@@ -124,5 +130,7 @@ final class AppSettings: ObservableObject {
         showFavoritesInCompactMode =
             defaults.object(forKey: Key.showFavoritesInCompactMode) == nil
             || defaults.bool(forKey: Key.showFavoritesInCompactMode)
+        // An unset key means "never configured" and seeds the defaults; a stored empty array is a user who deliberately cleared the list.
+        searchScopes = defaults.stringArray(forKey: Key.searchScopes) ?? SearchScopes.defaults
     }
 }

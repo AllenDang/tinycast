@@ -1,7 +1,33 @@
 # App launcher & fuzzy match
 
-`AppIndex.scan()` runs off-main, enumerates the standard `/Applications` dirs, and dedups by bundle ID
-(first dir wins).
+`AppIndex.scan()` runs off-main, enumerates the user's search scopes, and dedups by bundle ID (the
+earliest scope wins).
+
+## Search scopes
+
+`SearchScopes` (`Core/SearchScopes.swift`) owns the paths; the list is user-editable in General
+Settings and persisted as `AppSettings.searchScopes`. A scope is either a directory or a single `.app`
+bundle, stored tilde-abbreviated so the UI reads cleanly and a settings backup stays portable.
+
+Enumeration is **flat** — one `contentsOfDirectory` per scope, no recursion. A nested folder such as
+`/Applications/Adobe` is indexed by adding it as its own scope, which keeps the list honest: what it
+shows is exactly what is scanned. (A one-level nested walk was measured against the flat list over the
+real default set: same 96 apps, same ~0.5 ms once `Bundle()` metadata reads are counted.)
+
+The defaults cover `/Applications` and `/System/Applications` plus their `Utilities` folders,
+`/System/Library/CoreServices/Applications`, the cryptex apps under
+`/System/Volumes/Preboot/Cryptexes/App/System/Applications` (this is the only place Safari really
+lives — `/Applications/Safari.app` is a symlink flagged hidden, so `.skipsHiddenFiles` never sees it),
+`~/Applications`, and `/System/Library/CoreServices/Finder.app`.
+
+Finder ships as an individual bundle scope rather than by adding `/System/Library/CoreServices`, which
+holds ~120 background-agent bundles. There is no reliable way to filter those: `LSUIElement`,
+`LSBackgroundOnly` and "declares no icon" each also exclude legitimately launchable apps — Raycast,
+Stats, Tinycast itself, Mission Control, Siri, Time Machine, Screenshot, System Information, Font
+Book. Don't reintroduce such a heuristic.
+
+`AppIndex.start(settings:)` observes `$searchScopes`, so an edit re-indexes immediately; overlapping
+refreshes collapse into a single trailing scan.
 
 `FuzzyMatch.score` is a tiered scorer: exact → prefix → substring / word-start → subsequence with
 consecutive / word-boundary bonuses. `LauncherRankingStore` then adds a bounded, query-specific

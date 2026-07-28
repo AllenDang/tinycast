@@ -127,6 +127,7 @@ final class AppCore: ObservableObject {
         Task { clipboardStore.load() }
         clipboardManager.start()
 
+        appIndex.start(settings: settings)
         Task { await appIndex.refresh() }
         Task { await emojiIndex.load() }
         currencyRates.start()

@@ -67,6 +67,8 @@ struct GeneralSettingsView: View {
                 }
             }
 
+            SearchScopesCard()
+
             SettingsCard(header: "Hyper Key") {
                 SettingsRow(
                     title: "Hyper Key",
@@ -154,7 +156,8 @@ struct GeneralSettingsView: View {
                 SettingsDivider()
                 SettingsRow(
                     title: "Show favorites in compact mode",
-                    subtitle: "Pin favorite app icons to the right of the compact bar (⌘1–⌘5 to launch).",
+                    subtitle:
+                        "Pin favorite app icons to the right of the compact bar (⌘1–⌘5 to launch).",
                     systemImage: "star",
                     tint: .yellow
                 ) {
@@ -210,7 +213,8 @@ struct GeneralSettingsView: View {
                 SettingsDivider()
                 SettingsRow(
                     title: "Welcome Guide",
-                    subtitle: "Re-run the first-launch setup: shortcut, permissions, and Raycast import.",
+                    subtitle:
+                        "Re-run the first-launch setup: shortcut, permissions, and Raycast import.",
                     systemImage: "sparkles",
                     tint: .yellow
                 ) {

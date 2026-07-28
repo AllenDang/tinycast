@@ -1,4 +1,5 @@
 import AppKit
+import Combine
 
 struct AppEntry: Identifiable, Hashable, Sendable {
     enum Kind: String, Sendable {
@@ -156,56 +157,67 @@ final class AppIndex: ObservableObject {
     private var matchCache: (query: String, rankingRevision: Int, result: [AppEntry])?
 
     private var isRefreshing = false
+    /// Set when a refresh is requested mid-scan, so a scope edit landing during an in-flight scan isn't silently dropped.
+    private var refreshPending = false
     private let ranking: LauncherRankingStore
+    private var settings: AppSettings?
+    private var cancellables: Set<AnyCancellable> = []
 
     init(ranking: LauncherRankingStore) {
         self.ranking = ranking
     }
 
-    /// Re-scan (called on every launcher open); the in-flight guard drops overlapping reopens and `apps` is only re-published when the set changed, so an unchanged reopen does no UI work.
-    func refresh() async {
-        guard !isRefreshing else { return }
-        isRefreshing = true
-        defer { isRefreshing = false }
-        let found = await Task.detached(priority: .utility) { AppIndex.scan() }.value
-        guard found != apps else { return }
-        apps = found
-        matchCache = nil
+    /// Wires the search scopes, re-indexing when the user edits them so Settings changes land without waiting for the next launcher open.
+    func start(settings: AppSettings) {
+        self.settings = settings
+        settings.$searchScopes
+            .dropFirst()
+            // @Published emits synchronously on the main actor (hence assumeIsolated), before the property is written, so the scan is deferred to a task that reads the settled value.
+            .sink { [weak self] _ in
+                MainActor.assumeIsolated {
+                    guard let self else { return }
+                    Task { await self.refresh() }
+                }
+            }
+            .store(in: &cancellables)
     }
 
-    nonisolated private static func scan() -> [AppEntry] {
-        let fm = FileManager.default
-        var searchDirs = [
-            "/Applications",
-            "/Applications/Utilities",
-            "/System/Applications",
-            "/System/Applications/Utilities",
-        ].map { URL(fileURLWithPath: $0) }
-        searchDirs.append(fm.homeDirectoryForCurrentUser.appendingPathComponent("Applications"))
+    /// Re-scan (called on every launcher open); overlapping reopens collapse into one trailing scan and `apps` is only re-published when the set changed, so an unchanged reopen does no UI work.
+    func refresh() async {
+        guard !isRefreshing else {
+            refreshPending = true
+            return
+        }
+        isRefreshing = true
+        defer { isRefreshing = false }
+        repeat {
+            refreshPending = false
+            let scopes = settings?.searchScopes ?? SearchScopes.defaults
+            let found = await Task.detached(priority: .utility) { AppIndex.scan(scopes: scopes) }
+                .value
+            guard found != apps else { continue }
+            apps = found
+            matchCache = nil
+        } while refreshPending
+    }
 
+    nonisolated private static func scan(scopes: [String]) -> [AppEntry] {
         var seenBundleIDs = Set<String>()
         var result: [AppEntry] = []
-        for dir in searchDirs {
-            guard
-                let items = try? fm.contentsOfDirectory(
-                    at: dir, includingPropertiesForKeys: nil, options: [.skipsHiddenFiles]
-                )
-            else { continue }
-            for url in items where url.pathExtension == "app" {
-                let bundle = Bundle(url: url)
-                let bundleID = bundle?.bundleIdentifier
-                // Dedup by bundle id; first directory (/Applications) wins.
-                if let bundleID, !seenBundleIDs.insert(bundleID).inserted { continue }
+        for url in SearchScopes.appBundles(in: scopes) {
+            let bundle = Bundle(url: url)
+            let bundleID = bundle?.bundleIdentifier
+            // Dedup by bundle id; the earliest scope wins.
+            if let bundleID, !seenBundleIDs.insert(bundleID).inserted { continue }
 
-                let name =
-                    (bundle?.object(forInfoDictionaryKey: "CFBundleDisplayName") as? String)
-                    ?? (bundle?.object(forInfoDictionaryKey: "CFBundleName") as? String)
-                    ?? url.deletingPathExtension().lastPathComponent
-                result.append(
-                    AppEntry(
-                        id: url.path, name: name, url: url, bundleID: bundleID,
-                        kind: .application))
-            }
+            let name =
+                (bundle?.object(forInfoDictionaryKey: "CFBundleDisplayName") as? String)
+                ?? (bundle?.object(forInfoDictionaryKey: "CFBundleName") as? String)
+                ?? url.deletingPathExtension().lastPathComponent
+            result.append(
+                AppEntry(
+                    id: url.path, name: name, url: url, bundleID: bundleID,
+                    kind: .application))
         }
         // Apps, then Settings panes, then Commands — the sectioned launcher relies on this order so its flat selection index maps 1:1 onto rows.
         let apps = result.sorted {
