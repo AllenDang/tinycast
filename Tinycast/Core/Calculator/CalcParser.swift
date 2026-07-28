@@ -2,6 +2,8 @@ import Foundation
 
 enum CalcToken: Equatable, Sendable {
     case number(Double)
+    /// An attached thousands suffix (`10k` / `2.5K`), kept distinct so a lone shorthand still earns a calculator card.
+    case compactNumber(Double)
     /// Radix-prefixed integer literal (0xff / 0b1010 / 0o777), kept exact for base conversion.
     case intLiteral(UInt64, radix: Int)
     /// Lowercased word (function, constant, unit, or connector); `²`/`³` fold to "2"/"3" so `m²` and `m2` match, while `°` is kept.
@@ -58,11 +60,30 @@ enum CalcTokenizer {
                     i += 1
                 }
                 guard let value = Double(text) else { return nil }
-                tokens.append(.number(value))
+                // Attached `k` means ×1,000; whitespace keeps Kelvin explicit, and `10kg` remains a unit literal.
+                if i < chars.count, chars[i] == "k" || chars[i] == "K", isCompactSuffix(chars, i) {
+                    tokens.append(.compactNumber(value * 1_000))
+                    i += 1
+                } else {
+                    tokens.append(.number(value))
+                }
                 continue
             }
 
             if ch.isLetter || ch == "°" {
+                // Split an attached currency prefix (`USD1K`) before the generic ident scanner absorbs its digits.
+                if ch.isLetter {
+                    var letterEnd = i
+                    while letterEnd < chars.count, chars[letterEnd].isLetter { letterEnd += 1 }
+                    if letterEnd < chars.count, isDigit(chars[letterEnd]) {
+                        let prefix = String(chars[i..<letterEnd]).lowercased()
+                        if CalcUnits.byName[prefix] == nil, CalcCurrency.byName[prefix] != nil {
+                            tokens.append(.ident(prefix))
+                            i = letterEnd
+                            continue
+                        }
+                    }
+                }
                 var text = ""
                 while i < chars.count {
                     let c = chars[i]
@@ -116,6 +137,31 @@ enum CalcTokenizer {
         }
         return tokens
     }
+
+    /// Whether the `k` at `index` is a thousands suffix rather than Kelvin or the head of a unit: true at the end of the number, before a non-letter, or before a currency word (`1kUSD`) — never when an explicit temperature target follows (`273.15K to C`).
+    private static func isCompactSuffix(_ chars: [Character], _ index: Int) -> Bool {
+        let next = index + 1
+        guard next < chars.count else { return true }
+        if isTemperatureConversion(chars, from: next) { return false }
+        guard chars[next].isLetter else { return true }
+
+        var end = next
+        while end < chars.count, chars[end].isLetter { end += 1 }
+        return CalcCurrency.byName[String(chars[next..<end]).lowercased()] != nil
+    }
+
+    /// True when the remainder reads as a conversion into a temperature unit, which keeps `k` as Kelvin.
+    private static func isTemperatureConversion(_ chars: [Character], from index: Int) -> Bool {
+        let remainder = String(chars[index...])
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .lowercased()
+        for connector in ["to", "in", "->", "→"] where remainder.hasPrefix(connector) {
+            let target = remainder.dropFirst(connector.count)
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+            if CalcUnits.byName[target]?.category == .temperature { return true }
+        }
+        return false
+    }
 }
 
 /// Precedence-climbing evaluator over the token stream (evaluates while parsing, no AST), returning nil for anything malformed or non-finite.
@@ -136,6 +182,18 @@ enum CalcParser {
     ]
 
     fileprivate static let constants: [String: Double] = ["pi": .pi, "π": .pi, "e": M_E]
+
+    /// Factorial for non-negative integers; 170! is the last value representable as a Double.
+    static func factorial(_ value: Double) -> Double? {
+        guard value >= 0, value.rounded() == value, value <= 170 else { return nil }
+        var result = 1.0
+        var next = 2.0
+        while next <= value {
+            result *= next
+            next += 1
+        }
+        return result
+    }
 }
 
 private struct Parser {
@@ -205,7 +263,9 @@ private struct Parser {
         loop: while true {
             switch current {
             case .op("!"):
-                guard !value.isPercent, let fact = factorial(value.value) else { return nil }
+                guard !value.isPercent, let fact = CalcParser.factorial(value.value) else {
+                    return nil
+                }
                 value = Value(value: fact)
             case .op("%"):
                 guard !value.isPercent else { return nil }
@@ -224,6 +284,9 @@ private struct Parser {
     private mutating func parsePrefix() -> Value? {
         switch current {
         case .number(let n):
+            pos += 1
+            return Value(value: n)
+        case .compactNumber(let n):
             pos += 1
             return Value(value: n)
         case .intLiteral(let n, _):
@@ -265,17 +328,5 @@ private struct Parser {
         default:
             return nil
         }
-    }
-
-    /// Factorial for non-negative integers; 170! is the last value representable as a Double.
-    private func factorial(_ v: Double) -> Double? {
-        guard v >= 0, v.rounded() == v, v <= 170 else { return nil }
-        var result = 1.0
-        var n = 2.0
-        while n <= v {
-            result *= n
-            n += 1
-        }
-        return result
     }
 }
