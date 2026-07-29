@@ -151,10 +151,18 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
         panel.setFrame(frame, display: true)
     }
 
-    /// The current session's anchor, resolved from the active screen on first use and cached until hide — so compact and expanded placements can never read a different `visibleFrame`.
+    /// The display to anchor to. `NSScreen.main` is the *key window's* screen, which an accessory app driving a non-activating panel never has — it resolves to the menu-bar display, not the one the user is working on.
+    private func targetScreen() -> NSScreen? {
+        guard core.settings.openOnCursorScreen else { return NSScreen.main }
+        let mouse = NSEvent.mouseLocation
+        // NSMouseInRect, not `contains`: a mouse location falls in the half-open interval `(minY, maxY]`, so `contains` hands a pointer on a display's topmost row to the display stacked above it.
+        return NSScreen.screens.first { NSMouseInRect(mouse, $0.frame, false) } ?? NSScreen.main
+    }
+
+    /// The current session's anchor, resolved from the target screen on first use and cached until hide — so compact and expanded placements can never read a different `visibleFrame`.
     private func resolveAnchor() -> (x: CGFloat, topEdgeY: CGFloat)? {
         if let anchor { return anchor }
-        guard let screen = NSScreen.main else { return nil }
+        guard let screen = targetScreen() else { return nil }
         let visible = screen.visibleFrame
         let resolved = (
             x: visible.midX - Theme.Size.panelWidth / 2,

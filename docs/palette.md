@@ -20,6 +20,28 @@ The flat `selection` index is the single source of truth for highlight / activat
 match the visible row order**, including the inline calculator card at index 0 when present (see
 [calculator.md](calculator.md)).
 
+## Window placement
+
+`PaletteWindowController` resolves an anchor (left edge + top edge) **once per summon** and reuses it
+for every compact↔expanded resize, so only the height changes and the top edge never drifts. The
+anchor is dropped on hide, so the next summon re-resolves for wherever the user is then.
+
+Which display it anchors to depends on the **Follow the cursor across displays** setting
+(`AppSettings.openOnCursorScreen`, on by default):
+
+- **On** — the screen holding `NSEvent.mouseLocation`, i.e. the display under the pointer.
+- **Off** — `NSScreen.main`.
+
+`NSScreen.main` alone can't implement the follow-the-cursor case: it is documented as the *key window's*
+screen, and an accessory app driving a non-activating panel has no key window on the display the user is
+looking at, so `main` resolves to the menu-bar display regardless of where the pointer is.
+
+The hit test is `NSMouseInRect(mouse, screen.frame, false)`, **not** `CGRect.contains`. A mouse location
+is the CoreGraphics cursor position flipped about the primary display's height, so a screen's rows land
+in the half-open interval `(minY, maxY]`: the topmost row is exactly `maxY`, which `contains` excludes,
+while that same value is the `minY` of the display stacked above. `contains` would therefore hand a
+pointer parked at the top of one display to its neighbour. `NSMouseInRect` exists for precisely this.
+
 ## Menu-open input freeze
 
 While a footer popover menu (⌘K Actions / app menu) is open the search field reads as inert but
