@@ -161,6 +161,8 @@ private struct SidebarRow: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        // The selected-row fill already marks the current tab; a focus ring on top of it is just noise.
+        .focusEffectDisabled()
         .onHover { hovering = $0 }
     }
 

@@ -38,6 +38,9 @@ struct AppEntry: Identifiable, Hashable, Sendable {
         }
     }
 
+    /// Command entries are synthetic — no file behind them to reveal.
+    var canRevealInFinder: Bool { kind != .command }
+
     /// Command entries draw an SF Symbol tile; everything else uses its file icon.
     var isSymbolIcon: Bool { kind == .command }
     var symbolIconName: String {
