@@ -76,7 +76,9 @@ Never break these without an explicit task to do so.
   confirmation gate lives in `AppCore` and not in the runner. All of `Core/Snippets/` compiles into
   `Tools/snippets-test.swift` (the harness globs the directory), so the model, Markdown serializer,
   template engine, repository and keyword policies stay Foundation-only, and the AppKit files there
-  keep their dependencies to what the harness can stub.
+  keep their dependencies to what the harness can stub. `Core/SystemCommand.swift` is also
+  Foundation-only for `Tools/system-command-test.swift`; platform effects belong in
+  `SystemCommandRunner`, while confirmation and failure UI remain in `AppCore`.
 - **`Tools/fuzz-test.swift` holds a COPY of `FuzzyMatch`** from `Core/AppIndex.swift`. Change the
   scoring in one, mirror it in the other, or the test is meaningless.
 - **`EmojiData.generated.swift` is emitted by `node Tools/gen-emoji.js` and
@@ -110,6 +112,13 @@ Never break these without an explicit task to do so.
 - **Clipboard writes stamp a private `internalType` marker** so the poller skips Tinycast's own writes.
 - **Hotkeys persist under legacy `KeyboardShortcuts_<name>` UserDefaults keys** (from the removed
   KeyboardShortcuts package) so old bindings survive. See [hotkeys.md](docs/hotkeys.md).
+- **Tinycast presents its own dialogs, never `NSAlert` / `NSSlider` / system popovers.** Every
+  confirmation, failure report, value prompt and transient readout goes through
+  `ModalWindowController` (owned by `AppCore`; reachable elsewhere via `AppCore.showNotice` /
+  `askConfirmation`). Presentation is `async`, so there is no nested run loop, and the presenter
+  refuses a second dialog while one is up that, not a flag, is what stops a held hotkey stacking
+  dialogs. **↵ belongs to Cancel on every destructive dialog.** See
+  [ui.md](docs/ui.md#modals--hud).
 - **Read [`docs/ui.md`](docs/ui.md) before any restyle or new view.** `Core/Theme.swift` is the single
   design-token source.
 - **`Core/EdgeDissolve.swift` and `Core/ThinScrollbar.swift` are off-limits.** Both are tuned by eye
