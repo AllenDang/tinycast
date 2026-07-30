@@ -6,6 +6,7 @@ struct AppEntry: Identifiable, Hashable, Sendable {
         case application
         case systemSettings
         case command
+        case snippet
     }
 
     let id: String  // file path (or "command:…" id) — always unique
@@ -13,16 +14,21 @@ struct AppEntry: Identifiable, Hashable, Sendable {
     let url: URL
     let bundleID: String?
     let kind: Kind
+    /// Extra strings this entry also matches on in search — a snippet's keyword. Empty for every other kind.
+    var matchAliases: [String] = []
 
     /// Stable identity for learned ranking, favorites, and other per-entry preferences.
     var preferenceKey: String { bundleID ?? id }
+
+    /// User-authored command, as opposed to a `CommandRegistry` built-in.
+    var isCustomCommand: Bool { kind == .command && CustomCommand.id(fromEntryID: id) != nil }
 
     var kindLabel: String {
         switch kind {
         case .application: return "Application"
         case .systemSettings: return "System Setting"
-        case .command:
-            return CustomCommand.id(fromEntryID: id) == nil ? "Command" : "Custom Command"
+        case .command: return isCustomCommand ? "Custom Command" : "Command"
+        case .snippet: return "Snippet"
         }
     }
 
@@ -35,17 +41,20 @@ struct AppEntry: Identifiable, Hashable, Sendable {
             return bundleID.map { .settingsPane(bundleID: $0) }
         case .command:
             return CustomCommand.id(fromEntryID: id).map { .customCommand(id: $0) }
+        case .snippet:
+            return nil
         }
     }
 
     /// Command entries are synthetic — no file behind them to reveal.
     var canRevealInFinder: Bool { kind != .command }
 
-    /// Command entries draw an SF Symbol tile; everything else uses its file icon.
-    var isSymbolIcon: Bool { kind == .command }
+    /// Command and snippet entries draw an SF Symbol tile; everything else uses its file icon.
+    var isSymbolIcon: Bool { kind == .command || kind == .snippet }
     var symbolIconName: String {
+        if kind == .snippet { return "text.quote" }
         if let builtIn = CommandRegistry.command(for: self) { return builtIn.sfSymbol }
-        return CustomCommand.id(fromEntryID: id) == nil ? "questionmark" : "terminal"
+        return isCustomCommand ? "terminal" : "questionmark"
     }
 
     var icon: NSImage {
@@ -162,6 +171,8 @@ enum IconCache {
 final class AppIndex: ObservableObject {
     @Published private(set) var apps: [AppEntry] = []
 
+    private var snippetEntries: [AppEntry] = []
+
     /// One-entry memo so repeated renders for the same query reuse the ranking instead of re-matching every frame.
     private var matchCache: (query: String, rankingRevision: Int, result: [AppEntry])?
 
@@ -189,6 +200,24 @@ final class AppIndex: ObservableObject {
         .sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
         guard entries != customCommandEntries else { return }
         customCommandEntries = entries
+        publishEntries()
+    }
+
+    func updateSnippets(_ records: [StoredSnippet]) {
+        let entries = records
+            .filter { $0.snippet.isEnabled }
+            .map { record in
+                AppEntry(
+                    id: "snippet:\(record.id)",
+                    name: record.snippet.name,
+                    url: record.fileURL,
+                    bundleID: nil,
+                    kind: .snippet,
+                    matchAliases: [record.snippet.keyword].compactMap { $0 })
+            }
+            .sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
+        guard entries != snippetEntries else { return }
+        snippetEntries = entries
         publishEntries()
     }
 
@@ -244,7 +273,7 @@ final class AppIndex: ObservableObject {
                     id: url.path, name: name, url: url, bundleID: bundleID,
                     kind: .application))
         }
-        // `publishEntries` appends commands after apps and Settings panes so the sectioned flat selection maps 1:1 onto rows.
+        // `publishEntries` appends snippets, custom commands and built-in commands after apps and Settings panes so the sectioned flat selection maps 1:1 onto rows.
         let apps = result.sorted {
             $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending
         }
@@ -252,10 +281,8 @@ final class AppIndex: ObservableObject {
     }
 
     private func publishEntries() {
-        let commands = (CommandRegistry.all + customCommandEntries).sorted {
-            $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending
-        }
-        let updated = discoveredEntries + commands
+        // Each slice is already alphabetical; the slice order is the launcher's section order (LauncherList mirrors it), so custom commands sit in their own section ahead of the built-ins.
+        let updated = discoveredEntries + snippetEntries + customCommandEntries + CommandRegistry.all
         guard updated != apps else { return }
         apps = updated
         matchCache = nil
@@ -278,7 +305,13 @@ final class AppIndex: ObservableObject {
     private func rank(_ q: String, limit: Int) -> [AppEntry] {
         let learned = ranking.boosts(query: q)
         let scored = apps.compactMap { app -> (AppEntry, Int)? in
-            guard let score = FuzzyMatch.score(query: q, candidate: app.name) else { return nil }
+            // An entry matches on its name or on any alias it carries (a snippet's keyword), whichever scores best — all inside the same tiers, so an alias can never outrank a better name match.
+            var bestScore = FuzzyMatch.score(query: q, candidate: app.name)
+            for candidate in app.matchAliases {
+                guard let aliasScore = FuzzyMatch.score(query: q, candidate: candidate) else { continue }
+                bestScore = max(bestScore ?? aliasScore, aliasScore)
+            }
+            guard let score = bestScore else { return nil }
             return (app, score + (learned[app.preferenceKey] ?? 0))
         }
         return

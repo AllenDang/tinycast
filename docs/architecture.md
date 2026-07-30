@@ -2,14 +2,15 @@
 
 How Tinycast is wired together. See the per-subsystem docs for internals:
 [palette](palette.md), [launcher](launcher.md), [calculator](calculator.md),
-[clipboard](clipboard.md), [custom commands](custom-commands.md), [hotkeys](hotkeys.md), [ui](ui.md).
+[clipboard](clipboard.md), [custom commands](custom-commands.md), [snippets](snippets.md),
+[hotkeys](hotkeys.md), [ui](ui.md).
 
 ## Single-owner core
 
 `AppCore.shared` (`Core/AppCore.swift`) is a `@MainActor` singleton that owns every long-lived
-manager — `AppIndex`, `ClipboardStore`, `ClipboardManager`, `HotKeyManager`, `AppSettings`,
-`FavoritesStore`, `VisibilityStore`, `LauncherRankingStore`, `CustomCommandStore`,
-`CalculatorHistoryStore`,
+manager — `AppIndex`, `ClipboardStore`, `ClipboardManager`, `SnippetsStore`,
+`SnippetKeywordListener`, `SnippetTextInjector`, `HotKeyManager`, `AppSettings`, `FavoritesStore`,
+`VisibilityStore`, `LauncherRankingStore`, `CustomCommandStore`, `CalculatorHistoryStore`,
 `CurrencyRateStore`, `RunningAppsMonitor`, `PaletteViewModel` — plus the window controllers.
 `AppDelegate.applicationDidFinishLaunching` calls
 `AppCore.shared.start()` and nothing else; that is the single wiring point. All palette / paste /
@@ -33,6 +34,30 @@ imperatively from AppKit.
 
 The app forces `.darkAqua` appearance globally; the Liquid Glass material is tuned for a dark surface
 only.
+
+## Snippets
+
+`SnippetRepository` is a Foundation-only `Sendable` value that owns all snippet disk access under
+`~/Library/Application Support/<bundle-id>/Snippets/`, keeping stable, beta and dev isolated. The
+model, Markdown codec, template engine, repository, keyword buffer, event classification and listener
+lifecycle policy compile in the standalone harness without AppKit. `SnippetsStore` is the `@MainActor`
+publisher/coordinator: initialization is cheap, repository work runs off-main, and a debounced
+generation-ordered watcher reloads external edits and rearms after directory replacement. A stored
+snippet is identified by its source file path, so editing frontmatter never invalidates selection or
+launcher identity. `AppCore` projects every successful store snapshot into `AppIndex` and
+`SnippetKeywordListener`; neither consumer reads or parses snippet files independently. The store
+runs only while the feature switch is on — snippets ship off — so an untouched feature costs no
+load, no watcher and no tap.
+
+The feature switch doubles as keyword-expansion consent: it is an explicit opt-in confirmed in
+Settings and excluded from settings backups. When an enabled feature comes back at startup, the
+listener waits until Accessibility is granted — the only permission it needs, since its tap is
+listen-only — then its health check installs the tap without prompting. Permission prompts
+originate only from the enabling gesture in Settings, never from startup, the listener, callbacks or the
+health check. The listener owns only matching and tap lifecycle; `AppCore` owns template expansion and
+argument prompts, while `SnippetTextInjector` owns target activation, keyword deletion, text delivery,
+temporary pasteboard restoration and cursor placement. See [snippets.md](snippets.md) for storage,
+frontmatter, templates, conflicts, permissions and delivery invariants.
 
 ## Concurrency
 

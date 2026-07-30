@@ -60,6 +60,20 @@ enum Theme {
         static let settingsRowIcon: CGFloat = 20
         /// Little state indicator dot next to a settings row title (Hyper Key active/needs-permission).
         static let statusDot: CGFloat = 6
+        /// Settings editor modals (Custom Commands, Snippets): fixed width, intrinsic height.
+        static let editorSheetWidth: CGFloat = 480
+        /// The multi-line text box inside those modals (shell command, snippet template) — it scrolls internally rather than growing the sheet.
+        static let editorTextHeight: CGFloat = 120
+        /// Field column in the snippet argument prompt. At or below 220 the alert keeps its natural 260pt width, so its buttons sit exactly where every other alert's do.
+        static let argumentPromptWidth: CGFloat = 220
+        /// Confirmation HUD: it sizes to its message, up to this ceiling, and sits this far above the bottom of the screen.
+        static let hudMaxWidth: CGFloat = 420
+        static let hudEdgeOffset: CGFloat = 48
+    }
+
+    enum Duration {
+        /// How long the confirmation HUD stays on screen.
+        static let hud: TimeInterval = 1.6
     }
 
     /// System text styles (not hardcoded sizes) so the UI honors Dynamic Type.

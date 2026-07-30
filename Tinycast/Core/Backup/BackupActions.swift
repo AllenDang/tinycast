@@ -7,6 +7,9 @@ enum BackupActions {
     struct RaycastOutcome {
         var summary: SettingsBackup.ApplySummary
         var clipboardImported: Int
+        var snippetsImported: Int
+        /// Set when the snippet files couldn't be written; the rest of the import still applied.
+        var snippetsError: String?
         var missingImages: Int
     }
 
@@ -60,12 +63,31 @@ enum BackupActions {
                 return try RaycastImport.parse(decrypted).selecting(options)
             }
         }.value
+        // A snippet write failure is reported in the outcome rather than thrown: it must not abort the settings and clipboard the user also asked for.
+        var snippetsImported = 0
+        var snippetsError: String?
+        if !result.snippets.isEmpty {
+            do {
+                // Starting the (lazily started) store first gets the imported snippets into the launcher immediately. With the feature switched off the files are still written and appear once it's re-enabled.
+                if AppCore.shared.settings.snippetsEnabled {
+                    await AppCore.shared.snippetsStore.start()
+                }
+                snippetsImported =
+                    try await AppCore.shared.snippetsStore.importSnippets(result.snippets).count
+            } catch {
+                snippetsError = error.localizedDescription
+            }
+        }
         let summary = result.backup.apply()
         let imported =
             result.clipboard.isEmpty
             ? 0 : AppCore.shared.clipboardStore.importEntries(result.clipboard)
         return RaycastOutcome(
-            summary: summary, clipboardImported: imported, missingImages: result.missingImages)
+            summary: summary,
+            clipboardImported: imported,
+            snippetsImported: snippetsImported,
+            snippetsError: snippetsError,
+            missingImages: result.missingImages)
     }
 
     /// Every Raycast channel (stable, beta, alpha, internal) shares this bundle-id prefix.
@@ -95,14 +117,21 @@ enum BackupActions {
     // MARK: - Helpers
 
     static func summaryText(_ s: SettingsBackup.ApplySummary) -> String {
+        appliedText(s) ?? nothingImportedText
+    }
+
+    static let nothingImportedText = "Nothing to import from this file."
+
+    /// `nil` when the backup applied no settings, so callers that also import clipboard or snippets can compose one combined sentence instead of contradicting the empty-import wording.
+    static func appliedText(_ s: SettingsBackup.ApplySummary) -> String? {
         var parts: [String] = []
         if s.settingsFields > 0 { parts.append("\(s.settingsFields) settings") }
         if s.hotkeys > 0 { parts.append("\(s.hotkeys) shortcuts") }
         if s.favorites > 0 { parts.append("\(s.favorites) favorites") }
         if s.hiddenItems > 0 { parts.append("\(s.hiddenItems) hidden items") }
         if s.customCommands > 0 { parts.append("\(s.customCommands) custom commands") }
-        return parts.isEmpty
-            ? "Nothing to import from this file." : "Applied " + parts.joined(separator: ", ") + "."
+        guard !parts.isEmpty else { return nil }
+        return "Applied " + parts.joined(separator: ", ") + "."
     }
 
     private static func confirmExecutableImport(commands: Int, shortcuts: Int) -> Bool {

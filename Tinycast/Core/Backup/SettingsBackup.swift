@@ -26,6 +26,10 @@ struct SettingsBackup: Codable {
         var showFavoritesInCompactMode: Bool?
         var searchScopes: [String]?
         var openOnCursorScreen: Bool?
+        // `snippetsEnabled` is deliberately absent: it doubles as keyword-expansion consent, and an import must not enable keystroke listening.
+        var customCommandsEnabled: Bool?
+        var customCommandsShowInLauncher: Bool?
+        var snippetsShowInLauncher: Bool?
     }
 
     struct HotkeyBackup: Codable {
@@ -69,7 +73,10 @@ extension SettingsBackup {
             compactMode: s.compactMode,
             showFavoritesInCompactMode: s.showFavoritesInCompactMode,
             searchScopes: s.searchScopes,
-            openOnCursorScreen: s.openOnCursorScreen)
+            openOnCursorScreen: s.openOnCursorScreen,
+            customCommandsEnabled: s.customCommandsEnabled,
+            customCommandsShowInLauncher: s.customCommandsShowInLauncher,
+            snippetsShowInLauncher: s.snippetsShowInLauncher)
 
         let hk = core.hotKeys
         var hotkeys = HotkeyBackup()
@@ -177,6 +184,19 @@ extension SettingsBackup {
         }
         if let flag = s.openOnCursorScreen {
             settings.openOnCursorScreen = flag
+            count += 1
+        }
+        // Writing through AppSettings is enough: AppCore's sinks re-project launcher presence and the snippets store.
+        if let flag = s.customCommandsEnabled {
+            settings.customCommandsEnabled = flag
+            count += 1
+        }
+        if let flag = s.customCommandsShowInLauncher {
+            settings.customCommandsShowInLauncher = flag
+            count += 1
+        }
+        if let flag = s.snippetsShowInLauncher {
+            settings.snippetsShowInLauncher = flag
             count += 1
         }
         return count
