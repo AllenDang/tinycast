@@ -278,6 +278,8 @@ private struct Parser {
         case .op(let op) where op == "+" || op == "-": return (op, 10, 11)
         case .op(let op) where op == "*" || op == "/": return (op, Self.mulBP, Self.mulBP + 1)
         case .ident("of"): return ("*", Self.mulBP, Self.mulBP + 1)
+        // Spelled-out only: "%" is already percent, and "20% - 5" gives no local signal to tell the two apart.
+        case .ident("mod"): return ("%", Self.mulBP, Self.mulBP + 1)
         case .op("^"): return ("^", 30, 30)  // right-associative: 2^3^2 = 512
         default: return nil
         }
@@ -297,6 +299,7 @@ private struct Parser {
                 ? lhs.effective * (1 - rhs.value / 100) : lhs.effective - rhs.effective
         case "*": result = lhs.effective * rhs.effective
         case "/": result = lhs.effective / rhs.effective
+        case "%": result = lhs.effective.truncatingRemainder(dividingBy: rhs.effective)
         case "^": result = pow(lhs.effective, rhs.effective)
         default: return nil
         }
