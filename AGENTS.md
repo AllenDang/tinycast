@@ -102,6 +102,11 @@ Never break these without an explicit task to do so.
   KeyboardShortcuts package) so old bindings survive. See [hotkeys.md](docs/hotkeys.md).
 - **Read [`docs/ui.md`](docs/ui.md) before any restyle or new view.** `Core/Theme.swift` is the single
   design-token source.
+- **`Core/EdgeDissolve.swift` and `Core/ThinScrollbar.swift` are off-limits.** Both are tuned by eye
+  against the palette's floating bars, so any edit is a visual regression. Do not touch them to fix a
+  scroll bug, and never as a side effect of a restyle or refactor — needing to is the signal that the
+  real fix belongs elsewhere (a scroll target, an inset, an intent). Edit either one only under an
+  explicit task to change that look.
 
 ## Project Layout
 

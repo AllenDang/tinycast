@@ -5,8 +5,8 @@ struct LauncherList: View {
     let selectedID: AppEntry.ID?
     let favoriteCount: Int
     let showSections: Bool
-    /// Changes only when the list should scroll to follow the selection (keyboard nav / reset), so mouse selection never yanks the scroll position.
-    let scrollToken: UUID
+    /// Changes only when the list should scroll (keyboard nav / reset), so mouse selection never yanks the scroll position.
+    let scroll: ScrollIntent
     /// Inline calculator answer; occupies flat selection index 0 when present (requires a non-empty query, so it never coexists with the sectioned view).
     var calc: CalcResult?
     var calcSelected = false
@@ -29,6 +29,14 @@ struct LauncherList: View {
             case .app(let app): return app.id
             }
         }
+    }
+
+    /// Scroll target for the current selection.
+    private var selectedRowID: String? { calcSelected ? Self.calcRowID : selectedID }
+
+    /// Whether the selection sits on flat index 0 — the calc card when present, else the first result.
+    private var firstRowSelected: Bool {
+        calc != nil ? calcSelected : selectedID != nil && selectedID == results.first?.id
     }
 
     private var rows: [Row] {
@@ -91,14 +99,21 @@ struct LauncherList: View {
                         .padding(.top, Theme.Spacing.xs)
                         .padding(.bottom, Theme.Spacing.md)
                         .hideNativeScrollers()
+                        .scrollOriginAnchor()
                     }
                     .edgeDissolve()
                     .thinScrollbar()
-                    .onChange(of: scrollToken) {
-                        if calcSelected {
-                            proxy.scrollTo(Self.calcRowID, anchor: .center)
-                        } else if let selectedID {
-                            proxy.scrollTo(selectedID, anchor: .center)
+                    .onChange(of: scroll) { _, scroll in
+                        switch scroll.kind {
+                        case .top:
+                            proxy.scrollToOrigin()
+                        case .follow:
+                            // On the first row, snap to the origin so its section header shows too — a nil anchor won't, since the row is already visible.
+                            if firstRowSelected {
+                                proxy.scrollToOrigin()
+                            } else if let selectedRowID {
+                                proxy.reveal(selectedRowID)
+                            }
                         }
                     }
                 }
