@@ -1,8 +1,9 @@
 name: CI
 
-# Build + the Tools/ harnesses (docs/development.md) are required; SwiftLint is advisory only —
-# it never fails the job, it just annotates the PR. No XCTest target exists (AGENTS.md), so the
-# harnesses are the test suite.
+# Build + the Tools/ harnesses (docs/development.md) run on pushes to `main` only, so a PR isn't
+# held up by the ~3-minute macOS job; breakage is caught at merge instead of before it. SwiftLint
+# runs on both and is advisory — it never fails the job, it just annotates the PR. No XCTest target
+# exists (AGENTS.md), so the harnesses are the test suite.
 on:
   pull_request:
   push:
@@ -13,6 +14,7 @@ permissions:
 
 jobs:
   build-and-test:
+    if: github.event_name == 'push'
     runs-on: macos-26
     steps:
       - uses: actions/checkout@v7

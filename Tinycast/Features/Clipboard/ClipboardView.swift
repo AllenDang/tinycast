@@ -325,8 +325,7 @@ struct ClipboardPreview: View {
                     .overlayScroller()
             }
         case .image:
-            AsyncThumbnail(url: store.imageURL(for: item), maxPixel: Self.previewMaxPixel) {
-                image in
+            AsyncThumbnail(url: store.imageURL(for: item), maxPixel: Self.previewMaxPixel) { image in
                 image
                     .resizable()
                     .aspectRatio(contentMode: .fit)

@@ -75,6 +75,8 @@ enum ShellCommandRunner {
             let start = end > UInt64(limit) ? end - UInt64(limit) : 0
             try? handle.seek(toOffset: start)
             guard let data = try? handle.readToEnd(), !data.isEmpty else { return nil }
+            // Lossy on purpose: a stray byte in a command's stderr must not discard the whole report.
+            // swiftlint:disable:next optional_data_string_conversion
             return String(decoding: data, as: UTF8.self)
                 .trimmingCharacters(in: .whitespacesAndNewlines)
                 .nilIfEmpty
@@ -94,6 +96,8 @@ enum ShellCommandRunner {
             mkstemp(buffer.baseAddress!)
         }
         guard descriptor >= 0 else { return nil }
+        // Raw bytes, not Data: mkstemp filled in the template we handed it, so the decode can't fail.
+        // swiftlint:disable:next optional_data_string_conversion
         let path = String(
             decoding: bytes.prefix { $0 != 0 }.map { UInt8(bitPattern: $0) }, as: UTF8.self)
         return StderrCapture(

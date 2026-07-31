@@ -328,23 +328,31 @@ private struct QuantityParser {
         return left
     }
 
-    private func peekBinary(
-        left: QuantityValue
-    ) -> (op: Character, bindingPower: Int, rightBindingPower: Int, consumesToken: Bool)? {
+    /// An operator, its binding power, the minimum bp for its right operand, and whether it has a token to consume.
+    struct BinaryOp {
+        let op: Character
+        let bindingPower: Int
+        let rightBindingPower: Int
+        let consumesToken: Bool
+    }
+
+    private func peekBinary(left: QuantityValue) -> BinaryOp? {
         switch current {
         case .op(let op) where op == "+" || op == "-":
-            return (op, 10, 11, true)
+            return BinaryOp(op: op, bindingPower: 10, rightBindingPower: 11, consumesToken: true)
         case .op(let op) where op == "*" || op == "/":
-            return (op, 20, 21, true)
+            return BinaryOp(op: op, bindingPower: 20, rightBindingPower: 21, consumesToken: true)
         case .ident("of"):
-            return ("*", 20, 21, true)
+            return BinaryOp(op: "*", bindingPower: 20, rightBindingPower: 21, consumesToken: true)
         case .op("^"):
-            return ("^", 30, 30, true)
+            return BinaryOp(op: "^", bindingPower: 30, rightBindingPower: 30, consumesToken: true)
         default:
             // Juxtaposition against a bracket multiplies (`$5(2)`, `5(2)$`), matching the scalar parser.
-            if case .op("(") = current { return ("*", 20, 21, false) }
+            if case .op("(") = current {
+                return BinaryOp(op: "*", bindingPower: 20, rightBindingPower: 21, consumesToken: false)
+            }
             if !isScalar(left.kind), startsQuantity(current) {
-                return ("+", 10, 11, false)
+                return BinaryOp(op: "+", bindingPower: 10, rightBindingPower: 11, consumesToken: false)
             }
             return nil
         }

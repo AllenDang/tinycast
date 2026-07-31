@@ -198,8 +198,14 @@ final class AppIndex: ObservableObject {
 
     private var snippetEntries: [AppEntry] = []
 
+    private struct MatchCache {
+        let query: String
+        let rankingRevision: Int
+        let result: [AppEntry]
+    }
+
     /// One-entry memo so repeated renders for the same query reuse the ranking instead of re-matching every frame.
-    private var matchCache: (query: String, rankingRevision: Int, result: [AppEntry])?
+    private var matchCache: MatchCache?
 
     private static let systemCommandEntries: [AppEntry] = SystemCommandCatalog.all
         .map { command in
@@ -352,7 +358,7 @@ final class AppIndex: ObservableObject {
             return matchCache.result
         }
         let result = rank(q, limit: limit)
-        matchCache = (q, ranking.revision, result)
+        matchCache = MatchCache(query: q, rankingRevision: ranking.revision, result: result)
         return result
     }
 

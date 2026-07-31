@@ -188,8 +188,7 @@ struct SnippetRepository: Sendable {
             try mappedError(at: fileURL) {
                 let fileURL = try validatedFileURL(fileURL)
                 let content = SnippetMarkdownSerializer.serialize(snippet)
-                return try coordinatedMutation(at: fileURL, options: .forReplacing) {
-                    coordinatedURL in
+                return try coordinatedMutation(at: fileURL, options: .forReplacing) { coordinatedURL in
                     mutationHooks.beforeRevalidation(.save, coordinatedURL)
                     let mutationURL = try validatedFileURL(coordinatedURL)
                     let actualRevision = try revision(at: mutationURL)
@@ -217,8 +216,7 @@ struct SnippetRepository: Sendable {
         try coordinator.withLock { () throws(RepositoryError) in
             try mappedError(at: fileURL) {
                 let fileURL = try validatedFileURL(fileURL)
-                try coordinatedMutation(at: fileURL, options: .forDeleting) {
-                    coordinatedURL in
+                try coordinatedMutation(at: fileURL, options: .forDeleting) { coordinatedURL in
                     mutationHooks.beforeRevalidation(.delete, coordinatedURL)
                     let mutationURL = try validatedFileURL(coordinatedURL)
                     let actualRevision = try revision(at: mutationURL)

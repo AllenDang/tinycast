@@ -376,21 +376,29 @@ enum CalcDateTime {
         }
     }
 
+    private struct DurationPhrase {
+        let count: Int
+        let component: Calendar.Component
+        let subDay: Bool
+    }
+
     /// `<n> <unit>` for date arithmetic; weeks fold to days so `date(byAdding:)` stays DST-safe.
-    private static func parseDurationPhrase(_ phrase: String) -> (
-        count: Int, component: Calendar.Component, subDay: Bool
-    )? {
+    private static func parseDurationPhrase(_ phrase: String) -> DurationPhrase? {
         let atoms = atomize(phrase)
         guard atoms.count == 2, let count = Int(atoms[0]) else { return nil }
         switch atoms[1] {
-        case "s", "sec", "secs", "second", "seconds": return (count, .second, true)
-        case "min", "mins", "minute", "minutes": return (count, .minute, true)
-        case "h", "hr", "hrs", "hour", "hours": return (count, .hour, true)
-        case "d", "day", "days": return (count, .day, false)
+        case "s", "sec", "secs", "second", "seconds":
+            return DurationPhrase(count: count, component: .second, subDay: true)
+        case "min", "mins", "minute", "minutes":
+            return DurationPhrase(count: count, component: .minute, subDay: true)
+        case "h", "hr", "hrs", "hour", "hours":
+            return DurationPhrase(count: count, component: .hour, subDay: true)
+        case "d", "day", "days":
+            return DurationPhrase(count: count, component: .day, subDay: false)
         case "wk", "week", "weeks":
             // Absurd counts overflow the fold to days; degrade to no card rather than trap.
             let (days, overflow) = count.multipliedReportingOverflow(by: 7)
-            return overflow ? nil : (days, .day, false)
+            return overflow ? nil : DurationPhrase(count: days, component: .day, subDay: false)
         default: return nil
         }
     }

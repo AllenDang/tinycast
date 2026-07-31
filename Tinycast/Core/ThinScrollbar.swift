@@ -55,6 +55,7 @@ struct ThinScrollbar: ViewModifier {
             // Scrolling reveals the thumb (not the rail) and re-hides a beat after it stops; a thumb drag has no scroll phase, so its own handlers own visibility.
             .onScrollPhaseChange { _, phase in
                 guard !isDragging else { return }
+                // swiftlint:disable:next void_function_in_ternary
                 phase == .idle ? scheduleScrollStop() : beganScrolling()
             }
             .overlay(alignment: .topTrailing) { bar }

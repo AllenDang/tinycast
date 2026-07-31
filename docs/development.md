@@ -191,10 +191,13 @@ Full details in [signing.md](signing.md).
 `.github/workflows/ci.yml` runs on every PR and every push to `main`, on a `macos-26` runner with
 Xcode 26 (same selection step as the release workflow):
 
-- **`build-and-test`** — required. `xcodebuild` Debug build, then every `Tools/*.swift` harness from
-  [Tests](#tests) above, in order. A merge is blocked if either the build or any harness fails.
-- **`lint`** — advisory. Runs `swiftlint lint --reporter github-actions-logging` so warnings show up
-  as inline PR annotations; `continue-on-error: true` means it never blocks a merge.
+- **`build-and-test`** — pushes to `main` only (`if: github.event_name == 'push'`), so a PR isn't
+  held up by the ~3-minute macOS job. `xcodebuild` Debug build, then every `Tools/*.swift` harness
+  from [Tests](#tests) above, in order. **Run these locally before you open a PR** — CI won't catch
+  a broken build or a failing harness until the merge lands on `main`.
+- **`lint`** — advisory, on PRs and `main`. Runs `swiftlint lint --reporter github-actions-logging`
+  so warnings show up as inline PR annotations; `continue-on-error: true` means it never blocks a
+  merge.
 
 Same commands locally: `xcodebuild -project Tinycast.xcodeproj -scheme Tinycast -configuration Debug
 build`, then the harness block from [Tests](#tests), then `swiftlint lint` from

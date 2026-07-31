@@ -232,7 +232,7 @@ struct OnboardingView: View {
                         .foregroundStyle(.secondary)
                 }
                 if step == 2 && model.importing {
-                    Button(action: {}) {
+                    Button {} label: {
                         HStack(spacing: Theme.Spacing.sm) {
                             ProgressView().controlSize(.small)
                             Text("Importing…")

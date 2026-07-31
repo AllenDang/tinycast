@@ -1,6 +1,8 @@
 import Foundation
 import SQLite3
 
+// Spelled as the C macro in sqlite3.h, which isn't imported into Swift.
+// swiftlint:disable:next identifier_name
 private let SQLITE_TRANSIENT = unsafeBitCast(-1, to: sqlite3_destructor_type.self)
 
 struct ClipboardItem: Identifiable, Hashable, Sendable {
@@ -580,6 +582,8 @@ final class ClipboardStore: ObservableObject {
     private static func columnString(_ stmt: OpaquePointer?, _ index: Int32) -> String? {
         guard let ptr = sqlite3_column_text(stmt, index) else { return nil }
         let count = Int(sqlite3_column_bytes(stmt, index))
+        // Raw bytes, not Data: sqlite3_column_text already guarantees UTF-8, so the decode can't fail.
+        // swiftlint:disable:next optional_data_string_conversion
         return String(decoding: UnsafeBufferPointer(start: ptr, count: count), as: UTF8.self)
     }
 }

@@ -505,6 +505,8 @@ final class SnippetTextInjector {
             let focusedValue,
             CFGetTypeID(focusedValue) == AXUIElementGetTypeID()
         else { return nil }
+        // Type checked by CFGetTypeID above; `as?` on a CF type is a compile error.
+        // swiftlint:disable:next force_cast
         let element = focusedValue as! AXUIElement
         AXUIElementSetMessagingTimeout(element, Self.accessibilityTimeout)
         return element
@@ -529,6 +531,8 @@ final class SnippetTextInjector {
             let value,
             CFGetTypeID(value) == AXValueGetTypeID()
         else { return nil }
+        // Type checked by CFGetTypeID above; `as?` on a CF type is a compile error.
+        // swiftlint:disable:next force_cast
         let axValue = value as! AXValue
         guard AXValueGetType(axValue) == .cfRange else { return nil }
         var range = CFRange()

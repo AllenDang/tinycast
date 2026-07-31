@@ -302,6 +302,8 @@ final class WindowMover {
             AXUIElementCopyAttributeValue(element, attribute as CFString, &value) == .success,
             let value, CFGetTypeID(value) == AXValueGetTypeID()
         else { return nil }
+        // Type checked by CFGetTypeID above; `as?` on a CF type is a compile error.
+        // swiftlint:disable:next force_cast
         let axValue = value as! AXValue
         return AXValueGetType(axValue) == type ? axValue : nil
     }
@@ -312,6 +314,8 @@ final class WindowMover {
             AXUIElementCopyAttributeValue(element, attribute as CFString, &value) == .success,
             let value, CFGetTypeID(value) == AXUIElementGetTypeID()
         else { return nil }
+        // Type checked by CFGetTypeID above; `as?` on a CF type is a compile error.
+        // swiftlint:disable:next force_cast
         return (value as! AXUIElement)
     }
 

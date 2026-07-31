@@ -243,10 +243,10 @@ private struct Parser {
     mutating func parseExpression(minBP: Int) -> Value? {
         guard var lhs = parseOperand() else { return nil }
         while true {
-            if let (op, bp, rightBP) = peekBinary(), bp >= minBP {
+            if let binary = peekBinary(), binary.bindingPower >= minBP {
                 pos += 1
-                guard let rhs = parseExpression(minBP: rightBP) else { return nil }
-                guard let combined = apply(op, lhs, rhs) else { return nil }
+                guard let rhs = parseExpression(minBP: binary.rightBindingPower) else { return nil }
+                guard let combined = apply(binary.op, lhs, rhs) else { return nil }
                 lhs = combined
                 continue
             }
@@ -271,15 +271,26 @@ private struct Parser {
         }
     }
 
-    /// (operator, its binding power, minimum bp for its right operand).
-    private func peekBinary() -> (Character, Int, Int)? {
+    /// An operator, its binding power, and the minimum bp for its right operand.
+    struct BinaryOp {
+        let op: Character
+        let bindingPower: Int
+        let rightBindingPower: Int
+    }
+
+    private func peekBinary() -> BinaryOp? {
         switch current {
-        case .op(let op) where op == "+" || op == "-": return (op, 10, 11)
-        case .op(let op) where op == "*" || op == "/": return (op, Self.mulBP, Self.mulBP + 1)
-        case .ident("of"): return ("*", Self.mulBP, Self.mulBP + 1)
+        case .op(let op) where op == "+" || op == "-":
+            return BinaryOp(op: op, bindingPower: 10, rightBindingPower: 11)
+        case .op(let op) where op == "*" || op == "/":
+            return BinaryOp(op: op, bindingPower: Self.mulBP, rightBindingPower: Self.mulBP + 1)
+        case .ident("of"):
+            return BinaryOp(op: "*", bindingPower: Self.mulBP, rightBindingPower: Self.mulBP + 1)
         // Spelled-out only: "%" is already percent, and "20% - 5" gives no local signal to tell the two apart.
-        case .ident("mod"): return ("%", Self.mulBP, Self.mulBP + 1)
-        case .op("^"): return ("^", 30, 30)  // right-associative: 2^3^2 = 512
+        case .ident("mod"):
+            return BinaryOp(op: "%", bindingPower: Self.mulBP, rightBindingPower: Self.mulBP + 1)
+        case .op("^"):
+            return BinaryOp(op: "^", bindingPower: 30, rightBindingPower: 30)  // right-associative: 2^3^2 = 512
         default: return nil
         }
     }

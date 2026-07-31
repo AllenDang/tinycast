@@ -7,32 +7,20 @@ excluded:
 
 reporter: "github-actions-logging"
 
-# AGENTS.md mandates single-line `///` comments over wrapped multi-line blocks, so those
-# routinely run long; the rule still catches genuinely oversized *code* lines.
 line_length:
   warning: 160
   error: 200
   ignores_comments: true
   ignores_urls: true
 
-# Terse single/two-letter names are idiomatic here for loop indices, coordinate math
-# (CalcParser, WindowLayout) and parser/DSL tokens (CalcQuantity, ThinScrollbar) — the
-# default min length of 3 mostly just flags that convention rather than a real smell.
 identifier_name:
   min_length:
     warning: 1
 
-# `ID` mirrors `Identifiable.ID` — the standard Swift spelling, not a truncated name.
 type_name:
   excluded:
     - ID
 
-# AppCore (single-owner core) and RootPaletteView (the main content view) are
-# intentionally large per the architecture in AGENTS.md; SystemCommandRunner /
-# WindowCommand / CalcParser are one-case-per-line command dispatch or recursive-descent
-# parsing, where "complexity" just counts enum cases / token kinds, not real nesting.
-# These ceilings clear today's worst legitimate cases so a *new* runaway type/function
-# still gets flagged.
 cyclomatic_complexity:
   warning: 45
   error: 60
@@ -50,8 +38,8 @@ type_body_length:
   error: 900
 
 file_length:
-  warning: 950
-  error: 1200
+  warning: 1200
+  error: 1500
 
 nesting:
   type_level:

@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// Reusable building blocks for the Settings window; all metrics come from `Theme` so Settings shares one vocabulary with the palette.
+// Reusable building blocks for the Settings window; all metrics come from `Theme` so Settings shares one vocabulary with the palette.
 
 // MARK: - Pane scaffold
 
