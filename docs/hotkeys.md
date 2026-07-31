@@ -14,6 +14,12 @@ format** from the removed KeyboardShortcuts package, kept so old bindings surviv
 bundle IDs lives in `boundAppBundleIDs` and is re-registered on launch. System Settings panes use
 `boundPaneBundleIDs`; custom commands use their stable UUIDs in `boundCustomCommandIDs`.
 
+Window commands persist under `KeyboardShortcuts_windowCommandHotkey.<raw-id>` but need **no** bound-ID
+index: the catalog is fixed, so `start()` and `conflictOwner` iterate `WindowCommand.ID.allCases` and
+`register` no-ops on an unbound command. A registered window-command shortcut still runs nothing while
+the feature switch is off — `AppCore.runWindowCommand` re-checks it. See
+[window-management.md](window-management.md).
+
 ## Recorder
 
 The settings recorder (`Features/Settings/ShortcutRecorder.swift`) is deliberately **not** a focusable

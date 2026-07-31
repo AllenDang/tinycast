@@ -54,8 +54,9 @@ stable entry IDs, labels, symbols and confirmation policy are covered by
 confirmation or value dialog and surfacing permission-aware failures.
 
 System commands occupy their own launcher and Shortcuts Settings category. The empty-query publication
-order is applications, System Settings, system commands, then built-in/custom commands; the sectioned
-view filters in that same order so the visible rows remain identical to the flat selection index.
+order is applications, System Settings, snippets, system commands, window commands, custom commands,
+then built-in commands; the sectioned view filters in that same order so the visible rows remain
+identical to the flat selection index.
 Search, favorites, visibility and learned ranking work through the normal `AppEntry` path. Dedicated
 global hotkeys are deliberately out of scope.
 
@@ -88,6 +89,16 @@ control at all. Multi-disk ejection excludes internal and network volumes, treat
 that the same physical eject already unmounted as done, and reports remaining failures together.
 Preference-backed toggles refuse to write when the current value can't be read, and notification
 dismissal matches Accessibility subroles rather than English labels.
+
+## Window commands
+
+`WindowCommandCatalog` supplies the 29 window actions as a static slice, published as a whole by
+`AppIndex.setWindowCommandsVisible(_:)` and shown under a "Window Management" section. Unlike system
+commands they **do** carry dedicated global hotkeys (`AppEntry.hotKeyAction` returns
+`.windowCommand(id:)`), so launcher rows render keycaps for them. Their per-command shortcut and
+visibility controls live only in Settings › Window Management, not in Settings › Shortcuts — the same
+call already made for snippets. The feature ships off. See
+[window-management.md](window-management.md).
 
 ## Custom commands
 

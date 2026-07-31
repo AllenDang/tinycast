@@ -43,8 +43,8 @@ struct ShortcutsSettingsView: View {
         case .application: return "Search applications…"
         case .systemSettings: return "Search System Settings…"
         case .command: return "Search commands…"
-        // Unreachable — snippets have no tab here; they're managed in Settings › Snippets.
-        case .snippet: return ""
+        // Unreachable — snippets and window commands have no tab here; they're managed in their own panes.
+        case .snippet, .windowCommand: return ""
         case .systemCommand: return "Search system commands…"
         }
     }

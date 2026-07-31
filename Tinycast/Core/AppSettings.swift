@@ -44,6 +44,10 @@ final class AppSettings: ObservableObject {
         static let customCommandsShowInLauncher = "customCommandsShowInLauncher"
         static let snippetsEnabled = "snippetsEnabled"
         static let snippetsShowInLauncher = "snippetsShowInLauncher"
+        static let windowManagementEnabled = "windowManagementEnabled"
+        static let windowManagementShowInLauncher = "windowManagementShowInLauncher"
+        static let windowGap = "windowManagementGap"
+        static let windowCycleOnRepeat = "windowManagementCycleOnRepeat"
     }
 
     /// Folders (and individual `.app` bundles) `AppIndex` scans, in scan order. Editing this re-indexes — `AppIndex.start(settings:)` observes it.
@@ -129,6 +133,27 @@ final class AppSettings: ObservableObject {
         didSet { defaults.set(snippetsShowInLauncher, forKey: Key.snippetsShowInLauncher) }
     }
 
+    /// Off means fully off: no launcher entries, and a still-registered shortcut moves nothing.
+    @Published var windowManagementEnabled: Bool {
+        didSet { defaults.set(windowManagementEnabled, forKey: Key.windowManagementEnabled) }
+    }
+
+    @Published var windowManagementShowInLauncher: Bool {
+        didSet {
+            defaults.set(windowManagementShowInLauncher, forKey: Key.windowManagementShowInLauncher)
+        }
+    }
+
+    /// Points left between tiled windows and around the screen edge. `WindowLayout` caps anything absurd.
+    @Published var windowGap: Int {
+        didSet { defaults.set(windowGap, forKey: Key.windowGap) }
+    }
+
+    /// Re-triggering a half steps it through ⅓ and ⅔ instead of re-applying the same frame.
+    @Published var windowCycleOnRepeat: Bool {
+        didSet { defaults.set(windowCycleOnRepeat, forKey: Key.windowCycleOnRepeat) }
+    }
+
     init() {
         // integer(forKey:) returns 0 when unset, which no case matches — falls through to 3 Months.
         clipboardRetention =
@@ -175,5 +200,12 @@ final class AppSettings: ObservableObject {
         snippetsShowInLauncher =
             defaults.object(forKey: Key.snippetsShowInLauncher) == nil
             || defaults.bool(forKey: Key.snippetsShowInLauncher)
+        windowManagementEnabled = defaults.bool(forKey: Key.windowManagementEnabled)
+        windowManagementShowInLauncher =
+            defaults.object(forKey: Key.windowManagementShowInLauncher) == nil
+            || defaults.bool(forKey: Key.windowManagementShowInLauncher)
+        // Unset reads as 0, which is the intended default anyway — no gap.
+        windowGap = defaults.integer(forKey: Key.windowGap)
+        windowCycleOnRepeat = defaults.bool(forKey: Key.windowCycleOnRepeat)
     }
 }

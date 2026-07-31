@@ -8,6 +8,7 @@ struct AppEntry: Identifiable, Hashable, Sendable {
         case command
         case snippet
         case systemCommand
+        case windowCommand
     }
 
     let id: String  // file path (or "command:…" id) — always unique
@@ -31,6 +32,7 @@ struct AppEntry: Identifiable, Hashable, Sendable {
         case .command: return isCustomCommand ? "Custom Command" : "Command"
         case .snippet: return "Snippet"
         case .systemCommand: return "System Command"
+        case .windowCommand: return "Window Command"
         }
     }
 
@@ -43,6 +45,8 @@ struct AppEntry: Identifiable, Hashable, Sendable {
             return bundleID.map { .settingsPane(bundleID: $0) }
         case .command:
             return CustomCommand.id(fromEntryID: id).map { .customCommand(id: $0) }
+        case .windowCommand:
+            return WindowCommandCatalog.command(forEntryID: id).map { .windowCommand(id: $0.id) }
         case .snippet, .systemCommand:
             return nil
         }
@@ -51,10 +55,13 @@ struct AppEntry: Identifiable, Hashable, Sendable {
     /// Synthetic command entries have no file behind them to reveal.
     var canRevealInFinder: Bool { kind == .application || kind == .systemSettings || kind == .snippet }
 
-    /// Command, snippet and system-command entries draw an SF Symbol tile; everything else uses its file icon.
-    var isSymbolIcon: Bool { kind == .command || kind == .snippet || kind == .systemCommand }
+    /// Synthetic entries draw an SF Symbol tile; everything else uses its file icon.
+    var isSymbolIcon: Bool {
+        kind == .command || kind == .snippet || kind == .systemCommand || kind == .windowCommand
+    }
     var symbolIconName: String {
         if kind == .snippet { return "text.quote" }
+        if let window = WindowCommandCatalog.command(forEntryID: id) { return window.sfSymbol }
         if let system = SystemCommandCatalog.command(forEntryID: id) { return system.sfSymbol }
         if let builtIn = CommandRegistry.command(for: self) { return builtIn.sfSymbol }
         return isCustomCommand ? "terminal" : "questionmark"
@@ -188,8 +195,18 @@ final class AppIndex: ObservableObject {
         }
         .sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
 
+    private static let allWindowCommandEntries: [AppEntry] = WindowCommandCatalog.all
+        .map { command in
+            AppEntry(
+                id: command.entryID, name: command.name,
+                url: URL(string: "tinycast://window-command/" + command.id.rawValue)!,
+                bundleID: nil, kind: .windowCommand)
+        }
+        .sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
+
     private var discoveredEntries: [AppEntry] = []
     private var customCommandEntries: [AppEntry] = []
+    private var windowCommandEntries: [AppEntry] = []
     private var isRefreshing = false
     /// Set when a refresh is requested mid-scan, so a scope edit landing during an in-flight scan isn't silently dropped.
     private var refreshPending = false
@@ -212,6 +229,15 @@ final class AppIndex: ObservableObject {
         .sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
         guard entries != customCommandEntries else { return }
         customCommandEntries = entries
+        publishEntries()
+    }
+
+    /// Shows or hides the whole window-command slice; the catalog is static, so this is the on/off switch
+    /// rather than a content update.
+    func setWindowCommandsVisible(_ visible: Bool) {
+        let entries = visible ? Self.allWindowCommandEntries : []
+        guard entries != windowCommandEntries else { return }
+        windowCommandEntries = entries
         publishEntries()
     }
 
@@ -295,7 +321,7 @@ final class AppIndex: ObservableObject {
     private func publishEntries() {
         // Each slice is already alphabetical; the slice order is the launcher's section order (LauncherList mirrors it), so custom commands sit in their own section ahead of the built-ins.
         let updated =
-            discoveredEntries + snippetEntries + Self.systemCommandEntries
+            discoveredEntries + snippetEntries + Self.systemCommandEntries + windowCommandEntries
             + customCommandEntries + CommandRegistry.all
         guard updated != apps else { return }
         apps = updated

@@ -30,6 +30,12 @@ struct SettingsBackup: Codable {
         var customCommandsEnabled: Bool?
         var customCommandsShowInLauncher: Bool?
         var snippetsShowInLauncher: Bool?
+        // Safe to carry, unlike `snippetsEnabled`: this grants no permission class of its own — window
+        // commands reuse the Accessibility grant paste already prompts for.
+        var windowManagementEnabled: Bool?
+        var windowManagementShowInLauncher: Bool?
+        var windowGap: Int?
+        var windowCycleOnRepeat: Bool?
     }
 
     struct HotkeyBackup: Codable {
@@ -39,6 +45,7 @@ struct SettingsBackup: Codable {
         var apps: [String: KeyShortcut]?
         var panes: [String: KeyShortcut]?
         var customCommands: [String: KeyShortcut]?
+        var windowCommands: [String: KeyShortcut]?
     }
 
     /// A tally of what an import touched, for user-facing confirmation.
@@ -76,7 +83,11 @@ extension SettingsBackup {
             openOnCursorScreen: s.openOnCursorScreen,
             customCommandsEnabled: s.customCommandsEnabled,
             customCommandsShowInLauncher: s.customCommandsShowInLauncher,
-            snippetsShowInLauncher: s.snippetsShowInLauncher)
+            snippetsShowInLauncher: s.snippetsShowInLauncher,
+            windowManagementEnabled: s.windowManagementEnabled,
+            windowManagementShowInLauncher: s.windowManagementShowInLauncher,
+            windowGap: s.windowGap,
+            windowCycleOnRepeat: s.windowCycleOnRepeat)
 
         let hk = core.hotKeys
         var hotkeys = HotkeyBackup()
@@ -94,6 +105,10 @@ extension SettingsBackup {
         hotkeys.customCommands = Dictionary(
             uniqueKeysWithValues: hk.boundCustomCommandIDs.compactMap { id in
                 hk.shortcut(for: .customCommand(id: id)).map { (id.uuidString.lowercased(), $0) }
+            })
+        hotkeys.windowCommands = Dictionary(
+            uniqueKeysWithValues: WindowCommand.ID.allCases.compactMap { id in
+                hk.shortcut(for: .windowCommand(id: id)).map { (id.rawValue, $0) }
             })
         backup.hotkeys = hotkeys
 
@@ -199,6 +214,22 @@ extension SettingsBackup {
             settings.snippetsShowInLauncher = flag
             count += 1
         }
+        if let flag = s.windowManagementEnabled {
+            settings.windowManagementEnabled = flag
+            count += 1
+        }
+        if let flag = s.windowManagementShowInLauncher {
+            settings.windowManagementShowInLauncher = flag
+            count += 1
+        }
+        if let gap = s.windowGap {
+            settings.windowGap = gap
+            count += 1
+        }
+        if let flag = s.windowCycleOnRepeat {
+            settings.windowCycleOnRepeat = flag
+            count += 1
+        }
         return count
     }
 
@@ -221,6 +252,10 @@ extension SettingsBackup {
                 continue
             }
             apply(s, .customCommand(id: id))
+        }
+        for (rawID, s) in hotkeys.windowCommands ?? [:] {
+            guard let id = WindowCommand.ID(rawValue: rawID) else { continue }
+            apply(s, .windowCommand(id: id))
         }
         return count
     }

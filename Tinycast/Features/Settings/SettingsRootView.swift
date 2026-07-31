@@ -6,8 +6,8 @@ extension Notification.Name {
 }
 
 enum SettingsTab: Int, CaseIterable, Identifiable {
-    case general, clipboard, emoji, snippets, permissions, shortcuts, customCommands, backup,
-        miscellaneous, about
+    case general, clipboard, emoji, snippets, windowManagement, permissions, shortcuts,
+        customCommands, backup, miscellaneous, about
     var id: Int { rawValue }
 
     var title: String {
@@ -16,6 +16,7 @@ enum SettingsTab: Int, CaseIterable, Identifiable {
         case .clipboard: return "Clipboard"
         case .emoji: return "Emoji & Symbols"
         case .snippets: return "Snippets"
+        case .windowManagement: return "Window Management"
         case .permissions: return "Permissions"
         case .shortcuts: return "Shortcuts"
         case .customCommands: return "Custom Commands"
@@ -31,6 +32,7 @@ enum SettingsTab: Int, CaseIterable, Identifiable {
         case .clipboard: return "doc.on.clipboard"
         case .emoji: return "face.smiling"
         case .snippets: return "curlybraces"
+        case .windowManagement: return "macwindow"
         case .permissions: return "lock.shield"
         case .shortcuts: return "keyboard"
         case .customCommands: return "terminal"
@@ -47,6 +49,7 @@ enum SettingsTab: Int, CaseIterable, Identifiable {
         case .clipboard: return .orange
         case .emoji: return .yellow
         case .snippets: return .green
+        case .windowManagement: return .blue
         case .permissions: return .blue
         case .shortcuts: return .indigo
         case .customCommands: return .green
@@ -75,6 +78,7 @@ struct SettingsRootView: View {
                 case .clipboard: ClipboardSettingsView()
                 case .emoji: EmojiSettingsView()
                 case .snippets: SnippetsSettingsView()
+                case .windowManagement: WindowManagementSettingsView()
                 case .permissions: PermissionsSettingsView()
                 case .shortcuts: ShortcutsSettingsView()
                 case .customCommands: CustomCommandsSettingsView()

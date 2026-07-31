@@ -95,6 +95,10 @@ swiftc -swift-version 6 Tinycast/Core/NotificationToken.swift \
     Tools/snippets-test.swift -o /tmp/snippets-test && /tmp/snippets-test  # snippets
 swiftc -swift-version 6 Tinycast/Core/SystemCommand.swift Tools/system-command-test.swift \
     -o /tmp/system-command-test && /tmp/system-command-test        # system command metadata + safety
+swiftc -swift-version 6 Tinycast/Core/WindowManagement/WindowCommand.swift \
+    Tinycast/Core/WindowManagement/WindowLayout.swift \
+    Tinycast/Core/WindowManagement/WindowActionMemory.swift Tools/window-command-test.swift \
+    -o /tmp/window-command-test && /tmp/window-command-test        # window geometry + action memory
 ```
 
 `Tools/fuzz-test.swift` holds a **copy** of `FuzzyMatch` from `Tinycast/Core/AppIndex.swift` —
@@ -116,6 +120,14 @@ keyword/event/lifecycle policies, AppKit delivery primitives and main-actor stor
 roots and named pasteboards cover identity, per-channel isolation, malformed files, revision
 conflicts, watcher rearming, template determinism, delivery serialization and pasteboard restoration without touching a real snippets library or clipboard. The
 complete subsystem contract is in [snippets.md](snippets.md).
+
+The window-command harness compiles the real catalog, geometry and action memory (Foundation +
+CoreGraphics — `CGRect`'s `Equatable` conformance lives in the CoreGraphics overlay, not Foundation).
+It covers tiling, gaps, cycling, restore, display moves and the memory's reset rules against synthetic
+`WindowLayout.Screen` values, plus a fuzz sweep over every command × gap × screen × degenerate window
+frame. All of it runs headless because the layer is pure: `WindowMover` owns every `AXUIElement` call
+and is deliberately not compiled in. The full contract is in
+[window-management.md](window-management.md).
 
 ## Generated data
 

@@ -41,7 +41,8 @@ Full detail: [`docs/architecture.md`](docs/architecture.md).
   accessory apps).
 - **Subsystems:** [palette](docs/palette.md) · [launcher & fuzzy match](docs/launcher.md) ·
   [calculator](docs/calculator.md) · [clipboard](docs/clipboard.md) · [emoji](docs/emoji.md) ·
-  [snippets](docs/snippets.md) · [hotkeys](docs/hotkeys.md) · [UI & design system](docs/ui.md).
+  [snippets](docs/snippets.md) · [window management](docs/window-management.md) ·
+  [hotkeys](docs/hotkeys.md) · [UI & design system](docs/ui.md).
 
 ## Critical Invariants
 
@@ -78,7 +79,19 @@ Never break these without an explicit task to do so.
   template engine, repository and keyword policies stay Foundation-only, and the AppKit files there
   keep their dependencies to what the harness can stub. `Core/SystemCommand.swift` is also
   Foundation-only for `Tools/system-command-test.swift`; platform effects belong in
-  `SystemCommandRunner`, while confirmation and failure UI remain in `AppCore`.
+  `SystemCommandRunner`, while confirmation and failure UI remain in `AppCore`. `Core/WindowManagement/`
+  splits the same way for `Tools/window-command-test.swift`: `WindowCommand.swift`, `WindowLayout.swift`
+  and `WindowActionMemory.swift` stay Foundation + CoreGraphics and pure (no AX, no `NSScreen`, no
+  clock — `WindowActionMemory` takes `now` as a parameter), while every `AXUIElement` call and the
+  Cocoa↔AX coordinate flip live in `WindowMover.swift`.
+- **`WindowLayout` works exclusively in AX space** — global coordinates, top-left origin, +Y **down**.
+  `WindowMover.AXGeometry` is the only place that converts, and it anchors the flip on the **primary**
+  display's height, never the window's own screen: doing otherwise shears every rect on a
+  differently-sized display by the height difference, which is invisible on one monitor and wrong on
+  every mixed-size setup. The visible consequence is that "Top Half" has `minY == visibleFrame.minY`;
+  `Tools/window-command-test.swift` asserts it. Nothing in this feature ever touches
+  `backingScaleFactor` — all three of `NSScreen.frame`, `visibleFrame` and AX coordinates are in points,
+  so mixed-DPI correctness is automatic. See [window-management.md](docs/window-management.md).
 - **`Tools/fuzz-test.swift` holds a COPY of `FuzzyMatch`** from `Core/AppIndex.swift`. Change the
   scoring in one, mirror it in the other, or the test is meaningless.
 - **`EmojiData.generated.swift` is emitted by `node Tools/gen-emoji.js` and
@@ -131,8 +144,8 @@ Never break these without an explicit task to do so.
 
 - `Tinycast/Core/` — managers, stores, windows, AppKit glue (no view bodies beyond hosting).
   `Core/Calculator/` and `Core/Emoji/` are Foundation-only engines; `Core/Snippets/` is a
-  standalone-harness input in full; `Core/Theme.swift` is the design-token source;
-  `Core/HotKey/` is the in-house hotkey stack.
+  standalone-harness input in full; `Core/WindowManagement/` is a pure geometry layer plus its one AX
+  file; `Core/Theme.swift` is the design-token source; `Core/HotKey/` is the in-house hotkey stack.
 - `Tinycast/Features/` — SwiftUI views: `RootPaletteView`, `Launcher/`, `Clipboard/`, `Calculator/`,
   `Emoji/`, `Settings/`, `About/`, `Onboarding/`, plus shared `PopoverMenu`.
 - `Tinycast/App/` — `@main` app + delegate.
@@ -145,7 +158,9 @@ Never break these without an explicit task to do so.
 - [`docs/palette.md`](docs/palette.md) — palette state flow, menu-open freeze, focus restoration.
 - [`docs/launcher.md`](docs/launcher.md) · [`docs/calculator.md`](docs/calculator.md) ·
   [`docs/clipboard.md`](docs/clipboard.md) · [`docs/emoji.md`](docs/emoji.md) ·
-  [`docs/snippets.md`](docs/snippets.md) · [`docs/hotkeys.md`](docs/hotkeys.md) — subsystem internals.
+  [`docs/snippets.md`](docs/snippets.md) ·
+  [`docs/window-management.md`](docs/window-management.md) ·
+  [`docs/hotkeys.md`](docs/hotkeys.md) — subsystem internals.
 - [`docs/ui.md`](docs/ui.md) — the full visual design system, tokens, scrollbars, section headers.
 - [`docs/development.md`](docs/development.md) — build, test, package, release.
 - [`docs/signing.md`](docs/signing.md) — signing model and Gatekeeper.

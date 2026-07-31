@@ -101,6 +101,7 @@ final class AppCore: ObservableObject {
     let snippetTextInjector: SnippetTextInjector
     let hotKeys = HotKeyManager()
     let hyperKeyTap = HyperKeyTap()
+    let windowMover = WindowMover()
     let settings: AppSettings
     let favorites = FavoritesStore()
     let visibility = VisibilityStore()
@@ -149,6 +150,7 @@ final class AppCore: ObservableObject {
             self?.applyCustomCommandsPresence()
         }
         applyCustomCommandsPresence()
+        applyWindowCommandsPresence()
         Task { await appIndex.refresh() }
         Task { await emojiIndex.load() }
         currencyRates.start()
@@ -157,6 +159,7 @@ final class AppCore: ObservableObject {
         hotKeys.onToggleClipboard = { [weak self] in self?.toggleClipboard() }
         hotKeys.onToggleEmoji = { [weak self] in self?.toggleEmoji() }
         hotKeys.onRunCustomCommand = { [weak self] id in self?.runCustomCommand(id: id) }
+        hotKeys.onRunWindowCommand = { [weak self] id in self?.runWindowCommand(id: id) }
         hotKeys.start(customCommandIDs: Set(customCommands.commands.map(\.id)))
         // Deliberately keeps running while `hotKeys.recordingAction` pauses Carbon: the recorder relies on the tap's rewritten flags to capture Hyper shortcuts.
         hyperKeyTap.start(settings: settings)
@@ -173,6 +176,18 @@ final class AppCore: ObservableObject {
         }
 
         // @Published emits synchronously before the property is written (as in `AppIndex.start`), so every re-projection defers to a task that reads the settled value.
+        for publisher in [
+            settings.$windowManagementEnabled, settings.$windowManagementShowInLauncher,
+        ] {
+            publisher.dropFirst()
+                .sink { [weak self] _ in
+                    MainActor.assumeIsolated {
+                        guard let self else { return }
+                        Task { self.applyWindowCommandsPresence() }
+                    }
+                }
+                .store(in: &cancellables)
+        }
         for publisher in [settings.$customCommandsEnabled, settings.$customCommandsShowInLauncher] {
             publisher.dropFirst()
                 .sink { [weak self] _ in
@@ -220,6 +235,11 @@ final class AppCore: ObservableObject {
     private func applyCustomCommandsPresence() {
         let visible = settings.customCommandsEnabled && settings.customCommandsShowInLauncher
         appIndex.setCustomCommands(visible ? customCommands.commands : [])
+    }
+
+    private func applyWindowCommandsPresence() {
+        let visible = settings.windowManagementEnabled && settings.windowManagementShowInLauncher
+        appIndex.setWindowCommandsVisible(visible)
     }
 
     private func applySnippetsLauncherPresence() {
@@ -368,6 +388,11 @@ final class AppCore: ObservableObject {
             runSystemCommand(app)
             return
         }
+        if app.kind == .windowCommand {
+            guard let command = WindowCommandCatalog.command(forEntryID: app.id) else { return }
+            runWindowCommand(id: command.id)
+            return
+        }
         let previous = windowController.previousApp
         hidePalette(restoreFocus: false)
         switch app.kind {
@@ -379,13 +404,33 @@ final class AppCore: ObservableObject {
         case .snippet:
             let snippetID = String(app.id.dropFirst("snippet:".count))
             expandSnippet(id: snippetID, targetApp: previous)
-        case .command, .systemCommand:
+        case .command, .systemCommand, .windowCommand:
             break  // handled above
         }
     }
 
     func resetRanking(for app: AppEntry) {
         launcherRanking.reset(itemKey: app.preferenceKey)
+    }
+
+    // MARK: - Window commands
+
+    /// The one funnel for both palette activation and a command's global hotkey, so the feature switch
+    /// can't be bypassed by either — a shortcut stays registered while the feature is off and must move
+    /// nothing.
+    ///
+    /// The command acts on the app the user was in, so the palette hands focus back before dispatching,
+    /// the same dance the paste path does. Focus is restored rather than dropped: the window being moved
+    /// is the one they want to keep working in.
+    func runWindowCommand(id: WindowCommand.ID) {
+        guard settings.windowManagementEnabled else { return }
+        let target =
+            windowController.isVisible
+            ? windowController.previousApp : NSWorkspace.shared.frontmostApplication
+        if windowController.isVisible { hidePalette(restoreFocus: true) }
+        windowMover.perform(
+            id, target: target, gap: CGFloat(settings.windowGap),
+            cycleOnRepeat: settings.windowCycleOnRepeat)
     }
 
     // MARK: - System commands
