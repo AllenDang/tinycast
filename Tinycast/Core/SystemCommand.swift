@@ -128,6 +128,7 @@ enum SystemCommandCatalog {
         case .unhideAllApps: return "eye.circle"
         case .quitAllApps: return "xmark.circle"
         case .dismissNotifications: return "bell.slash"
+        // Not an SF Symbol — the logo is a Bluetooth SIG trademark, so this resolves to a bundled asset instead.
         case .toggleBluetooth: return "bluetooth"
         }
     }
