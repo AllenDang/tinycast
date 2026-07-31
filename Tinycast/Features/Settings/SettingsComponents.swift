@@ -46,7 +46,7 @@ struct SettingsHeader: View {
 
 /// A rounded, hairline-bordered container grouping related rows — the macOS System Settings "card" (rows split by inset dividers via `SettingsRow`/`SettingsDivider`).
 struct SettingsCard<Content: View>: View {
-    var header: String? = nil
+    var header: String?
     @ViewBuilder var content: Content
 
     var body: some View {
@@ -127,11 +127,11 @@ struct SettingsDivider: View {
 /// A single settings line (optional SF Symbol, title with optional subtitle, trailing control); fixed vertical rhythm keeps every card aligned regardless of the control.
 struct SettingsRow<Trailing: View>: View {
     let title: String
-    var subtitle: String? = nil
-    var systemImage: String? = nil
+    var subtitle: String?
+    var systemImage: String?
     var tint: Color = .secondary
     /// Optional state indicator rendered after the title (green = active, orange = attention).
-    var statusDot: Color? = nil
+    var statusDot: Color?
     @ViewBuilder var trailing: Trailing
 
     var body: some View {
@@ -172,7 +172,7 @@ struct SettingsRow<Trailing: View>: View {
 /// A tinted inset box for a notice or warning inside a `SettingsCard` — SF Symbol + title + optional message, with an optional trailing control (e.g. a fix-it button).
 struct SettingsCallout<Trailing: View>: View {
     let title: String
-    var message: String? = nil
+    var message: String?
     var systemImage: String = "info.circle"
     var tint: Color = .secondary
     @ViewBuilder var trailing: Trailing

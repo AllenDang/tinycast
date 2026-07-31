@@ -152,7 +152,7 @@ enum CalcUnits {
         "mmHg": ("psi", false), "Torr": ("psi", false),
         // Data transfer rate
         "Mbps": ("kbps", false), "Gbps": ("mbps", false), "Kbps": ("bps", false),
-        "bps": ("kbps", false), "Tbps": ("gbps", false),
+        "bps": ("kbps", false), "Tbps": ("gbps", false)
     ]
 
     /// Lookup by lowercased, `²`-folded name (the tokenizer's ident form).

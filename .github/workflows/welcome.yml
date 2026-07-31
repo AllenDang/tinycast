@@ -41,7 +41,8 @@ jobs:
               "> **Open an issue before you write code — this is mandatory.** Get the bug or the feature agreed on",
               "> first; discussing it in the issue (or on [Discord](https://discord.gg/v2Eeb4QQy3)) is strongly",
               "> encouraged. A PR with no agreed issue behind it gets closed however good the patch is, and the",
-              "> work is wasted. Typo and docs-only fixes are the one exception.",
+              "> work is wasted. Typo and docs-only fixes are the one exception, a maintainer marks those",
+              "> `typo`/`docs` rather than asking for a linked issue.",
             ].join("\n");
             await github.rest.issues.createComment({
               owner: context.repo.owner,

@@ -26,10 +26,13 @@ Check existing [issues](https://github.com/abue-ammar/tinycast/issues) and
 
 ## Before submitting
 
-- **A linked issue that got a green light.** No agreed issue, no merge — typos and docs-only fixes
-  aside.
+- **A linked issue that got a green light.** No agreed issue, no merge — unless a maintainer marks
+  the PR `typo` or `docs`.
 - Builds clean — no new warnings.
-- The `Tools/` harnesses pass; engine changes come with new cases.
+- The `Tools/` harnesses pass; engine changes come with new cases. CI runs the build and every
+  harness on your PR automatically — [`docs/development.md`](docs/development.md#tests) has the
+  commands to run them locally first. SwiftLint runs too (`swiftlint lint`,
+  [`docs/development.md`](docs/development.md#format--lint)) but is advisory, not a merge gate.
 - Leak-tested and memory-measured. Numbers in the PR.
 - You actually used the app, on your path and the ones next to it.
 - Rebased on `main`, squashed into logical commits.

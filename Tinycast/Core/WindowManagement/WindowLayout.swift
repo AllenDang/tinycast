@@ -14,12 +14,6 @@ enum WindowLayout {
         let id: Int
         let frame: CGRect
         let visibleFrame: CGRect
-
-        init(id: Int, frame: CGRect, visibleFrame: CGRect) {
-            self.id = id
-            self.frame = frame
-            self.visibleFrame = visibleFrame
-        }
     }
 
     /// Where a window that refused to shrink to its slot sits inside it — a left half stays left-aligned
@@ -37,8 +31,7 @@ enum WindowLayout {
         /// Places `size` inside `slot` per the anchor, used when an app clamped itself larger than the slot.
         func place(_ size: CGSize, in slot: CGRect) -> CGRect {
             func origin(_ axis: Axis, slotMin: CGFloat, slotLength: CGFloat, length: CGFloat)
-                -> CGFloat
-            {
+                -> CGFloat {
                 switch axis {
                 case .min: return slotMin
                 case .center: return slotMin + (slotLength - length) / 2
@@ -212,8 +205,7 @@ enum WindowLayout {
     }
 
     private static func displayPlacement(_ input: Input, from host: Screen, gap: CGFloat)
-        -> Placement?
-    {
+        -> Placement? {
         let ordered = ordered(input.screens)
         // A single display makes both commands a quiet no-op rather than a pointless re-place.
         guard ordered.count > 1, let index = ordered.firstIndex(where: { $0.id == host.id })
@@ -405,8 +397,7 @@ enum WindowLayout {
     }
 
     private static func nudged(_ frame: CGRect, in canvas: CGRect, command: WindowCommand.ID)
-        -> CGRect
-    {
+        -> CGRect {
         let dx = (canvas.width * stepFraction).rounded()
         let dy = (canvas.height * stepFraction).rounded()
         var moved = frame

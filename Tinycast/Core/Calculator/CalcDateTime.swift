@@ -10,8 +10,7 @@ enum CalcDateTime {
     private enum MomentBias { case future, past }
 
     static func evaluate(_ raw: String, now: Date = Date(), calendar: Calendar = .current)
-        -> CalcResult?
-    {
+        -> CalcResult? {
         let echo = raw.trimmingCharacters(in: .whitespacesAndNewlines)
         let query = echo.lowercased()
         guard !query.isEmpty else { return nil }
@@ -38,8 +37,7 @@ enum CalcDateTime {
     // MARK: - Grammar A: duration until a moment
 
     private static func parseUntil(_ query: String, echo: String, now: Date, calendar: Calendar)
-        -> CalcResult?
-    {
+        -> CalcResult? {
         guard let connector = [" until ", " till ", " til "].first(where: query.contains) else {
             return nil
         }
@@ -85,8 +83,7 @@ enum CalcDateTime {
     // MARK: - Grammar B: duration since a past moment
 
     private static func parseSince(_ query: String, echo: String, now: Date, calendar: Calendar)
-        -> CalcResult?
-    {
+        -> CalcResult? {
         let parts = query.components(separatedBy: " since ")
         guard parts.count == 2,
             let unit = durationUnit(parts[0]),
@@ -288,8 +285,7 @@ enum CalcDateTime {
                     month: month, day: day, now: now, calendar: calendar, bias: bias)
             }
             if parts.count == 3, let month = Int(parts[0]), let day = Int(parts[1]),
-                let year = Int(parts[2]), let date = makeDate(fullYear(year), month, day, calendar)
-            {
+                let year = Int(parts[2]), let date = makeDate(fullYear(year), month, day, calendar) {
                 return Moment(date: date, hasTime: false)
             }
         }
@@ -402,8 +398,7 @@ enum CalcDateTime {
     // MARK: - Formatting
 
     private static func momentString(_ date: Date, hasTime: Bool, now: Date, calendar: Calendar)
-        -> String
-    {
+        -> String {
         let day = dateString(date, now: now, calendar: calendar)
         return hasTime ? "\(day) at \(timeString(date, calendar: calendar))" : day
     }
@@ -479,8 +474,7 @@ enum CalcDateTime {
     }
 
     private static func makeDate(_ year: Int, _ month: Int, _ day: Int, _ calendar: Calendar)
-        -> Date?
-    {
+        -> Date? {
         guard (1...12).contains(month), (1...31).contains(day) else { return nil }
         var components = DateComponents()
         components.year = year
@@ -507,13 +501,13 @@ enum CalcDateTime {
         "january": 1, "jan": 1, "february": 2, "feb": 2, "march": 3, "mar": 3, "april": 4,
         "apr": 4, "may": 5, "june": 6, "jun": 6, "july": 7, "jul": 7, "august": 8, "aug": 8,
         "september": 9, "sep": 9, "sept": 9, "october": 10, "oct": 10, "november": 11, "nov": 11,
-        "december": 12, "dec": 12,
+        "december": 12, "dec": 12
     ]
 
     /// Gregorian weekday numbers (Sunday = 1).
     private static let weekdayByName: [String: Int] = [
         "sunday": 1, "sun": 1, "monday": 2, "mon": 2, "tuesday": 3, "tue": 3, "tues": 3,
         "wednesday": 4, "wed": 4, "thursday": 5, "thu": 5, "thurs": 5, "friday": 6, "fri": 6,
-        "saturday": 7, "sat": 7,
+        "saturday": 7, "sat": 7
     ]
 }

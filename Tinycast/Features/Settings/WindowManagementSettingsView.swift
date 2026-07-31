@@ -66,8 +66,7 @@ struct WindowManagementSettingsView: View {
 
     private var commandsCard: some View {
         SettingsCard(header: "Commands") {
-            ForEach(Array(WindowCommandCatalog.grouped().enumerated()), id: \.element.group) {
-                index, section in
+            ForEach(Array(WindowCommandCatalog.grouped().enumerated()), id: \.element.group) { index, section in
                 if index > 0 { SettingsDivider() }
                 WindowCommandGroupHeader(title: section.group.title)
                 ForEach(section.commands) { command in

@@ -150,8 +150,7 @@ enum IconCache {
         let config = NSImage.SymbolConfiguration(pointSize: 21, weight: .medium)
             .applying(.init(paletteColors: [tint]))
         if let symbol = NSImage(systemSymbolName: name, accessibilityDescription: nil)?
-            .withSymbolConfiguration(config)
-        {
+            .withSymbolConfiguration(config) {
             return symbol
         }
         guard let asset = NSImage(named: name) else { return nil }
@@ -349,8 +348,7 @@ final class AppIndex: ObservableObject {
         let q = query.trimmingCharacters(in: .whitespaces)
         guard !q.isEmpty else { return apps }
         if let matchCache, matchCache.query == q,
-            matchCache.rankingRevision == ranking.revision
-        {
+            matchCache.rankingRevision == ranking.revision {
             return matchCache.result
         }
         let result = rank(q, limit: limit)

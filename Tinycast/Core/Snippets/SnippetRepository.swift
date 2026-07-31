@@ -214,7 +214,7 @@ struct SnippetRepository: Sendable {
         fileURL: URL,
         expectedRevision: SnippetSourceRevision
     ) throws(RepositoryError) {
-        try coordinator.withLock { () throws(RepositoryError) -> Void in
+        try coordinator.withLock { () throws(RepositoryError) in
             try mappedError(at: fileURL) {
                 let fileURL = try validatedFileURL(fileURL)
                 try coordinatedMutation(at: fileURL, options: .forDeleting) {

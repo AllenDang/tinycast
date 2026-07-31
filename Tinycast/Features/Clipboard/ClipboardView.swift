@@ -143,7 +143,7 @@ enum ClipboardActionsMenu {
                 title: "Paste & Keep Window Open", icon: .paste(target, fallback: "macwindow")
             ) {
                 core.pasteKeepingWindowOpen(item)
-            },
+            }
         ]
         if item.isPinned {
             items.append(

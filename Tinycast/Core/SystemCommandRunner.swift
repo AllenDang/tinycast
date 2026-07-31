@@ -45,8 +45,7 @@ enum SystemCommandRunner {
     /// What a command reports back once it succeeded. Only commands whose effect is otherwise invisible
     /// return one, since Show Desktop or Hide Others are their own confirmation.
     static func run(_ id: SystemCommand.ID, previousApp: NSRunningApplication?) async throws
-        -> SystemCommandFeedback?
-    {
+        -> SystemCommandFeedback? {
         switch id {
         case .lockScreen:
             try postKey(keyCode: CGKeyCode(kVK_ANSI_Q), flags: [.maskControl, .maskCommand])
@@ -249,8 +248,7 @@ enum SystemCommandRunner {
     }
 
     private static func volumeAddress(element: AudioObjectPropertyElement)
-        -> AudioObjectPropertyAddress
-    {
+        -> AudioObjectPropertyAddress {
         AudioObjectPropertyAddress(
             mSelector: kAudioDevicePropertyVolumeScalar,
             mScope: kAudioDevicePropertyScopeOutput,
@@ -289,8 +287,7 @@ enum SystemCommandRunner {
         var muted: UInt32 = 0
         var size = UInt32(MemoryLayout<UInt32>.size)
         if AudioObjectHasProperty(device, &address),
-            AudioObjectGetPropertyData(device, &address, 0, nil, &size, &muted) == noErr
-        {
+            AudioObjectGetPropertyData(device, &address, 0, nil, &size, &muted) == noErr {
             try setMuted(muted == 0, on: device)
             return
         }
@@ -362,8 +359,7 @@ enum SystemCommandRunner {
         for app in NSWorkspace.shared.runningApplications
         where app.activationPolicy == .regular
             && app.processIdentifier != ownPID
-            && app.processIdentifier != keptPID
-        {
+            && app.processIdentifier != keptPID {
             app.hide()
         }
         previousApp?.unhide()
@@ -373,7 +369,7 @@ enum SystemCommandRunner {
     @discardableResult
     private static func ejectAllDisks() throws -> Int {
         let keys: Set<URLResourceKey> = [
-            .volumeIsEjectableKey, .volumeIsInternalKey, .volumeIsLocalKey,
+            .volumeIsEjectableKey, .volumeIsInternalKey, .volumeIsLocalKey
         ]
         let urls = FileManager.default.mountedVolumeURLs(
             includingResourceValuesForKeys: Array(keys), options: [.skipHiddenVolumes]) ?? []

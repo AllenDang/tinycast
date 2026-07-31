@@ -156,8 +156,7 @@ private struct CalcHistoryRow: View {
 @MainActor
 enum CalcHistoryActionsMenu {
     static func content(entry: CalcHistoryEntry, core: AppCore, calcHistory: CalculatorHistoryStore)
-        -> PopoverMenuContent
-    {
+        -> PopoverMenuContent {
         PopoverMenuContent(
             header: entry.expression,
             items: [
@@ -176,7 +175,7 @@ enum CalcHistoryActionsMenu {
                     title: "Delete All Entries", systemImage: "trash.fill", isDestructive: true
                 ) {
                     calcHistory.clearAll()
-                },
+                }
             ]
         )
     }

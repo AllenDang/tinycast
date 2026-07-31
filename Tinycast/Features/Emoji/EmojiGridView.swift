@@ -240,8 +240,7 @@ private struct EmojiCell: View {
 @MainActor
 enum EmojiActionsMenu {
     static func content(entry: EmojiEntry, core: AppCore, target: PasteTarget?)
-        -> PopoverMenuContent
-    {
+        -> PopoverMenuContent {
         PopoverMenuContent(
             header: entry.displayName,
             items: [
@@ -260,7 +259,7 @@ enum EmojiActionsMenu {
                     title: "Paste & Keep Window Open", icon: .paste(target, fallback: "macwindow")
                 ) {
                     core.pasteEmojiKeepingWindowOpen(entry)
-                },
+                }
             ]
         )
     }

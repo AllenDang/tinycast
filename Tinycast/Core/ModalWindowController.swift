@@ -51,7 +51,7 @@ struct ModalRequest {
     let title: String
     var message: String?
     /// Falls back to `kind.defaultSymbol` when unset; a `.custom` kind should always set this explicitly.
-    var symbol: String? = nil
+    var symbol: String?
     var kind: ModalKind = .warning
     var actions: [ModalAction]
     /// The button ↵ fires, normally the primary/confirm action.
@@ -154,15 +154,14 @@ final class ModalWindowController: NSObject, NSWindowDelegate {
             title: title, message: message, kind: kind ?? (destructive ? .warning : .info),
             actions: [
                 ModalAction(title: confirmTitle, role: destructive ? .destructive : .normal),
-                ModalAction(title: "Cancel", role: .cancel),
+                ModalAction(title: "Cancel", role: .cancel)
             ],
             defaultIndex: 0, cancelIndex: 1)
         return await present(request) == 0
     }
 
     func notice(title: String, message: String, symbol: String? = nil, kind: ModalKind = .info)
-        async
-    {
+        async {
         let request = ModalRequest(
             title: title, message: message, symbol: symbol, kind: kind,
             actions: [ModalAction(title: "OK", role: .cancel)], defaultIndex: 0, cancelIndex: 0)
@@ -188,7 +187,7 @@ final class ModalWindowController: NSObject, NSWindowDelegate {
             kind: .info,
             actions: [
                 ModalAction(title: "Set Volume"),
-                ModalAction(title: "Cancel", role: .cancel),
+                ModalAction(title: "Cancel", role: .cancel)
             ],
             defaultIndex: 0, cancelIndex: 1, showsVolumeSlider: true)
         guard await present(request) == 0 else { return nil }

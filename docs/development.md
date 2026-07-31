@@ -129,6 +129,22 @@ frame. All of it runs headless because the layer is pure: `WindowMover` owns eve
 and is deliberately not compiled in. The full contract is in
 [window-management.md](window-management.md).
 
+## Format & lint
+
+Formatting is whatever Xcode's own reindent does — there's no separate formatter. Linting is
+[SwiftLint](https://github.com/realm/SwiftLint), configured in [`.swiftlint.yml`](../.swiftlint.yml)
+(default ruleset, scoped to `Tinycast/`, the two `.generated.swift` files excluded):
+
+```sh
+brew install swiftlint   # once
+swiftlint lint           # report issues
+swiftlint lint --fix     # auto-fix what's fixable, then re-run lint to see what's left
+```
+
+Lint is advisory, not a merge gate — CI runs it as a non-blocking check (below). Warnings are still
+worth clearing before you open a PR; CONTRIBUTING.md's "builds clean" bar is about compiler warnings,
+which SwiftLint doesn't touch.
+
 ## Generated data
 
 Two Swift files are emitted by scripts and must never be hand-edited. Both download their source, so
@@ -169,6 +185,20 @@ Both local builds and CI releases sign with the same stable `Tinycast Self-Signe
 Apple Developer ID), so macOS quarantines a directly-downloaded DMG — the Homebrew cask strips that
 automatically, and direct downloaders run `xattr -dr com.apple.quarantine "…/Tinycast.app"` once.
 Full details in [signing.md](signing.md).
+
+## Continuous integration
+
+`.github/workflows/ci.yml` runs on every PR and every push to `main`, on a `macos-26` runner with
+Xcode 26 (same selection step as the release workflow):
+
+- **`build-and-test`** — required. `xcodebuild` Debug build, then every `Tools/*.swift` harness from
+  [Tests](#tests) above, in order. A merge is blocked if either the build or any harness fails.
+- **`lint`** — advisory. Runs `swiftlint lint --reporter github-actions-logging` so warnings show up
+  as inline PR annotations; `continue-on-error: true` means it never blocks a merge.
+
+Same commands locally: `xcodebuild -project Tinycast.xcodeproj -scheme Tinycast -configuration Debug
+build`, then the harness block from [Tests](#tests), then `swiftlint lint` from
+[Format & lint](#format--lint).
 
 ## CI releases
 

@@ -295,7 +295,7 @@ final class SnippetsStore: ObservableObject {
             let events = directoryWatcher?.data
         else { return }
 
-        if !events.intersection([.delete, .rename, .revoke]).isEmpty {
+        if !events.isDisjoint(with: [.delete, .rename, .revoke]) {
             stopWatchers()
         }
         noteFilesystemChange()
@@ -306,7 +306,7 @@ final class SnippetsStore: ObservableObject {
             let source = fileWatchers[path]
         else { return }
 
-        if !source.data.intersection([.delete, .rename, .revoke]).isEmpty {
+        if !source.data.isDisjoint(with: [.delete, .rename, .revoke]) {
             fileWatchers.removeValue(forKey: path)?.cancel()
         }
         noteFilesystemChange()

@@ -30,7 +30,7 @@ struct RaycastImportOptions: OptionSet, Sendable {
     static let snippets = RaycastImportOptions(rawValue: 1 << 8)
     static let all: RaycastImportOptions = [
         .shortcuts, .favorites, .emojiSkinTone, .launchAtLogin, .menuBarVisibility, .clipboardHistory,
-        .popToRoot, .compactMode, .snippets,
+        .popToRoot, .compactMode, .snippets
     ]
 }
 
@@ -159,7 +159,7 @@ enum RaycastImport {
         "right_control": .rightControl,
         "right_shift": .rightShift,
         "right_option": .rightOption,
-        "right_command": .rightCommand,
+        "right_command": .rightCommand
     ]
 
     private static func mapSettings(_ json: [String: Any]) -> SettingsBackup.SettingsData? {
@@ -193,8 +193,7 @@ enum RaycastImport {
         }
         // Exact-match only: a Raycast timeout outside Tinycast's option set is skipped, not clamped.
         if let secs = general?["popToRootTimeout"] as? Int,
-            let timeout = PopToRootTimeout(rawValue: secs)
-        {
+            let timeout = PopToRootTimeout(rawValue: secs) {
             data.popToRootSeconds = timeout.rawValue
             mapped = true
         }
@@ -218,8 +217,7 @@ enum RaycastImport {
         var mapped = false
 
         if let general = settings?["general"] as? [String: Any],
-            let shortcut = keyShortcut(from: general["globalHotkey"])
-        {
+            let shortcut = keyShortcut(from: general["globalHotkey"]) {
             hotkeys.togglePalette = shortcut
             mapped = true
         }
@@ -235,8 +233,7 @@ enum RaycastImport {
                 mapped = true
             case "e:r:applications":
                 if let path = appPath(fromCommandID: command["id"] as? String),
-                    let bundleID = Bundle(url: URL(fileURLWithPath: path))?.bundleIdentifier
-                {
+                    let bundleID = Bundle(url: URL(fileURLWithPath: path))?.bundleIdentifier {
                     apps[bundleID] = shortcut
                     mapped = true
                 }
@@ -306,8 +303,7 @@ enum RaycastImport {
 
     // MARK: - Clipboard
 
-    private static func mapClipboard(_ json: [String: Any]) -> (items: [ClipboardItem], missing: Int)
-    {
+    private static func mapClipboard(_ json: [String: Any]) -> (items: [ClipboardItem], missing: Int) {
         guard
             let entries = (json["clipboardHistory"] as? [String: Any])?["clipboardEntries"]
                 as? [[String: Any]]

@@ -547,7 +547,7 @@ final class ClipboardStore: ObservableObject {
     private func closeDatabase() {
         [
             insertStmt, loadStmt, windowFloorStmt, searchStmt, deleteByIDStmt, pinStmt,
-            staleImagesStmt, deleteStaleStmt,
+            staleImagesStmt, deleteStaleStmt
         ].forEach { sqlite3_finalize($0) }
         insertStmt = nil
         loadStmt = nil

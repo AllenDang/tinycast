@@ -177,7 +177,7 @@ final class AppCore: ObservableObject {
 
         // @Published emits synchronously before the property is written (as in `AppIndex.start`), so every re-projection defers to a task that reads the settled value.
         for publisher in [
-            settings.$windowManagementEnabled, settings.$windowManagementShowInLauncher,
+            settings.$windowManagementEnabled, settings.$windowManagementShowInLauncher
         ] {
             publisher.dropFirst()
                 .sink { [weak self] _ in
@@ -453,8 +453,7 @@ final class AppCore: ObservableObject {
                 title: Self.confirmationTitle(command),
                 message: Self.confirmationMessage(command),
                 confirmTitle: command.name, destructive: true,
-                kind: Self.confirmationKind(command))
-        {
+                kind: Self.confirmationKind(command)) {
             return
         }
         do {
@@ -483,7 +482,7 @@ final class AppCore: ObservableObject {
     /// Commands that change the output level or mute state; macOS only draws its own HUD for real media keys, so these get Tinycast's.
     private static let showsVolumeFeedback: Set<SystemCommand.ID> = [
         .setVolume, .volumeUp, .volumeDown, .toggleMute,
-        .volume0, .volume25, .volume50, .volume75, .volume100,
+        .volume0, .volume25, .volume50, .volume75, .volume100
     ]
 
     private static func confirmationTitle(_ command: SystemCommand) -> String {

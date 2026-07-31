@@ -75,7 +75,7 @@ struct SnippetMarkdownSerializer {
     static func serialize(_ snippet: Snippet) -> String {
         var lines = [
             "---",
-            "name: \(encodeScalar(snippet.name))",
+            "name: \(encodeScalar(snippet.name))"
         ]
         if let keyword = snippet.keyword {
             lines.append("keyword: \(encodeScalar(keyword))")

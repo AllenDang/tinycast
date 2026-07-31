@@ -56,8 +56,7 @@ enum CalcQuantity {
             // answer stays in the units the user wrote, so `2 * 5kg` is `10 kg`, not `22.05 lb`.
             if !preserveStandaloneUnit, parser.operationCount == 0, parser.dimensionCount == 1,
                 case .ident(let finalName)? = split.expressionTokens.last,
-                CalcUnits.byName[finalName] != nil
-            {
+                CalcUnits.byName[finalName] != nil {
                 return nil
             }
             guard parser.operationCount > 0 || preserveStandaloneUnit else { return nil }
@@ -213,8 +212,7 @@ enum CalcQuantity {
             // Money is written sign-first (`$10`), so echo the amount ahead of its code like every other quantity.
             if case .ident(let name) = tokens[index], CalcUnits.byName[name] == nil,
                 let definition = CalcCurrency.byName[name], index + 1 < tokens.count,
-                let amount = numberValue(tokens[index + 1])
-            {
+                let amount = numberValue(tokens[index + 1]) {
                 add(CalcFormatter.copyText(amount))
                 add(definition.code)
                 index += 2

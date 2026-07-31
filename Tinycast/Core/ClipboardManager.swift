@@ -12,7 +12,7 @@ final class ClipboardManager {
     static let sensitiveTypes: Set<NSPasteboard.PasteboardType> = [
         .init("org.nspasteboard.ConcealedType"),
         .init("org.nspasteboard.TransientType"),
-        .init("com.apple.is-sensitive"),
+        .init("com.apple.is-sensitive")
     ]
 
     private let store: ClipboardStore
@@ -65,8 +65,7 @@ final class ClipboardManager {
         if let sourceBundleID, settings.clipboardDisabledApps.contains(sourceBundleID) { return }
 
         if let text = pb.string(forType: .string),
-            !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-        {
+            !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
             guard text.count <= Self.maxTextLength else { return }
             store.addText(text, sourceBundleID: sourceBundleID)
             return

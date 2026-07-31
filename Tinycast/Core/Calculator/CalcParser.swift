@@ -30,8 +30,7 @@ enum CalcTokenizer {
 
             // Radix literals: 0x… / 0b… / 0o… — needs ≥1 digit after the prefix, else fall through so "0" parses as a plain number.
             if ch == "0", i + 2 < chars.count,
-                let radix = ["x": 16, "b": 2, "o": 8][String(chars[i + 1]).lowercased()]
-            {
+                let radix = ["x": 16, "b": 2, "o": 8][String(chars[i + 1]).lowercased()] {
                 let start = i + 2
                 var end = start
                 while end < chars.count, chars[end].isHexDigit { end += 1 }
@@ -203,7 +202,7 @@ enum CalcParser {
     fileprivate static let functions: [String: @Sendable (Double) -> Double] = [
         "sqrt": { sqrt($0) }, "log": { log10($0) }, "ln": { log($0) }, "sin": { sin($0) },
         "cos": { cos($0) }, "tan": { tan($0) }, "abs": { abs($0) }, "floor": { floor($0) },
-        "ceil": { ceil($0) }, "round": { $0.rounded() },
+        "ceil": { ceil($0) }, "round": { $0.rounded() }
     ]
 
     fileprivate static let constants: [String: Double] = ["pi": .pi, "π": .pi, "e": M_E]

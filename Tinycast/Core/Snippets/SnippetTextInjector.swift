@@ -193,8 +193,7 @@ final class SnippetTextInjector {
                 postKey(code: CGKeyCode(kVK_LeftArrow), targetApp: targetApp)
             else { return }
             if index < offset - 1,
-                !(await wait(for: .milliseconds(8)))
-            {
+                !(await wait(for: .milliseconds(8))) {
                 return
             }
         }
@@ -296,8 +295,7 @@ final class SnippetTextInjector {
             else { return false }
             post(events[index], targetApp: targetApp)
             if index < events.count - 1,
-                !(await wait(for: .milliseconds(8)))
-            {
+                !(await wait(for: .milliseconds(8))) {
                 return false
             }
         }
@@ -388,15 +386,13 @@ final class SnippetTextInjector {
         for _ in 0..<50 {
             if targetApp.isActive,
                 NSWorkspace.shared.frontmostApplication?.processIdentifier
-                    == targetApp.processIdentifier
-            {
+                    == targetApp.processIdentifier {
                 return true
             }
             if let automaticGeneration,
                 !automaticExpansionIsAllowed(
                     generation: automaticGeneration,
-                    targetApp: targetApp)
-            {
+                    targetApp: targetApp) {
                 return false
             }
             guard await wait(for: .milliseconds(20)) else { return false }
@@ -471,16 +467,14 @@ final class SnippetTextInjector {
             else { return false }
 
             if let previousState,
-                let currentState = accessibilityTextState(in: targetApp)
-            {
+                let currentState = accessibilityTextState(in: targetApp) {
                 readStateAfterPaste = true
                 if currentState != previousState { return true }
             }
             if SnippetPasteConfirmationPolicy.acceptsUnconfirmedDelivery(
                 attempt: attempt,
                 hadPreviousState: previousState != nil,
-                readStateAfterPaste: readStateAfterPaste)
-            {
+                readStateAfterPaste: readStateAfterPaste) {
                 return true
             }
             guard await wait(for: .milliseconds(25)) else { return false }

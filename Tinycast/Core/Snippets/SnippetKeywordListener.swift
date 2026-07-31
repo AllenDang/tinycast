@@ -214,7 +214,7 @@ final class SnippetKeywordListener: ObservableObject {
                 ) { [weak self] _ in
                     MainActor.assumeIsolated { self?.sessionDidBecomeActive() }
                 },
-                center: center),
+                center: center)
         ]
     }
 
@@ -340,6 +340,6 @@ final class SnippetKeywordListener: ObservableObject {
         kVK_End,
         kVK_PageUp,
         kVK_PageDown,
-        kVK_ForwardDelete,
+        kVK_ForwardDelete
     ]
 }

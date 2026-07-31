@@ -153,7 +153,7 @@ struct RootPaletteView: View {
             },
             PopoverMenuItem(title: "Settings", systemImage: "gearshape", shortcut: "⌘,") {
                 core.showSettings()
-            },
+            }
         ])
     }
 
@@ -280,8 +280,7 @@ struct RootPaletteView: View {
             // A nil `old.id` is the first load landing, not a row that moved.
             guard vm.mode == .clipboard, old.id != nil else { return }
             if isQueryEmpty, old.id != new.id, let id = new.id,
-                let index = clips.firstIndex(where: { $0.id == id })
-            {
+                let index = clips.firstIndex(where: { $0.id == id }) {
                 vm.selection = index
             }
             scroll = ScrollIntent(kind: .follow)

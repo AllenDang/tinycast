@@ -160,8 +160,7 @@ final class WindowMover {
 
         // The second resize can shift the origin — some apps anchor a resize on a different corner.
         if abs(actual.minX - placement.frame.minX) > Self.clampTolerance
-            || abs(actual.minY - placement.frame.minY) > Self.clampTolerance
-        {
+            || abs(actual.minY - placement.frame.minY) > Self.clampTolerance {
             _ = setPosition(placement.frame.origin, on: window)
             actual = frame(of: window) ?? actual
         }
@@ -171,8 +170,7 @@ final class WindowMover {
         // anchor, so a left half stays left-aligned instead of drifting centre. One correction, no loop:
         // iterating against an app that fights back just makes the window visibly jitter.
         if actual.width > placement.frame.width + Self.clampTolerance
-            || actual.height > placement.frame.height + Self.clampTolerance
-        {
+            || actual.height > placement.frame.height + Self.clampTolerance {
             var slot = placement.anchor.place(actual.size, in: placement.frame)
             if let canvas { slot = WindowLayout.clamped(slot, into: canvas) }
             _ = setPosition(WindowLayout.rounded(slot).origin, on: window)
@@ -223,8 +221,7 @@ final class WindowMover {
     private func toggleFullScreen(_ window: AXUIElement) -> Bool {
         let target: CFBoolean = isFullScreen(window) ? kCFBooleanFalse : kCFBooleanTrue
         if isSettable(Self.fullScreenAttribute as String, on: window),
-            AXUIElementSetAttributeValue(window, Self.fullScreenAttribute, target) == .success
-        {
+            AXUIElementSetAttributeValue(window, Self.fullScreenAttribute, target) == .success {
             return true
         }
         guard let button = element(window, Self.fullScreenButtonAttribute as String) else {
@@ -251,8 +248,7 @@ final class WindowMover {
 
     /// Cocoa screens converted into the AX space `WindowLayout` works in.
     private static func screens(_ screens: [NSScreen], geometry: AXGeometry)
-        -> [WindowLayout.Screen]
-    {
+        -> [WindowLayout.Screen] {
         screens.enumerated().map { index, screen in
             let number = screen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")]
                 as? NSNumber

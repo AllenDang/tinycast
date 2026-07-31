@@ -11,7 +11,7 @@ final class RunningAppsMonitor: ObservableObject {
         let center = NSWorkspace.shared.notificationCenter
         for name in [
             NSWorkspace.didLaunchApplicationNotification,
-            NSWorkspace.didTerminateApplicationNotification,
+            NSWorkspace.didTerminateApplicationNotification
         ] {
             let token = center.addObserver(forName: name, object: nil, queue: .main) {
                 [weak self] _ in

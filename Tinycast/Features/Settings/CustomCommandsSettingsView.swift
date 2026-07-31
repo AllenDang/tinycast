@@ -32,8 +32,7 @@ struct CustomCommandsSettingsView: View {
                         EmptyView()
                     }
                 } else {
-                    ForEach(Array(sortedCommands.enumerated()), id: \.element.id) {
-                        index, command in
+                    ForEach(Array(sortedCommands.enumerated()), id: \.element.id) { index, command in
                         if index > 0 { SettingsDivider() }
                         CustomCommandSettingsRow(
                             command: command,

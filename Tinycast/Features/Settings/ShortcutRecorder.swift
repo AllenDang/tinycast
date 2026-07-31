@@ -137,8 +137,7 @@ private final class CaptureSession: ObservableObject {
                         keyCode: keyCode, flags: flags, action: action, hotKeys: hotKeys)
                 }
                 return nil  // always consume: no beeps, no leaking keys to the window
-            })
-        {
+            }) {
             monitors.append(monitor)
         }
 
@@ -149,8 +148,7 @@ private final class CaptureSession: ObservableObject {
                 let flags = event.modifierFlags.intersection([.command, .option, .control, .shift])
                 MainActor.assumeIsolated { self?.heldModifiers = flags }
                 return event
-            })
-        {
+            }) {
             monitors.append(monitor)
         }
 
@@ -160,8 +158,7 @@ private final class CaptureSession: ObservableObject {
             handler: { [weak hotKeys] event in
                 MainActor.assumeIsolated { hotKeys?.recordingAction = nil }
                 return event
-            })
-        {
+            }) {
             monitors.append(monitor)
         }
 

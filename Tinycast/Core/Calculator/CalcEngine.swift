@@ -51,8 +51,7 @@ enum CalcEngine {
         guard let tokens = CalcTokenizer.tokenize(query), !tokens.isEmpty else { return nil }
 
         if let partial = partialResult(
-            tokens, query: query, now: now, calendar: calendar, currency: currency)
-        {
+            tokens, query: query, now: now, calendar: calendar, currency: currency) {
             return partial
         }
 
@@ -182,16 +181,14 @@ enum CalcEngine {
 
         if let quantity = CalcQuantity.evaluate(
             prefixTokens, query: tokenQuery(prefixTokens), currency: currency,
-            preserveStandaloneUnit: true)
-        {
+            preserveStandaloneUnit: true) {
             return replacingExpression(
                 quantity, with: "\(quantity.expression) \(operatorText)")
         }
 
         // A conversion's own echo drops its target ("10 km" for `10km to mi`), so echo the typed text instead — the badges still name both units.
         if let complete = evaluate(
-            tokenQuery(prefixTokens), now: now, calendar: calendar, currency: currency)
-        {
+            tokenQuery(prefixTokens), now: now, calendar: calendar, currency: currency) {
             return replacingExpression(complete, with: prettyExpression(query))
         }
 
@@ -262,14 +259,12 @@ enum CalcEngine {
             sourceBadge = baseName(forRadix: radix)
             sourceText = literalText
         } else if valueTokens.count == 1, let value = decimalLiteral(valueTokens[0]),
-            value >= 0, value.rounded() == value, value <= 9_007_199_254_740_992
-        {
+            value >= 0, value.rounded() == value, value <= 9_007_199_254_740_992 {
             source = UInt64(value)
             sourceBadge = "Decimal"
             sourceText = literalText
         } else if let value = CalcParser.evaluate(valueTokens),
-            value >= 0, value.rounded() == value, value <= 9_007_199_254_740_992
-        {
+            value >= 0, value.rounded() == value, value <= 9_007_199_254_740_992 {
             source = UInt64(value)
             sourceBadge = "Decimal"
             sourceText = CalcFormatter.grouped(String(source))

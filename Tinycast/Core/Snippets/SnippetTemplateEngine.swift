@@ -283,8 +283,7 @@ enum SnippetTemplateEngine {
         var position = source.startIndex
 
         while position < source.endIndex,
-            let opening = source[position...].firstIndex(of: "{")
-        {
+            let opening = source[position...].firstIndex(of: "{") {
             if position < opening {
                 segments.append(.literal(String(source[position..<opening])))
             }

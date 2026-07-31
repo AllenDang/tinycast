@@ -63,7 +63,7 @@ struct LauncherList: View {
             ("Favorites", Array(favorites)), ("Applications", apps),
             ("System Settings", panes), ("Snippets", snippets),
             ("System Commands", systemCommands), ("Window Management", windowCommands),
-            ("Custom Commands", customCommands), ("Commands", commands),
+            ("Custom Commands", customCommands), ("Commands", commands)
         ]
         where !group.isEmpty {
             rows.append(.header(title))

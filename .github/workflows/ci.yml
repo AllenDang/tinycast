@@ -1,0 +1,74 @@
+name: CI
+
+# Build + the Tools/ harnesses (docs/development.md) are required; SwiftLint is advisory only —
+# it never fails the job, it just annotates the PR. No XCTest target exists (AGENTS.md), so the
+# harnesses are the test suite.
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-test:
+    runs-on: macos-26
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Select Xcode 26
+        run: |
+          XCODE_PATH="$(ls -d /Applications/Xcode_26*.app 2>/dev/null | sort -V | tail -n1)"
+          if [ -z "$XCODE_PATH" ]; then
+            echo "::error::No Xcode 26.x found on this runner. Installed Xcodes:"
+            ls /Applications | grep -i xcode || true
+            exit 1
+          fi
+          echo "Using $XCODE_PATH"
+          echo "DEVELOPER_DIR=$XCODE_PATH/Contents/Developer" >> "$GITHUB_ENV"
+
+      - name: Build (Debug)
+        run: |
+          xcodebuild -project Tinycast.xcodeproj -scheme Tinycast -configuration Debug build \
+            CODE_SIGNING_ALLOWED=NO
+
+      - name: Run Tools/ harnesses
+        run: |
+          set -euo pipefail
+          swift Tools/fuzz-test.swift
+          swiftc -swift-version 6 Tinycast/Core/LauncherRankingStore.swift Tools/ranking-test.swift \
+            -o /tmp/ranking-test && /tmp/ranking-test
+          swiftc Tinycast/Core/Calculator/*.swift Tools/calc-test.swift \
+            -o /tmp/calc-test && /tmp/calc-test
+          swiftc -swift-version 6 Tinycast/Core/ClipboardStore.swift Tools/clipboard-test.swift \
+            -o /tmp/clipboard-test && /tmp/clipboard-test
+          swiftc -swift-version 6 Tinycast/Core/SearchScopes.swift Tools/scopes-test.swift \
+            -o /tmp/scopes-test && /tmp/scopes-test
+          swiftc Tinycast/Core/Emoji/EmojiCatalog.swift Tinycast/Core/Emoji/EmojiGridGeometry.swift \
+            Tinycast/Core/Emoji/EmojiData.generated.swift Tools/emoji-test.swift \
+            -o /tmp/emoji-test && /tmp/emoji-test
+          swiftc -swift-version 6 Tinycast/Core/CustomCommand.swift \
+            Tinycast/Core/ShellCommandRunner.swift Tools/custom-command-test.swift \
+            -o /tmp/custom-command-test && /tmp/custom-command-test
+          swiftc -swift-version 6 Tinycast/Core/NotificationToken.swift \
+            Tinycast/Core/Snippets/*.swift \
+            Tools/snippets-test.swift -o /tmp/snippets-test && /tmp/snippets-test
+          swiftc -swift-version 6 Tinycast/Core/SystemCommand.swift Tools/system-command-test.swift \
+            -o /tmp/system-command-test && /tmp/system-command-test
+          swiftc -swift-version 6 Tinycast/Core/WindowManagement/WindowCommand.swift \
+            Tinycast/Core/WindowManagement/WindowLayout.swift \
+            Tinycast/Core/WindowManagement/WindowActionMemory.swift Tools/window-command-test.swift \
+            -o /tmp/window-command-test && /tmp/window-command-test
+
+  lint:
+    runs-on: macos-26
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install SwiftLint
+        run: brew install swiftlint
+
+      - name: SwiftLint (warning-only)
+        run: swiftlint lint --reporter github-actions-logging

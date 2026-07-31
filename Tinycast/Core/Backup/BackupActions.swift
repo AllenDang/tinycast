@@ -51,8 +51,7 @@ enum BackupActions {
     // MARK: - Raycast (the pane owns the passphrase field + inline status)
 
     static func importRaycast(file: URL, passphrase: String, options: RaycastImportOptions = .all)
-        async throws -> RaycastOutcome
-    {
+        async throws -> RaycastOutcome {
         // Decrypt (scrypt/AES/gunzip) AND parse off the main actor, inside an autoreleasepool so the large JSON tree drains at once instead of spiking the main-thread footprint. Only the value-type Result crosses back.
         let result = try await Task.detached(priority: .userInitiated) {
             try autoreleasepool {
@@ -96,8 +95,7 @@ enum BackupActions {
     static func quitRaycast() {
         for app in NSWorkspace.shared.runningApplications
         where app.bundleIdentifier.map(isRaycastBundleID) == true
-            && app.activationPolicy != .prohibited
-        {
+            && app.activationPolicy != .prohibited {
             app.terminate()
         }
     }

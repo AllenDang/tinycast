@@ -66,8 +66,7 @@ final class HotKeyManager: ObservableObject {
         objectWillChange.send()
         if let shortcut,
             let data = try? JSONEncoder().encode(shortcut),
-            let json = String(data: data, encoding: .utf8)
-        {
+            let json = String(data: data, encoding: .utf8) {
             UserDefaults.standard.set(json, forKey: action.defaultsKey)
             register(action)
         } else {
