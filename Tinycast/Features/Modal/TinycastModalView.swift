@@ -7,12 +7,12 @@ struct TinycastModalView: View {
     let onChoose: (Int) -> Void
 
     var body: some View {
-        VStack(alignment: .leading, spacing: Theme.Spacing.xl) {
+        VStack(alignment: .leading, spacing: Theme.Spacing.xxl) {
             HStack(alignment: .top, spacing: Theme.Spacing.lg) {
-                Image(systemName: request.symbol)
+                Image(systemName: request.symbol ?? request.kind.defaultSymbol)
                     .font(.system(size: Theme.Size.modalIcon, weight: .regular))
                     .symbolRenderingMode(.hierarchical)
-                    .foregroundStyle(isDestructive ? Color.red : Color.secondary)
+                    .foregroundStyle(request.kind.tint)
                     .frame(width: Theme.Size.modalIcon)
                 VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
                     Text(request.title)
@@ -33,9 +33,10 @@ struct TinycastModalView: View {
 
             HStack(spacing: Theme.Spacing.md) {
                 Spacer(minLength: 0)
-                ForEach(request.actions.indices, id: \.self) { index in
+                ForEach(visualOrder, id: \.self) { index in
                     ModalButton(
                         action: request.actions[index],
+                        kind: request.kind,
                         keyCap: keyCap(for: index),
                         onActivate: { onChoose(index) }
                     )
@@ -49,11 +50,16 @@ struct TinycastModalView: View {
         .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.modal, style: .continuous))
     }
 
-    private var isDestructive: Bool {
-        request.actions.contains { $0.role == .destructive }
+    /// Cancel renders leading, matching macOS convention and the panel's Escape/Return keys, while `onChoose(index)` still dispatches against `request.actions`' original order so callers never have to think about display position.
+    private var visualOrder: [Int] {
+        request.actions.indices.sorted { rank(of: $0) < rank(of: $1) }
     }
 
-    /// Only the two keys the panel actually handles are advertised, so a printed cap can't drift from the behavior.
+    private func rank(of index: Int) -> Int {
+        request.actions[index].role == .cancel ? 0 : 1
+    }
+
+    /// Only the two keys the panel actually handles are advertised, so a hover tooltip can't drift from the behavior.
     private func keyCap(for index: Int) -> String? {
         if index == request.defaultIndex { return "↵" }
         if index == request.cancelIndex { return "esc" }
@@ -63,28 +69,25 @@ struct TinycastModalView: View {
 
 private struct ModalButton: View {
     let action: ModalAction
+    let kind: ModalKind
     let keyCap: String?
     let onActivate: () -> Void
     @State private var hovered = false
 
     var body: some View {
         Button(action: onActivate) {
-            HStack(spacing: Theme.Spacing.sm) {
-                Text(action.title)
-                    .font(Theme.Typography.bar)
-                    .foregroundStyle(action.role == .destructive ? Color.red : Color.primary)
-                if let keyCap {
-                    KeyCapChip(text: keyCap, style: .outline)
-                }
-            }
-            .padding(.horizontal, Theme.Spacing.xl)
-            .frame(height: Theme.Size.menuButton)
-            .contentShape(Capsule())
-            .background(Capsule().fill(hovered ? Theme.Colors.menuHover : Color.clear))
+            Text(action.title)
+                .font(Theme.Typography.bar)
+                .foregroundStyle(action.role == .cancel ? Theme.Colors.textSecondary : kind.tint)
+                .padding(.horizontal, Theme.Spacing.xl)
+                .frame(height: Theme.Size.menuButton)
+                .contentShape(Capsule())
+                .background(Capsule().fill(hovered ? Theme.Colors.menuHover : Color.clear))
         }
         .buttonStyle(.plain)
         .onHover { hovered = $0 }
         .frosted(in: Capsule())
+        .tooltip(keyCap)
     }
 }
 
@@ -142,9 +145,9 @@ struct VolumeSlider: View {
     }
 }
 
-/// The transient readout: a volume bar, or a one-line confirmation for a command whose effect is invisible. Glass, because it is a floating control rather than a surface with content.
-struct TinycastHUDView: View {
-    @ObservedObject var state: ModalWindowController.HUDState
+/// The transient volume readout shown after a volume or mute command, since macOS only draws its own HUD for real media keys. A success/info confirmation for every other command is `HUDWindowController`'s pill instead, not this box, because that one has an actual level to show. Glass, because it is a floating control rather than a surface with content.
+struct VolumeHUDView: View {
+    @ObservedObject var state: ModalWindowController.VolumeState
 
     var body: some View {
         VStack(spacing: Theme.Spacing.lg) {
@@ -152,39 +155,23 @@ struct TinycastHUDView: View {
                 .font(.system(size: Theme.Size.modalIcon, weight: .regular))
                 .symbolRenderingMode(.hierarchical)
                 .foregroundStyle(Color.primary)
-            switch state.content {
-            case .volume(let level, let muted):
-                ZStack(alignment: .leading) {
-                    Capsule()
-                        .fill(Theme.Colors.controlSurface)
-                    Capsule()
-                        .fill(Color.white.opacity(muted ? 0.35 : 0.85))
-                        .frame(width: fill(level: muted ? 0 : level))
-                }
-                .frame(height: Theme.Size.volumeTrackHeight)
-            case .message(_, let title):
-                Text(title)
-                    .font(Theme.Typography.rowTrailing)
-                    .foregroundStyle(Theme.Colors.textSecondary)
-                    .multilineTextAlignment(.center)
-                    .lineLimit(2)
-                    .fixedSize(horizontal: false, vertical: true)
+            ZStack(alignment: .leading) {
+                Capsule()
+                    .fill(Theme.Colors.controlSurface)
+                Capsule()
+                    .fill(Color.white.opacity(state.muted ? 0.35 : 0.85))
+                    .frame(width: fill(level: state.muted ? 0 : state.level))
             }
+            .frame(height: Theme.Size.volumeTrackHeight)
         }
         .padding(Theme.Spacing.xxl)
         .frame(width: Theme.Size.hudWidth, height: Theme.Size.hudHeight)
-        .glassEffect(
-            .regular, in: RoundedRectangle(cornerRadius: Theme.Radius.modal, style: .continuous))
+        .frosted(in: RoundedRectangle(cornerRadius: Theme.Radius.modal, style: .continuous))
     }
 
     private var symbol: String {
-        switch state.content {
-        case .volume(let level, let muted):
-            if muted || level == 0 { return "speaker.slash.fill" }
-            return level < 0.5 ? "speaker.wave.1.fill" : "speaker.wave.3.fill"
-        case .message(let symbol, _):
-            return symbol
-        }
+        if state.muted || state.level == 0 { return "speaker.slash.fill" }
+        return state.level < 0.5 ? "speaker.wave.1.fill" : "speaker.wave.3.fill"
     }
 
     private func fill(level: Double) -> CGFloat {

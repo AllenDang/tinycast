@@ -13,12 +13,48 @@ struct ModalAction {
     var role: Role = .normal
 }
 
+/// A dialog's visual tone, which drives its leading glyph's tint, default icon, and the pill's
+/// status dot. `.warning` is a confirmation asking before something happens; `.error` is a report
+/// that something already went wrong — both share the same red tint (severity reads the same either
+/// way), so the shape of the default icon is what tells them apart. `.custom` is the template for a
+/// one-off dialog that doesn't fit the other four: it carries its own tint and, via
+/// `ModalRequest.symbol`, its own icon, rather than deriving either.
+enum ModalKind: Sendable {
+    case info
+    case success
+    case warning
+    case error
+    case custom(Color)
+
+    var tint: Color {
+        switch self {
+        case .info: return .secondary
+        case .success: return Theme.Colors.success
+        case .warning: return Theme.Colors.destructive
+        case .error: return Theme.Colors.destructive
+        case .custom(let color): return color
+        }
+    }
+
+    var defaultSymbol: String {
+        switch self {
+        case .info: return "info.circle"
+        case .success: return "checkmark.circle.fill"
+        case .warning: return "exclamationmark.triangle.fill"
+        case .error: return "exclamationmark.circle.fill"
+        case .custom: return "questionmark.circle"
+        }
+    }
+}
+
 struct ModalRequest {
     let title: String
     var message: String?
-    var symbol: String = "exclamationmark.triangle"
+    /// Falls back to `kind.defaultSymbol` when unset; a `.custom` kind should always set this explicitly.
+    var symbol: String? = nil
+    var kind: ModalKind = .warning
     var actions: [ModalAction]
-    /// The button ↵ fires. Destructive dialogs point it at Cancel, so a reflexive second Return can't run the very thing the user asked to be warned about (same rule the old `NSAlert` gate used).
+    /// The button ↵ fires, normally the primary/confirm action.
     var defaultIndex: Int
     /// Resolved when the modal goes away without a choice: Esc, or losing key status to a click elsewhere.
     var cancelIndex: Int
@@ -99,51 +135,49 @@ final class ModalWindowController: NSObject, NSWindowDelegate {
         }
     }
 
-    /// The transient HUD's content. One panel serves both kinds so a volume change and a confirmation can never overlap on screen.
-    final class HUDState: ObservableObject {
-        enum Content {
-            case volume(level: Double, muted: Bool)
-            case message(symbol: String, title: String)
-        }
-
-        @Published var content: Content = .volume(level: 0, muted: false)
-    }
-
     private var panel: ModalPanel?
     private var continuation: CheckedContinuation<Int, Never>?
     private var volume = VolumeState(level: 0)
     private var hud: ModalPanel?
-    private let hudState = HUDState()
+    /// The volume HUD's own level/muted, distinct from `volume` above: that one is the live Set Volume slider's binding, this is a snapshot for the read-only bar.
+    private let hudVolume = VolumeState(level: 0)
     private var hudDismissal: Task<Void, Never>?
 
-    func confirm(title: String, message: String?, confirmTitle: String, destructive: Bool) async
-        -> Bool
-    {
+    /// `kind` defaults to the usual `.warning`/`.info` split by `destructive`, but a caller can pass
+    /// `.error` instead to make a particularly severe confirmation (data loss, ending the session)
+    /// read as more alarming than a routine one, without that dialog claiming something already went wrong.
+    func confirm(
+        title: String, message: String?, confirmTitle: String, destructive: Bool,
+        kind: ModalKind? = nil
+    ) async -> Bool {
         let request = ModalRequest(
-            title: title, message: message,
-            symbol: destructive ? "exclamationmark.triangle" : "questionmark.circle",
+            title: title, message: message, kind: kind ?? (destructive ? .warning : .info),
             actions: [
                 ModalAction(title: confirmTitle, role: destructive ? .destructive : .normal),
                 ModalAction(title: "Cancel", role: .cancel),
             ],
-            defaultIndex: 1, cancelIndex: 1)
+            defaultIndex: 0, cancelIndex: 1)
         return await present(request) == 0
     }
 
-    func notice(title: String, message: String, symbol: String) async {
+    func notice(title: String, message: String, symbol: String? = nil, kind: ModalKind = .info)
+        async
+    {
         let request = ModalRequest(
-            title: title, message: message, symbol: symbol,
+            title: title, message: message, symbol: symbol, kind: kind,
             actions: [ModalAction(title: "OK", role: .cancel)], defaultIndex: 0, cancelIndex: 0)
         _ = await present(request)
     }
 
-    /// A failure report. Returns true when the user asked to be taken to the relevant settings.
+    /// A failure report: something already went wrong, as opposed to `confirm`'s "about to happen".
+    /// Returns true when the user asked to be taken to the relevant settings.
     func report(title: String, message: String, settingsTitle: String?) async -> Bool {
         var actions = [ModalAction(title: "OK", role: .cancel)]
         if let settingsTitle { actions.append(ModalAction(title: settingsTitle)) }
+        // ↵ lands on the settings action when there is one to take, not on the OK dismissal.
         let request = ModalRequest(
-            title: title, message: message, symbol: "exclamationmark.triangle",
-            actions: actions, defaultIndex: 0, cancelIndex: 0)
+            title: title, message: message, kind: .error,
+            actions: actions, defaultIndex: actions.count - 1, cancelIndex: 0)
         return await present(request) == 1
     }
 
@@ -151,6 +185,7 @@ final class ModalWindowController: NSObject, NSWindowDelegate {
         volume = VolumeState(level: Double(current))
         let request = ModalRequest(
             title: "Set Volume", message: "Choose the output volume.", symbol: "speaker.wave.2",
+            kind: .info,
             actions: [
                 ModalAction(title: "Set Volume"),
                 ModalAction(title: "Cancel", role: .cancel),
@@ -160,21 +195,13 @@ final class ModalWindowController: NSObject, NSWindowDelegate {
         return Float32(volume.level)
     }
 
-    /// Feedback for the volume and mute commands, which otherwise change the output with nothing on screen, since macOS only draws its own HUD for real media keys.
+    /// Feedback for the volume and mute commands, which otherwise change the output with nothing on screen, since macOS only draws its own HUD for real media keys. Success/info toasts for other commands go through `HUDWindowController`'s pill instead, since this box's whole point is showing the level.
     func showVolumeHUD(level: Float32, muted: Bool) {
-        showHUD(.volume(level: Double(level), muted: muted))
-    }
-
-    /// Confirmation for a command whose effect is invisible (Empty Trash, a toggle). Without it a successful run is indistinguishable from nothing happening.
-    func showToast(symbol: String, title: String) {
-        showHUD(.message(symbol: symbol, title: title))
-    }
-
-    private func showHUD(_ content: HUDState.Content) {
-        hudState.content = content
+        hudVolume.level = Double(level)
+        hudVolume.muted = muted
         if hud == nil {
             let view = hostingView(
-                TinycastHUDView(state: hudState), width: Theme.Size.hudWidth,
+                VolumeHUDView(state: hudVolume), width: Theme.Size.hudWidth,
                 minHeight: Theme.Size.hudHeight)
             let panel = ModalPanel(content: view, acceptsKey: false)
             place(panel, anchor: .hud)
@@ -183,7 +210,7 @@ final class ModalWindowController: NSObject, NSWindowDelegate {
         }
         hudDismissal?.cancel()
         hudDismissal = Task { [weak self] in
-            try? await Task.sleep(for: .milliseconds(1500))
+            try? await Task.sleep(for: .seconds(Theme.Duration.hud))
             guard !Task.isCancelled else { return }
             self?.dismissHUD()
         }

@@ -452,7 +452,8 @@ final class AppCore: ObservableObject {
             await !modals.confirm(
                 title: Self.confirmationTitle(command),
                 message: Self.confirmationMessage(command),
-                confirmTitle: command.name, destructive: true)
+                confirmTitle: command.name, destructive: true,
+                kind: Self.confirmationKind(command))
         {
             return
         }
@@ -469,7 +470,7 @@ final class AppCore: ObservableObject {
                 let state = try SystemCommandRunner.outputState()
                 modals.showVolumeHUD(level: state.level, muted: state.muted)
             } else if let feedback {
-                modals.showToast(symbol: feedback.symbol, title: feedback.title)
+                hud.show(message: feedback.title, kind: feedback.isNoOp ? .info : .success)
             }
         } catch let failure as SystemCommandFailure {
             await presentFailure(name: command.name, failure: failure)
@@ -504,13 +505,25 @@ final class AppCore: ObservableObject {
         }
     }
 
+    /// Most confirmations read as the usual `.warning` orange; the four that end the session
+    /// (`.restart`, `.shutDown`, `.logOut`) or destroy data outright (`.emptyTrash`) read `.error`
+    /// red instead, so their weight on screen matches their weight in practice.
+    private static func confirmationKind(_ command: SystemCommand) -> ModalKind {
+        switch command.id {
+        case .restart, .shutDown, .logOut, .emptyTrash: return .error
+        default: return .warning
+        }
+    }
+
     // MARK: - Dialogs
     //
     // Routed through `AppCore` so `modals` stays the single owner; flows outside the palette (the backup
     // actions) reach the same dialogs instead of falling back to an `NSAlert`.
 
-    func showNotice(title: String, message: String, symbol: String = "info.circle") async {
-        await modals.notice(title: title, message: message, symbol: symbol)
+    func showNotice(
+        title: String, message: String, symbol: String? = nil, kind: ModalKind = .info
+    ) async {
+        await modals.notice(title: title, message: message, symbol: symbol, kind: kind)
     }
 
     func askConfirmation(

@@ -126,11 +126,22 @@ Never break these without an explicit task to do so.
 - **Hotkeys persist under legacy `KeyboardShortcuts_<name>` UserDefaults keys** (from the removed
   KeyboardShortcuts package) so old bindings survive. See [hotkeys.md](docs/hotkeys.md).
 - **Tinycast presents its own dialogs, never `NSAlert` / `NSSlider` / system popovers.** Every
-  confirmation, failure report, value prompt and transient readout goes through
-  `ModalWindowController` (owned by `AppCore`; reachable elsewhere via `AppCore.showNotice` /
-  `askConfirmation`). Presentation is `async`, so there is no nested run loop, and the presenter
-  refuses a second dialog while one is up that, not a flag, is what stops a held hotkey stacking
-  dialogs. **↵ belongs to Cancel on every destructive dialog.** See
+  confirmation, failure report and value prompt goes through `ModalWindowController` (owned by
+  `AppCore`; reachable elsewhere via `AppCore.showNotice` / `askConfirmation`). Presentation is
+  `async`, so there is no nested run loop, and the presenter refuses a second dialog while one is up
+  that, not a flag, is what stops a held hotkey stacking dialogs. **↵ runs the primary action, Escape
+  cancels, and Cancel always renders leading** (the left button), matching macOS convention. A
+  dialog's tone is one of five `ModalKind` cases (`.info` / `.success` / `.warning` / `.error` /
+  `.custom(Color)`), which drives its glyph's tint and default icon. **`.warning` is a
+  confirmation before something happens; `.error` is a report that something already went
+  wrong.** Don't conflate the two — even though both now share the same red tint (only the default
+  icon's triangle-vs-circle shape tells them apart), the semantic split still governs which one a
+  caller reaches for. A button never prints its key cap; hovering it shows a `Tooltip`
+  (`Core/Tooltip.swift`) instead, styled like the palette's own keycap chips. A transient readout is
+  a HUD, not a dialog: `ModalWindowController`'s
+  square box is volume/mute only, since that one needs an actual level; every other success/info
+  confirmation (system commands, Custom Commands, Snippets) goes through `HUDWindowController`'s
+  pill, a leading `statusDot` tinted by the same `ModalKind` standing in for an icon. See
   [ui.md](docs/ui.md#modals--hud).
 - **Read [`docs/ui.md`](docs/ui.md) before any restyle or new view.** `Core/Theme.swift` is the single
   design-token source.
