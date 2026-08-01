@@ -8,6 +8,7 @@ struct BackupSettingsView: View {
     @State private var importing = false
     @State private var status: Status?
     @State private var selection: RaycastImportOptions = .all
+    @State private var format: RaycastFormat?
 
     private enum Status {
         case success(String)
@@ -16,6 +17,13 @@ struct BackupSettingsView: View {
 
     private var raycastRunning: Bool {
         runningApps.runningBundleIDs.contains(where: BackupActions.isRaycastBundleID)
+    }
+
+    private var raycastFileSubtitle: String {
+        guard let name = raycastFile?.lastPathComponent else {
+            return "Choose a .rayconfig file exported from Raycast."
+        }
+        return "\(name) — \(format?.title ?? "not a Raycast export")"
     }
 
     var body: some View {
@@ -50,8 +58,7 @@ struct BackupSettingsView: View {
             SettingsCard(header: "Import from Raycast") {
                 SettingsRow(
                     title: "Raycast Export",
-                    subtitle: raycastFile?.lastPathComponent
-                        ?? "Choose a .rayconfig file exported from Raycast.",
+                    subtitle: raycastFileSubtitle,
                     systemImage: "doc.badge.gearshape",
                     tint: .orange
                 ) {
@@ -82,10 +89,10 @@ struct BackupSettingsView: View {
                     } else {
                         Button("Import") { runRaycastImport() }
                             .controlSize(.small)
-                            .disabled(raycastFile == nil || passphrase.isEmpty || selection.isEmpty)
+                            .disabled(format == nil || passphrase.isEmpty || selection.isEmpty)
                     }
                 }
-                RaycastImportSelection(selection: $selection)
+                RaycastImportSelection(selection: $selection, format: format)
                     .padding(.horizontal, Theme.Spacing.xl)
                     .padding(.bottom, Theme.Spacing.lg)
                 conflictCallout
@@ -138,13 +145,14 @@ struct BackupSettingsView: View {
     private func chooseRaycastFile() {
         guard let url = BackupActions.pickRaycastFile() else { return }
         raycastFile = url
+        format = BackupActions.detectRaycastFormat(of: url)
         status = nil
     }
 
     private func runRaycastImport() {
-        guard let file = raycastFile, !passphrase.isEmpty, !selection.isEmpty, !importing else {
-            return
-        }
+        guard let file = raycastFile, format != nil, !passphrase.isEmpty, !selection.isEmpty,
+            !importing
+        else { return }
         importing = true
         status = nil
         Task {

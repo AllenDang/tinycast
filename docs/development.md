@@ -84,6 +84,10 @@ swiftc -swift-version 6 Tinycast/Core/ClipboardStore.swift Tools/clipboard-test.
     -o /tmp/clipboard-test && /tmp/clipboard-test                 # clipboard store
 swiftc -swift-version 6 Tinycast/Core/SearchScopes.swift Tools/scopes-test.swift \
     -o /tmp/scopes-test && /tmp/scopes-test                       # launcher search scopes
+swiftc -swift-version 6 Tinycast/Core/Backup/RaycastFormat.swift \
+    Tinycast/Core/Backup/RaycastV1Decoder.swift Tinycast/Core/Backup/Gunzip.swift \
+    Tinycast/Core/ClipboardStore.swift Tools/raycast-test.swift \
+    -o /tmp/raycast-test && /tmp/raycast-test                     # raycast format detect + v1 decode
 swiftc Tinycast/Core/Emoji/EmojiCatalog.swift Tinycast/Core/Emoji/EmojiGridGeometry.swift \
     Tinycast/Core/Emoji/EmojiData.generated.swift Tools/emoji-test.swift \
     -o /tmp/emoji-test && /tmp/emoji-test                         # emoji catalog + geometry
@@ -122,6 +126,13 @@ keyword/event/lifecycle policies, AppKit delivery primitives and main-actor stor
 roots and named pasteboards cover identity, per-channel isolation, malformed files, revision
 conflicts, watcher rearming, template determinism, delivery serialization and pasteboard restoration without touching a real snippets library or clipboard. The
 complete subsystem contract is in [snippets.md](snippets.md).
+
+The Raycast harness compiles the real format detector and v1 decoder, so both must stay Foundation +
+CommonCrypto + Carbon (no AppKit). It builds its own v1 files in-process — a small embedded gzip blob
+encrypted with `CCCrypt` — and feeds the mapper hand-written JSON, so no real `.rayconfig` is ever
+committed. Turning payload values into Tinycast's own types lives in `RaycastImportV1`, which needs
+AppKit and is covered by the app build instead. The format contract is in
+[raycast-import.md](raycast-import.md).
 
 The window-command harness compiles the real catalog, geometry and action memory (Foundation +
 CoreGraphics — `CGRect`'s `Equatable` conformance lives in the CoreGraphics overlay, not Foundation).
@@ -204,7 +215,7 @@ builds before it ships anyway, so CI keeps to the two checks that finish in abou
 that compiles nowhere still turns the PR green — **build locally before you open one** (`xcodebuild
 -project Tinycast.xcodeproj -scheme Tinycast -configuration Debug build`, or just ⌘B in Xcode).
 
-Same commands locally: the harness block from [Tests](#tests), then `swiftlint lint --strict` from
+Same commands locally: the harness block from [Tests](#tests), then `swiftlint lint` from
 [Format & lint](#format--lint).
 
 ## CI releases

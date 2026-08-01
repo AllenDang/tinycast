@@ -42,7 +42,8 @@ Full detail: [`docs/architecture.md`](docs/architecture.md).
 - **Subsystems:** [palette](docs/palette.md) · [launcher & fuzzy match](docs/launcher.md) ·
   [calculator](docs/calculator.md) · [clipboard](docs/clipboard.md) · [emoji](docs/emoji.md) ·
   [snippets](docs/snippets.md) · [window management](docs/window-management.md) ·
-  [hotkeys](docs/hotkeys.md) · [UI & design system](docs/ui.md).
+  [hotkeys](docs/hotkeys.md) · [Raycast import](docs/raycast-import.md) ·
+  [UI & design system](docs/ui.md).
 
 ## Critical Invariants
 
@@ -124,6 +125,16 @@ Never break these without an explicit task to do so.
   the only permission, since the listen-only tap needs nothing more — may be requested only from that
   explicit Settings gesture, never from startup, callbacks, watchers or health checks.
   See [snippets.md](docs/snippets.md).
+- **The two Raycast export formats share no mapper.** `RaycastFormat.detect` is the *only* branch
+  between them; `RaycastImportV1` and `RaycastImportV2` own their own decrypt and their own field
+  mapping, and neither is ever tried as a fallback for the other (that is what makes a wrong
+  passphrase report a wrong passphrase instead of "not a Raycast export"). They meet only at
+  `RaycastImport.Result`. `RaycastFormat.swift` and `RaycastV1Decoder.swift` stay Foundation +
+  CommonCrypto + Carbon so `Tools/raycast-test.swift` compiles them standalone, which is why the
+  decoder returns Raycast's own values and `RaycastImportV1` — not the decoder — validates them
+  against `PopToRootTimeout` / `EmojiSkinTone` / `HyperKeyPhysicalKey` / `KeyShortcut`. Never commit a
+  real `.rayconfig` as a fixture: the harness builds its own. See
+  [raycast-import.md](docs/raycast-import.md).
 - **Swift 6 language mode: data-race violations are hard errors.** Almost everything is `@MainActor`;
   cross-actor model types are `Sendable`; heavy / IO work (app scan, image decode) is pushed off-main
   via `Task.detached` / `nonisolated`. Keep that boundary. House idioms: `NotificationToken` (RAII) for

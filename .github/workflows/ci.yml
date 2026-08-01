@@ -46,6 +46,10 @@ jobs:
             -o /tmp/clipboard-test && /tmp/clipboard-test
           swiftc -swift-version 6 Tinycast/Core/SearchScopes.swift Tools/scopes-test.swift \
             -o /tmp/scopes-test && /tmp/scopes-test
+          swiftc -swift-version 6 Tinycast/Core/Backup/RaycastFormat.swift \
+            Tinycast/Core/Backup/RaycastV1Decoder.swift Tinycast/Core/Backup/Gunzip.swift \
+            Tinycast/Core/ClipboardStore.swift Tools/raycast-test.swift \
+            -o /tmp/raycast-test && /tmp/raycast-test
           swiftc Tinycast/Core/Emoji/EmojiCatalog.swift Tinycast/Core/Emoji/EmojiGridGeometry.swift \
             Tinycast/Core/Emoji/EmojiData.generated.swift Tools/emoji-test.swift \
             -o /tmp/emoji-test && /tmp/emoji-test

@@ -56,11 +56,10 @@ enum BackupActions {
 
     static func importRaycast(file: URL, passphrase: String, options: RaycastImportOptions = .all)
         async throws -> RaycastOutcome {
-        // Decrypt (scrypt/AES/gunzip) AND parse off the main actor, inside an autoreleasepool so the large JSON tree drains at once instead of spiking the main-thread footprint. Only the value-type Result crosses back.
+        // Detect, decrypt and parse off the main actor, inside an autoreleasepool so the large JSON tree drains at once instead of spiking the main-thread footprint. Only the value-type Result crosses back.
         let result = try await Task.detached(priority: .userInitiated) {
             try autoreleasepool {
-                let decrypted = try RaycastImport.decrypt(file: file, passphrase: passphrase)
-                return try RaycastImport.parse(decrypted).selecting(options)
+                try RaycastImport.read(file: file, passphrase: passphrase).selecting(options)
             }
         }.value
         // A snippet write failure is reported in the outcome rather than thrown: it must not abort the settings and clipboard the user also asked for.
@@ -111,6 +110,12 @@ enum BackupActions {
         panel.canChooseDirectories = false
         NSApp.activate(ignoringOtherApps: true)
         return panel.runModal() == .OK ? panel.url : nil
+    }
+
+    /// Nil when the file isn't a Raycast export at all. Reads only the leading bytes — mapped, not copied — so the pane can label a file before a passphrase is typed.
+    static func detectRaycastFormat(of file: URL) -> RaycastFormat? {
+        guard let raw = try? Data(contentsOf: file, options: .mappedIfSafe) else { return nil }
+        return try? RaycastFormat.detect(raw)
     }
 
     // MARK: - Helpers
