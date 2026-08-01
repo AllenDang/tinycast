@@ -107,7 +107,6 @@ final class AppCore: ObservableObject {
     let visibility = VisibilityStore()
     let calcHistory = CalculatorHistoryStore()
     let currencyRates = CurrencyRateStore()
-    let updates = UpdateStore()
     let emojiIndex = EmojiIndex()
     let frequentEmoji = FrequentEmojiStore()
     let runningApps = RunningAppsMonitor()
@@ -155,7 +154,6 @@ final class AppCore: ObservableObject {
         Task { await appIndex.refresh() }
         Task { await emojiIndex.load() }
         currencyRates.start()
-        updates.start()
 
         hotKeys.onTogglePalette = { [weak self] in self?.togglePalette() }
         hotKeys.onToggleClipboard = { [weak self] in self?.toggleClipboard() }
@@ -353,11 +351,6 @@ final class AppCore: ObservableObject {
 
     func showAbout() {
         showSettings(tab: .about)
-    }
-
-    /// The user-initiated check, from the menu bar or the palette. Background checks are the store's own business.
-    func checkForUpdates() {
-        updates.checkNow()
     }
 
     /// The first-run wizard: palette shortcut, Accessibility, Raycast import. Also re-runnable from Settings.
@@ -703,9 +696,6 @@ final class AppCore: ObservableObject {
         case .about:
             hidePalette(restoreFocus: false)
             showAbout()
-        case .checkForUpdates:
-            hidePalette(restoreFocus: false)
-            checkForUpdates()
         case .quit:
             NSApp.terminate(nil)
         case nil:

@@ -8,7 +8,6 @@ enum CommandID: String, CaseIterable, Sendable {
     case exportSettings = "command:export-settings"
     case importSettings = "command:import-settings"
     case importFromRaycast = "command:import-from-raycast"
-    case checkForUpdates = "command:check-for-updates"
     case settings = "command:settings"
     case about = "command:about"
     case quit = "command:quit"
@@ -21,7 +20,6 @@ enum CommandID: String, CaseIterable, Sendable {
         case .exportSettings: return "Export Settings"
         case .importSettings: return "Import Settings"
         case .importFromRaycast: return "Import from Raycast"
-        case .checkForUpdates: return "Check for Updates"
         case .settings: return "Settings"
         case .about: return "About Tinycast"
         case .quit: return "Quit Tinycast"
@@ -36,7 +34,6 @@ enum CommandID: String, CaseIterable, Sendable {
         case .exportSettings: return "square.and.arrow.up"
         case .importSettings: return "square.and.arrow.down"
         case .importFromRaycast: return "arrow.down.doc"
-        case .checkForUpdates: return "arrow.down.circle"
         case .settings: return "gearshape"
         case .about: return "info.circle"
         case .quit: return "power"
@@ -48,11 +45,6 @@ enum CommandRegistry {
     /// Sorted by name to keep the AppIndex sort invariant; the URL is a placeholder since commands are never launched from disk.
     nonisolated static let all: [AppEntry] =
         CommandID.allCases
-        // No feed for this bundle id means the channel is un-updatable, so it gets no command.
-        .filter {
-            $0 != .checkForUpdates
-                || UpdateStore.feedURL(for: Bundle.main.bundleIdentifier) != nil
-        }
         .map { id in
             AppEntry(
                 id: id.rawValue, name: id.name,
