@@ -45,6 +45,7 @@ struct SettingsBackup: Codable {
         var apps: [String: KeyShortcut]?
         var panes: [String: KeyShortcut]?
         var customCommands: [String: KeyShortcut]?
+        var systemActions: [String: KeyShortcut]?
         var windowCommands: [String: KeyShortcut]?
     }
 
@@ -105,6 +106,10 @@ extension SettingsBackup {
         hotkeys.customCommands = Dictionary(
             uniqueKeysWithValues: hk.boundCustomCommandIDs.compactMap { id in
                 hk.shortcut(for: .customCommand(id: id)).map { (id.uuidString.lowercased(), $0) }
+            })
+        hotkeys.systemActions = Dictionary(
+            uniqueKeysWithValues: SystemAction.ID.allCases.compactMap { id in
+                hk.shortcut(for: .systemAction(id: id)).map { (id.rawValue, $0) }
             })
         hotkeys.windowCommands = Dictionary(
             uniqueKeysWithValues: WindowCommand.ID.allCases.compactMap { id in
@@ -252,6 +257,10 @@ extension SettingsBackup {
                 continue
             }
             apply(s, .customCommand(id: id))
+        }
+        for (rawID, s) in hotkeys.systemActions ?? [:] {
+            guard let id = SystemAction.ID(rawValue: rawID) else { continue }
+            apply(s, .systemAction(id: id))
         }
         for (rawID, s) in hotkeys.windowCommands ?? [:] {
             guard let id = WindowCommand.ID(rawValue: rawID) else { continue }

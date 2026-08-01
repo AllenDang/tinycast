@@ -100,8 +100,8 @@ struct WindowCommandTests {
             WindowCommandCatalog.command(forEntryID: "window-command:unknown") == nil,
             "unknown entry IDs are rejected")
         expect(
-            WindowCommandCatalog.command(forEntryID: "system-command:sleep") == nil,
-            "system-command entry IDs are not claimed")
+            WindowCommandCatalog.command(forEntryID: "system-action:sleep") == nil,
+            "system-action entry IDs are not claimed")
 
         let cycling = Set(commands.filter(\.cyclesOnRepeat).map(\.id))
         expect(

@@ -154,7 +154,7 @@ stock Electron app tiles correctly without it, delete the helper rather than kee
 ## Wiring
 
 - **`AppEntry.Kind.windowCommand`** — entries are `window-command:<id>`, published by
-  `AppIndex.setWindowCommandsVisible(_:)` between the system-command and custom-command slices.
+  `AppIndex.setWindowCommandsVisible(_:)` between the system-action and custom-command slices.
   `LauncherView.rows` mirrors that position with a "Window Management" section; the slice order is the
   flat-selection invariant, so the two must move together.
 - **`HotKeyAction.windowCommand(id:)`** — persisted under
@@ -168,8 +168,8 @@ stock Electron app tiles correctly without it, delete the helper rather than kee
   grant no permission class of their own.
 - **Per-command visibility** reuses `VisibilityStore` as-is; clearing a recorded shortcut is how a
   hotkey is disabled, so there is no separate per-command enabled flag. Window commands deliberately
-  get **no** tab in Settings › Shortcuts — they are managed only in their own pane, the same call
-  already made for snippets.
+  get **no** launcher-category pane of their own — they are managed inside Settings › Window
+  Management, the same call already made for snippets.
 
 ## Testing
 

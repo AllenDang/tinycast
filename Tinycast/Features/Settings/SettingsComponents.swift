@@ -112,6 +112,41 @@ struct FeatureSwitchCard: View {
     }
 }
 
+/// The filter field above a long settings list, styled like a card so it reads as part of the group below it.
+struct SettingsSearchField: View {
+    let prompt: String
+    @Binding var query: String
+
+    var body: some View {
+        HStack(spacing: Theme.Spacing.sm) {
+            Image(systemName: "magnifyingglass")
+                .foregroundStyle(.secondary)
+            TextField(prompt, text: $query)
+                .textFieldStyle(.plain)
+            if !query.isEmpty {
+                Button {
+                    query = ""
+                } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .foregroundStyle(.tertiary)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Clear search")
+            }
+        }
+        .font(.body)
+        .padding(Theme.Spacing.lg)
+        .background(
+            RoundedRectangle(cornerRadius: Theme.Radius.row, style: .continuous)
+                .fill(Theme.Colors.cardFill)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: Theme.Radius.row, style: .continuous)
+                .strokeBorder(Theme.Colors.cardStroke, lineWidth: 1)
+        )
+    }
+}
+
 /// Inset divider between rows inside a `SettingsCard`, aligned under the row's title (past the icon).
 struct SettingsDivider: View {
     var body: some View {

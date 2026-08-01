@@ -25,7 +25,9 @@ enum BackupActions {
         do {
             try SettingsBackup.gather().encoded().write(to: url, options: .atomic)
         } catch {
-            await present(title: "Export Failed", message: error.localizedDescription)
+            await present(
+                title: "Export Failed", message: error.localizedDescription,
+                symbol: "square.and.arrow.up")
         }
     }
 
@@ -42,9 +44,11 @@ enum BackupActions {
             guard await confirmExecutableImport(commands: commandCount, shortcuts: shortcutCount)
             else { return }
             await present(
-                title: "Settings Imported", message: summaryText(backup.apply()), kind: .success)
+                title: "Settings Imported", message: summaryText(backup.apply()),
+                symbol: importSymbol, tone: .success)
         } catch {
-            await present(title: "Import Failed", message: error.localizedDescription)
+            await present(
+                title: "Import Failed", message: error.localizedDescription, symbol: importSymbol)
         }
     }
 
@@ -134,12 +138,14 @@ enum BackupActions {
         let commandText = commands == 1 ? "1 custom command" : "\(commands) custom commands"
         let shortcutText =
             shortcuts == 1 ? "1 global shortcut" : "\(shortcuts) global shortcuts"
-        return await AppCore.shared.askConfirmation(
+        // Red glyph because this is a real security warning, but a plain button: importing a file
+        // destroys nothing, so the confirm action isn't destructive.
+        return await AppCore.shared.confirm(
             title: "Import executable commands?",
             message:
                 "This backup contains \(commandText) and \(shortcutText). Custom commands can run "
                 + "arbitrary shell code. Only import files you trust.",
-            confirmTitle: "Import")
+            symbol: importSymbol, confirmTitle: "Import", confirmRole: .standard)
     }
 
     private static func dateStamp() -> String {
@@ -148,9 +154,13 @@ enum BackupActions {
         return formatter.string(from: Date())
     }
 
+    /// Every import dialog — the warning, the failure and the summary — carries the same glyph, so the flow reads as one thing.
+    private static let importSymbol = "square.and.arrow.down"
+
     private static func present(
-        title: String, message: String, kind: ModalKind = .error
+        title: String, message: String, symbol: String, tone: DialogTone = .danger
     ) async {
-        await AppCore.shared.showNotice(title: title, message: message, kind: kind)
+        await AppCore.shared.showNotice(
+            title: title, message: message, symbol: symbol, tone: tone)
     }
 }

@@ -3,6 +3,8 @@ import Foundation
 
 struct CustomCommand: Codable, Hashable, Identifiable, Sendable {
     static let entryIDPrefix = "custom-command:"
+    /// One glyph for every custom command — launcher row, Settings row and its dialogs, so they read as the same thing.
+    static let sfSymbol = "terminal"
 
     let id: UUID
     var name: String

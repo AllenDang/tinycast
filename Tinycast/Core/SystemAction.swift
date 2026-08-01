@@ -1,6 +1,6 @@
 import Foundation
 
-struct SystemCommand: Identifiable, Hashable, Sendable {
+struct SystemAction: Identifiable, Hashable, Sendable {
     enum ID: String, CaseIterable, Sendable {
         case lockScreen = "lock-screen"
         case sleep
@@ -35,9 +35,14 @@ struct SystemCommand: Identifiable, Hashable, Sendable {
         case toggleBluetooth = "toggle-bluetooth"
     }
 
-    enum Confirmation: String, Sendable {
+    /// Whether running the action needs a confirmation first, and the copy for it. Every action
+    /// that needs one is destructive, so `AppCore` renders them all the same way and the catalog
+    /// only has to supply the words.
+    enum Confirmation: Hashable, Sendable {
         case none
-        case required
+        case required(title: String, message: String)
+        /// Quit All alone counts its targets before asking, so its copy is built at call time.
+        case computed
     }
 
     let id: ID
@@ -45,26 +50,30 @@ struct SystemCommand: Identifiable, Hashable, Sendable {
     let sfSymbol: String
     let confirmation: Confirmation
 
-    var entryID: String {
-        // Preserve the existing Quit All launcher's persisted favorite, visibility and ranking key.
-        id == .quitAllApps ? "command:quit-all-apps" : "system-command:" + id.rawValue
-    }
+    /// Stable identity for the launcher entry, and with it the persisted favorite, visibility and ranking keys.
+    var entryID: String { "system-action:" + id.rawValue }
 }
 
-enum SystemCommandCatalog {
-    static let all: [SystemCommand] = SystemCommand.ID.allCases.map { id in
-        SystemCommand(
+enum SystemActionCatalog {
+    static let all: [SystemAction] = SystemAction.ID.allCases.map { id in
+        SystemAction(
             id: id, name: name(for: id), sfSymbol: symbol(for: id),
             confirmation: confirmation(for: id))
     }
 
     private static let byEntryID = Dictionary(uniqueKeysWithValues: all.map { ($0.entryID, $0) })
+    private static let byID = Dictionary(uniqueKeysWithValues: all.map { ($0.id, $0) })
 
-    static func command(forEntryID entryID: String) -> SystemCommand? {
+    static func action(forEntryID entryID: String) -> SystemAction? {
         byEntryID[entryID]
     }
 
-    private static func name(for id: SystemCommand.ID) -> String {
+    static func action(id: SystemAction.ID) -> SystemAction {
+        // Every ID is in `all` by construction, so a miss is a programmer error rather than a runtime case.
+        byID[id]!
+    }
+
+    private static func name(for id: SystemAction.ID) -> String {
         switch id {
         case .lockScreen: return "Lock Screen"
         case .sleep: return "Sleep"
@@ -100,7 +109,7 @@ enum SystemCommandCatalog {
         }
     }
 
-    private static func symbol(for id: SystemCommand.ID) -> String {
+    private static func symbol(for id: SystemAction.ID) -> String {
         switch id {
         case .lockScreen: return "lock"
         case .sleep: return "moon.zzz"
@@ -133,10 +142,23 @@ enum SystemCommandCatalog {
         }
     }
 
-    private static func confirmation(for id: SystemCommand.ID) -> SystemCommand.Confirmation {
+    private static let sessionEndingMessage =
+        "Applications with unsaved changes may ask you to save."
+
+    private static func confirmation(for id: SystemAction.ID) -> SystemAction.Confirmation {
         switch id {
-        case .restart, .shutDown, .logOut, .emptyTrash, .quitAllApps:
-            return .required
+        case .restart:
+            return .required(title: "Restart your Mac?", message: sessionEndingMessage)
+        case .shutDown:
+            return .required(title: "Shut down your Mac?", message: sessionEndingMessage)
+        case .logOut:
+            return .required(title: "Log out now?", message: sessionEndingMessage)
+        case .emptyTrash:
+            return .required(
+                title: "Empty Trash?",
+                message: "The items in the Trash will be permanently deleted.")
+        case .quitAllApps:
+            return .computed
         default:
             return .none
         }

@@ -113,10 +113,11 @@ final class AppCore: ObservableObject {
     let palette = PaletteViewModel()
 
     private lazy var windowController = PaletteWindowController(core: self)
-    private lazy var hud = HUDWindowController(settings: settings)
+    private lazy var messageHUD = MessageHUDController(settings: settings)
+    private let volumeHUD = VolumeHUDController()
     private let auxWindows = AuxWindowController()
     /// Every confirmation, failure report and value prompt in the app; it also guards against a held hotkey stacking dialogs.
-    private let modals = ModalWindowController()
+    private let dialogs = DialogController()
     private var cancellables = Set<AnyCancellable>()
 
     private init() {
@@ -159,6 +160,7 @@ final class AppCore: ObservableObject {
         hotKeys.onToggleClipboard = { [weak self] in self?.toggleClipboard() }
         hotKeys.onToggleEmoji = { [weak self] in self?.toggleEmoji() }
         hotKeys.onRunCustomCommand = { [weak self] id in self?.runCustomCommand(id: id) }
+        hotKeys.onRunSystemAction = { [weak self] id in self?.runSystemAction(id: id) }
         hotKeys.onRunWindowCommand = { [weak self] id in self?.runWindowCommand(id: id) }
         hotKeys.start(customCommandIDs: Set(customCommands.commands.map(\.id)))
         // Deliberately keeps running while `hotKeys.recordingAction` pauses Carbon: the recorder relies on the tap's rewritten flags to capture Hyper shortcuts.
@@ -377,15 +379,17 @@ final class AppCore: ObservableObject {
         }
         // Commands dispatch before the palette hides: mode-switching commands keep it open.
         if app.kind == .command {
-            if let id = CustomCommand.id(fromEntryID: app.id) {
-                runCustomCommand(id: id)
-            } else {
-                runCommand(app)
-            }
+            runCommand(app)
             return
         }
-        if app.kind == .systemCommand {
-            runSystemCommand(app)
+        if app.kind == .customCommand {
+            guard let id = CustomCommand.id(fromEntryID: app.id) else { return }
+            runCustomCommand(id: id)
+            return
+        }
+        if app.kind == .systemAction {
+            guard let action = SystemActionCatalog.action(forEntryID: app.id) else { return }
+            runSystemAction(id: action.id)
             return
         }
         if app.kind == .windowCommand {
@@ -404,7 +408,7 @@ final class AppCore: ObservableObject {
         case .snippet:
             let snippetID = String(app.id.dropFirst("snippet:".count))
             expandSnippet(id: snippetID, targetApp: previous)
-        case .command, .systemCommand, .windowCommand:
+        case .command, .customCommand, .systemAction, .windowCommand:
             break  // handled above
         }
     }
@@ -433,116 +437,96 @@ final class AppCore: ObservableObject {
             cycleOnRepeat: settings.windowCycleOnRepeat)
     }
 
-    // MARK: - System commands
+    // MARK: - System actions
 
-    private func runSystemCommand(_ entry: AppEntry) {
-        guard let command = SystemCommandCatalog.command(forEntryID: entry.id) else { return }
-        let previousApp = windowController.previousApp
+    /// The one funnel for both palette activation and an action's global hotkey, so the confirmation
+    /// gate can't be bypassed by either — nor by a favorite slot or the compact bar.
+    ///
+    /// Some actions target the app the user was in (Hide Others, Quit All), so the palette hands back the
+    /// app it displaced; a hotkey pressed with the palette closed targets whatever is frontmost.
+    func runSystemAction(id: SystemAction.ID) {
+        let target =
+            windowController.isVisible
+            ? windowController.previousApp : NSWorkspace.shared.frontmostApplication
         if windowController.isVisible { hidePalette(restoreFocus: false) }
-        Task { await perform(command, previousApp: previousApp) }
+        Task { await perform(SystemActionCatalog.action(id: id), previousApp: target) }
     }
 
-    /// The one place a system command runs, so the confirmation gate can't be bypassed by the palette, a favorite slot, or the compact bar.
-    private func perform(_ command: SystemCommand, previousApp: NSRunningApplication?) async {
-        if command.id == .quitAllApps {
+    private func perform(_ action: SystemAction, previousApp: NSRunningApplication?) async {
+        switch action.confirmation {
+        case .computed:
             await quitAllApps()
             return
-        }
-        if command.confirmation == .required,
-            await !modals.confirm(
-                title: Self.confirmationTitle(command),
-                message: Self.confirmationMessage(command),
-                confirmTitle: command.name, destructive: true,
-                kind: Self.confirmationKind(command)) {
-            return
+        case .required(let title, let message):
+            guard
+                await confirm(
+                    title: title, message: message, symbol: action.sfSymbol,
+                    confirmTitle: action.name)
+            else { return }
+        case .none:
+            break
         }
         do {
-            var feedback: SystemCommandFeedback?
-            if command.id == .setVolume {
-                let current = try SystemCommandRunner.currentVolume()
-                guard let selected = await modals.pickVolume(current: current) else { return }
-                try SystemCommandRunner.setVolume(selected)
+            var feedback: SystemActionFeedback?
+            if action.id == .setVolume {
+                let current = try SystemActionRunner.currentVolume()
+                guard let selected = await dialogs.pickVolume(current: current) else { return }
+                try SystemActionRunner.setVolume(selected)
             } else {
-                feedback = try await SystemCommandRunner.run(command.id, previousApp: previousApp)
+                feedback = try await SystemActionRunner.run(action.id, previousApp: previousApp)
             }
-            if Self.showsVolumeFeedback.contains(command.id) {
-                let state = try SystemCommandRunner.outputState()
-                modals.showVolumeHUD(level: state.level, muted: state.muted)
+            if Self.showsVolumeFeedback.contains(action.id) {
+                let state = try SystemActionRunner.outputState()
+                volumeHUD.show(level: state.level, muted: state.muted)
             } else if let feedback {
-                hud.show(message: feedback.title, kind: feedback.isNoOp ? .info : .success)
+                messageHUD.show(
+                    message: feedback.title, tone: feedback.isNoOp ? .neutral : .success)
             }
-        } catch let failure as SystemCommandFailure {
-            await presentFailure(name: command.name, failure: failure)
+        } catch let failure as SystemActionFailure {
+            await presentFailure(action: action, failure: failure)
         } catch {
             await presentFailure(
-                name: command.name, failure: SystemCommandFailure(error.localizedDescription))
+                action: action, failure: SystemActionFailure(error.localizedDescription))
         }
     }
 
-    /// Commands that change the output level or mute state; macOS only draws its own HUD for real media keys, so these get Tinycast's.
-    private static let showsVolumeFeedback: Set<SystemCommand.ID> = [
+    /// Actions that change the output level or mute state; macOS only draws its own HUD for real media keys, so these get Tinycast's.
+    private static let showsVolumeFeedback: Set<SystemAction.ID> = [
         .setVolume, .volumeUp, .volumeDown, .toggleMute,
         .volume0, .volume25, .volume50, .volume75, .volume100
     ]
 
-    private static func confirmationTitle(_ command: SystemCommand) -> String {
-        switch command.id {
-        case .restart: return "Restart your Mac?"
-        case .shutDown: return "Shut down your Mac?"
-        case .logOut: return "Log out now?"
-        case .emptyTrash: return "Empty Trash?"
-        default: return "Run \(command.name)?"
-        }
-    }
-
-    private static func confirmationMessage(_ command: SystemCommand) -> String {
-        switch command.id {
-        case .emptyTrash: return "The items in the Trash will be permanently deleted."
-        case .restart, .shutDown, .logOut:
-            return "Applications with unsaved changes may ask you to save."
-        default: return "This system action may interrupt your work."
-        }
-    }
-
-    /// Most confirmations read as the usual `.warning` orange; the four that end the session
-    /// (`.restart`, `.shutDown`, `.logOut`) or destroy data outright (`.emptyTrash`) read `.error`
-    /// red instead, so their weight on screen matches their weight in practice.
-    private static func confirmationKind(_ command: SystemCommand) -> ModalKind {
-        switch command.id {
-        case .restart, .shutDown, .logOut, .emptyTrash: return .error
-        default: return .warning
-        }
-    }
-
     // MARK: - Dialogs
     //
-    // Routed through `AppCore` so `modals` stays the single owner; flows outside the palette (the backup
+    // Routed through `AppCore` so `dialogs` stays the single owner; flows outside the palette (the backup
     // actions) reach the same dialogs instead of falling back to an `NSAlert`.
 
-    func showNotice(
-        title: String, message: String, symbol: String? = nil, kind: ModalKind = .info
-    ) async {
-        await modals.notice(title: title, message: message, symbol: symbol, kind: kind)
+    func showNotice(title: String, message: String, symbol: String, tone: DialogTone) async {
+        await dialogs.notice(title: title, message: message, symbol: symbol, tone: tone)
     }
 
-    func askConfirmation(
-        title: String, message: String, confirmTitle: String, destructive: Bool = true
+    /// `tone` is what the dialog looks like; `confirmRole` is what the confirm button looks like. They
+    /// are separate on purpose — a red-glyph security warning can still carry a plain white button.
+    func confirm(
+        title: String, message: String, symbol: String, confirmTitle: String,
+        tone: DialogTone = .danger, confirmRole: DialogAction.Role = .destructive
     ) async -> Bool {
-        await modals.confirm(
-            title: title, message: message, confirmTitle: confirmTitle, destructive: destructive)
+        await dialogs.confirm(
+            title: title, message: message, symbol: symbol, tone: tone, confirmTitle: confirmTitle,
+            confirmRole: confirmRole)
     }
 
     /// Sync entry point for the runner's own async completion handlers, which can't await.
-    func presentSystemCommandFailure(name: String, failure: SystemCommandFailure) {
-        Task { await presentFailure(name: name, failure: failure) }
+    func presentSystemActionFailure(id: SystemAction.ID, failure: SystemActionFailure) {
+        Task { await presentFailure(action: SystemActionCatalog.action(id: id), failure: failure) }
     }
 
-    private func presentFailure(name: String, failure: SystemCommandFailure) async {
-        let settingsTitle = failure.settings == nil ? nil : "Open System Settings…"
+    private func presentFailure(action: SystemAction, failure: SystemActionFailure) async {
         guard
-            await modals.report(
-                title: "“\(name)” Failed", message: failure.message,
-                settingsTitle: settingsTitle),
+            await dialogs.reportFailure(
+                title: "“\(action.name)” Failed", message: failure.message,
+                symbol: action.sfSymbol,
+                recovery: failure.settings == nil ? nil : "Open System Settings…"),
             let settings = failure.settings
         else { return }
         let pane: String
@@ -593,17 +577,22 @@ final class AppCore: ObservableObject {
         Task {
             if command.requiresConfirmation {
                 guard
-                    await modals.confirm(
+                    // Neutral, not destructive: running a shell command the user wrote themselves is
+                    // not a warning, it just wants a deliberate second tap.
+                    await confirm(
                         title: command.name,
                         message: "Are you sure you want to run this command?\n\n\(command.command)",
-                        confirmTitle: "Run", destructive: true)
+                        symbol: CustomCommand.sfSymbol, confirmTitle: "Run",
+                        tone: .neutral, confirmRole: .standard)
                 else { return }
             }
             let outcome = await ShellCommandRunner.run(
                 command.command, loadingShellEnvironment: command.loadsShellEnvironment)
             guard outcome != .success else {
                 // Fires when the command finishes, not when it starts, so a slow one confirms late rather than lying early.
-                if command.showsConfirmation { self.hud.show(message: "Ran \(command.name)") }
+                if command.showsConfirmation {
+                    self.messageHUD.show(message: "Ran \(command.name)")
+                }
                 return
             }
             await presentCustomCommandFailure(command: command, outcome: outcome)
@@ -644,11 +633,12 @@ final class AppCore: ObservableObject {
                         + "this command." : "")
         }
         guard
-            await modals.report(
+            await dialogs.reportFailure(
                 title: "“\(command.name)” Failed", message: message,
-                settingsTitle: suggestsShellEnvironment ? "Open Settings…" : nil)
+                symbol: CustomCommand.sfSymbol,
+                recovery: suggestsShellEnvironment ? "Open Settings…" : nil)
         else { return }
-        showSettings(tab: .customCommands)
+        showSettings(tab: .commands)
     }
 
     /// Quits the app behind an entry; a no-op (palette stays put) when it isn't running.
@@ -664,11 +654,12 @@ final class AppCore: ObservableObject {
     private func quitAllApps() async {
         let targets = AppLauncher.quitAllTargets()
         guard !targets.isEmpty,
-            await modals.confirm(
+            await confirm(
                 title: targets.count == 1
                     ? "Quit 1 application?" : "Quit \(targets.count) applications?",
                 message: "Applications with unsaved changes will ask you to save.",
-                confirmTitle: "Quit All", destructive: true)
+                symbol: SystemActionCatalog.action(id: .quitAllApps).sfSymbol,
+                confirmTitle: "Quit All")
         else { return }
         for app in targets { app.terminate() }
     }
@@ -947,7 +938,7 @@ final class AppCore: ObservableObject {
             automaticGeneration: automaticGeneration,
             onDelivered: { [weak self] in
                 guard let self, let confirmation else { return }
-                self.hud.show(message: confirmation)
+                self.messageHUD.show(message: confirmation)
             })
     }
 }

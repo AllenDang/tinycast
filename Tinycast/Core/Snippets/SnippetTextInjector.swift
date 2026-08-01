@@ -56,9 +56,10 @@ final class SnippetTextInjector {
         targetApp: NSRunningApplication?
     ) -> AutomaticGeneration? {
         cancelAutomaticExpansion()
-        guard automaticExpansionIsAllowed(
-            generation: automaticGeneration,
-            targetApp: targetApp)
+        guard
+            automaticExpansionIsAllowed(
+                generation: automaticGeneration,
+                targetApp: targetApp)
         else { return nil }
         return automaticGeneration
     }
@@ -124,9 +125,10 @@ final class SnippetTextInjector {
     ) {
         activate(targetApp)
         if let automaticGeneration {
-            guard automaticExpansionIsAllowed(
-                generation: automaticGeneration,
-                targetApp: targetApp)
+            guard
+                automaticExpansionIsAllowed(
+                    generation: automaticGeneration,
+                    targetApp: targetApp)
             else { return }
         } else {
             guard prepareInteractiveExpansion(targetApp: targetApp) else { return }
@@ -174,11 +176,12 @@ final class SnippetTextInjector {
         }
         guard accessibilityReplacement.fallsBackToEvents else { return }
 
-        guard await deliverUsingEvents(
-            result.text,
-            keywordLength: keywordLength,
-            targetApp: targetApp,
-            automaticGeneration: automaticGeneration)
+        guard
+            await deliverUsingEvents(
+                result.text,
+                keywordLength: keywordLength,
+                targetApp: targetApp,
+                automaticGeneration: automaticGeneration)
         else { return }
 
         guard let offset = result.cursorOffsetFromEnd, offset > 0 else {
@@ -186,14 +189,16 @@ final class SnippetTextInjector {
             return
         }
         for index in 0..<offset {
-            guard deliveryIsAllowed(
-                automaticGeneration: automaticGeneration,
-                targetApp: targetApp,
-                promptForInteractiveAccessibility: false),
+            guard
+                deliveryIsAllowed(
+                    automaticGeneration: automaticGeneration,
+                    targetApp: targetApp,
+                    promptForInteractiveAccessibility: false),
                 postKey(code: CGKeyCode(kVK_LeftArrow), targetApp: targetApp)
             else { return }
             if index < offset - 1,
-                !(await wait(for: .milliseconds(8))) {
+                !(await wait(for: .milliseconds(8)))
+            {
                 return
             }
         }
@@ -206,7 +211,8 @@ final class SnippetTextInjector {
         targetApp: NSRunningApplication?,
         automaticGeneration: AutomaticGeneration?
     ) async -> Bool {
-        let isShortSingleLine = text.count <= 100
+        let isShortSingleLine =
+            text.count <= 100
             && !text.contains("\n")
             && !text.contains("\r")
         if isShortSingleLine {
@@ -288,14 +294,16 @@ final class SnippetTextInjector {
         automaticGeneration: AutomaticGeneration?
     ) async -> Bool {
         for index in events.indices {
-            guard deliveryIsAllowed(
-                automaticGeneration: automaticGeneration,
-                targetApp: targetApp,
-                promptForInteractiveAccessibility: false)
+            guard
+                deliveryIsAllowed(
+                    automaticGeneration: automaticGeneration,
+                    targetApp: targetApp,
+                    promptForInteractiveAccessibility: false)
             else { return false }
             post(events[index], targetApp: targetApp)
             if index < events.count - 1,
-                !(await wait(for: .milliseconds(8))) {
+                !(await wait(for: .milliseconds(8)))
+            {
                 return false
             }
         }
@@ -345,9 +353,10 @@ final class SnippetTextInjector {
         promptForInteractiveAccessibility: Bool
     ) -> Bool {
         if let automaticGeneration {
-            guard automaticExpansionIsAllowed(
-                generation: automaticGeneration,
-                targetApp: targetApp),
+            guard
+                automaticExpansionIsAllowed(
+                    generation: automaticGeneration,
+                    targetApp: targetApp),
                 let targetApp,
                 targetApp.isActive,
                 NSWorkspace.shared.frontmostApplication?.processIdentifier
@@ -386,13 +395,15 @@ final class SnippetTextInjector {
         for _ in 0..<50 {
             if targetApp.isActive,
                 NSWorkspace.shared.frontmostApplication?.processIdentifier
-                    == targetApp.processIdentifier {
+                    == targetApp.processIdentifier
+            {
                 return true
             }
             if let automaticGeneration,
                 !automaticExpansionIsAllowed(
                     generation: automaticGeneration,
-                    targetApp: targetApp) {
+                    targetApp: targetApp)
+            {
                 return false
             }
             guard await wait(for: .milliseconds(20)) else { return false }
@@ -433,10 +444,11 @@ final class SnippetTextInjector {
         }
 
         guard setSelectedRange(replacementRange, in: element) else { return .unavailable }
-        guard AXUIElementSetAttributeValue(
-            element,
-            kAXSelectedTextAttribute as CFString,
-            result.text as CFString) == .success
+        guard
+            AXUIElementSetAttributeValue(
+                element,
+                kAXSelectedTextAttribute as CFString,
+                result.text as CFString) == .success
         else {
             _ = setSelectedRange(originalRange, in: element)
             return .rejected
@@ -467,14 +479,16 @@ final class SnippetTextInjector {
             else { return false }
 
             if let previousState,
-                let currentState = accessibilityTextState(in: targetApp) {
+                let currentState = accessibilityTextState(in: targetApp)
+            {
                 readStateAfterPaste = true
                 if currentState != previousState { return true }
             }
             if SnippetPasteConfirmationPolicy.acceptsUnconfirmedDelivery(
                 attempt: attempt,
                 hadPreviousState: previousState != nil,
-                readStateAfterPaste: readStateAfterPaste) {
+                readStateAfterPaste: readStateAfterPaste)
+            {
                 return true
             }
             guard await wait(for: .milliseconds(25)) else { return false }
@@ -498,15 +512,15 @@ final class SnippetTextInjector {
         // A hung target would otherwise stall the main actor for the global default. The timeout is per element and never inherited, so the focused element needs its own.
         AXUIElementSetMessagingTimeout(application, Self.accessibilityTimeout)
         var focusedValue: CFTypeRef?
-        guard AXUIElementCopyAttributeValue(
-            application,
-            kAXFocusedUIElementAttribute as CFString,
-            &focusedValue) == .success,
+        guard
+            AXUIElementCopyAttributeValue(
+                application,
+                kAXFocusedUIElementAttribute as CFString,
+                &focusedValue) == .success,
             let focusedValue,
             CFGetTypeID(focusedValue) == AXUIElementGetTypeID()
         else { return nil }
-        // Type checked by CFGetTypeID above; `as?` on a CF type is a compile error.
-        // swiftlint:disable:next force_cast
+
         let element = focusedValue as! AXUIElement
         AXUIElementSetMessagingTimeout(element, Self.accessibilityTimeout)
         return element
@@ -514,25 +528,26 @@ final class SnippetTextInjector {
 
     private func stringValue(in element: AXUIElement) -> String? {
         var value: CFTypeRef?
-        guard AXUIElementCopyAttributeValue(
-            element,
-            kAXValueAttribute as CFString,
-            &value) == .success
+        guard
+            AXUIElementCopyAttributeValue(
+                element,
+                kAXValueAttribute as CFString,
+                &value) == .success
         else { return nil }
         return value as? String
     }
 
     private func selectedRange(in element: AXUIElement) -> NSRange? {
         var value: CFTypeRef?
-        guard AXUIElementCopyAttributeValue(
-            element,
-            kAXSelectedTextRangeAttribute as CFString,
-            &value) == .success,
+        guard
+            AXUIElementCopyAttributeValue(
+                element,
+                kAXSelectedTextRangeAttribute as CFString,
+                &value) == .success,
             let value,
             CFGetTypeID(value) == AXValueGetTypeID()
         else { return nil }
-        // Type checked by CFGetTypeID above; `as?` on a CF type is a compile error.
-        // swiftlint:disable:next force_cast
+
         let axValue = value as! AXValue
         guard AXValueGetType(axValue) == .cfRange else { return nil }
         var range = CFRange()
@@ -551,10 +566,11 @@ final class SnippetTextInjector {
 
     private func isAttributeSettable(_ attribute: String, in element: AXUIElement) -> Bool {
         var settable = DarwinBoolean(false)
-        guard AXUIElementIsAttributeSettable(
-            element,
-            attribute as CFString,
-            &settable) == .success
+        guard
+            AXUIElementIsAttributeSettable(
+                element,
+                attribute as CFString,
+                &settable) == .success
         else { return false }
         return settable.boolValue
     }
@@ -571,10 +587,11 @@ final class SnippetTextInjector {
         else { return nil }
 
         var selectionValue: CFTypeRef?
-        guard AXUIElementCopyAttributeValue(
-            element,
-            kAXSelectedTextAttribute as CFString,
-            &selectionValue) == .success
+        guard
+            AXUIElementCopyAttributeValue(
+                element,
+                kAXSelectedTextAttribute as CFString,
+                &selectionValue) == .success
         else { return nil }
         return selectionValue as? String
     }
@@ -583,10 +600,11 @@ final class SnippetTextInjector {
         guard !text.isEmpty else { return [] }
         let source = CGEventSource(stateID: .combinedSessionState)
         var characters = Array(text.utf16)
-        guard let down = CGEvent(
-            keyboardEventSource: source,
-            virtualKey: 0,
-            keyDown: true),
+        guard
+            let down = CGEvent(
+                keyboardEventSource: source,
+                virtualKey: 0,
+                keyDown: true),
             let up = CGEvent(
                 keyboardEventSource: source,
                 virtualKey: 0,
@@ -619,10 +637,11 @@ final class SnippetTextInjector {
         flags: CGEventFlags = []
     ) -> [CGEvent]? {
         let source = CGEventSource(stateID: .combinedSessionState)
-        guard let down = CGEvent(
-            keyboardEventSource: source,
-            virtualKey: code,
-            keyDown: true),
+        guard
+            let down = CGEvent(
+                keyboardEventSource: source,
+                virtualKey: code,
+                keyDown: true),
             let up = CGEvent(
                 keyboardEventSource: source,
                 virtualKey: code,
@@ -868,7 +887,8 @@ struct PasteboardSnapshot {
                     pasteboardItem.setData(Data(), forType: ClipboardManager.internalType)
                 else { return nil }
             }
-            for value in item.values where index != 0 || firstString == nil || value.type != .string {
+            for value in item.values where index != 0 || firstString == nil || value.type != .string
+            {
                 guard pasteboardItem.setData(value.data, forType: value.type) else { return nil }
             }
             pasteboardItems.append(pasteboardItem)

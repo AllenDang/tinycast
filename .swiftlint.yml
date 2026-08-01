@@ -44,3 +44,11 @@ file_length:
 nesting:
   type_level:
     warning: 2
+
+disabled_rules:
+  - force_cast
+  - opening_brace
+  - trailing_whitespace
+  - identifier_name
+  - optional_data_string_conversion
+  - void_function_in_ternary

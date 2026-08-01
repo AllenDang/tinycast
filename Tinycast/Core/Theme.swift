@@ -25,8 +25,8 @@ enum Theme {
         /// Hover highlight behind a popover menu row.
         static let menuRow: CGFloat = 10
         static let menuPanel: CGFloat = 16
-        /// Tinycast's own modal / HUD surface, sized between `menuPanel` and `panel`, so a dialog reads as a smaller sibling of the palette rather than a second palette.
-        static let modal: CGFloat = 20
+        /// Tinycast's own dialog / HUD surface, sized between `menuPanel` and `panel`, so a dialog reads as a smaller sibling of the palette rather than a second palette.
+        static let dialog: CGFloat = 20
         static let thumbnail: CGFloat = 6
         static let card: CGFloat = 10
         static let keyCap: CGFloat = 6
@@ -71,21 +71,30 @@ enum Theme {
         /// Confirmation HUD: it sizes to its message, up to this ceiling, and sits this far above the bottom of the screen.
         static let hudMaxWidth: CGFloat = 420
         static let hudEdgeOffset: CGFloat = 48
-        /// Tinycast's own modal: fixed width, height measured from the SwiftUI content.
-        static let modalWidth: CGFloat = 420
-        /// Leading glyph on a modal, larger than a row icon because it carries the dialog's tone (warning / question).
-        static let modalIcon: CGFloat = 32
+        /// Tinycast's own dialog: fixed width, height measured from the SwiftUI content.
+        static let dialogWidth: CGFloat = 420
+        /// Leading glyph on a dialog, larger than a row icon because it carries the subject the dialog is about.
+        static let dialogIcon: CGFloat = 32
         /// Transient volume HUD shown after any volume or mute command.
         static let hudWidth: CGFloat = 200
-        static let hudHeight: CGFloat = 92
-        /// Volume slider geometry, shared by the Set Volume modal and the HUD's read-only bar.
+        static let hudHeight: CGFloat = 100
+        /// Volume slider geometry, shared by the Set Volume dialog and the HUD's read-only bar.
         static let volumeTrackHeight: CGFloat = 6
         static let volumeKnob: CGFloat = 16
+        /// Fixed slot for the level readout, so the track can't resize as the number runs 0% → 100%.
+        /// Sized to the widest string it ever holds — "Muted" at 36pt in `rowTrailing` — and no wider,
+        /// since the slack is subtracted straight off the track.
+        static let volumeReadout: CGFloat = 38
     }
 
     enum Duration {
-        /// How long the confirmation HUD stays on screen.
-        static let hud: TimeInterval = 1.6
+        /// How long each HUD stays on screen. A sentence needs reading time; a level only needs a glance.
+        static let messageHUD: TimeInterval = 2.4
+        static let volumeHUD: TimeInterval = 1.6
+        /// How any borderless surface — dialog or HUD — arrives and leaves. The exit is shorter so a
+        /// confirmed action doesn't feel held up.
+        static let enter: TimeInterval = 0.18
+        static let exit: TimeInterval = 0.12
         /// Fade-in/out for a hover `Tooltip`.
         static let tooltip: TimeInterval = 0.15
     }
@@ -128,9 +137,9 @@ enum Theme {
         static let glassFrost = Color.white.opacity(0.05)
         /// The violet of the app mark, used only to tint the About support callout.
         static let brand = Color(red: 0.525, green: 0.231, blue: 1.0)
-        /// Destructive tint: a destructive button's label, and a modal's leading glyph for `.warning`/`.error` kind dialogs — both read equally severe; only the default icon's shape tells them apart.
+        /// Destructive tint: a destructive button's label, and the leading glyph of a `.danger` dialog.
         static let destructive = Color.red
-        /// Success tint: a modal's leading glyph for a `.success` kind dialog.
+        /// Success tint: the leading glyph of a `.success` dialog.
         static let success = Color.green
     }
 }

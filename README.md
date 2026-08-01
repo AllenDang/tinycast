@@ -86,18 +86,6 @@ in the **[pull request template](.github/PULL_REQUEST_TEMPLATE.md)**. Security i
 
 Questions, ideas, or just want to follow along? **[Join the Discord](https://discord.gg/v2Eeb4QQy3)**.
 
-## Contributors
-
-Thank you to everyone who has put time into Tinycast — every fix and idea shows up in something
-people use every day.
-
-<p align="center">
-  <a href="https://github.com/abue-ammar/tinycast/graphs/contributors">
-    <img alt="Tinycast contributors"
-         src="https://contrib.rocks/image?repo=abue-ammar/tinycast&max=28&columns=28">
-  </a>
-</p>
-
 ## License
 
 [AGPL-3.0](LICENSE)

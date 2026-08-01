@@ -131,7 +131,8 @@ final class WindowMover {
     ) -> CGRect? {
         let destination = screens.first { $0.id == placement.screenID }
         let canvas = destination.map {
-            WindowLayout.canvas($0.visibleFrame, gap: WindowLayout.sanitizedGap(gap, in: $0.visibleFrame))
+            WindowLayout.canvas(
+                $0.visibleFrame, gap: WindowLayout.sanitizedGap(gap, in: $0.visibleFrame))
         }
 
         guard canResize else {
@@ -160,7 +161,8 @@ final class WindowMover {
 
         // The second resize can shift the origin — some apps anchor a resize on a different corner.
         if abs(actual.minX - placement.frame.minX) > Self.clampTolerance
-            || abs(actual.minY - placement.frame.minY) > Self.clampTolerance {
+            || abs(actual.minY - placement.frame.minY) > Self.clampTolerance
+        {
             _ = setPosition(placement.frame.origin, on: window)
             actual = frame(of: window) ?? actual
         }
@@ -170,7 +172,8 @@ final class WindowMover {
         // anchor, so a left half stays left-aligned instead of drifting centre. One correction, no loop:
         // iterating against an app that fights back just makes the window visibly jitter.
         if actual.width > placement.frame.width + Self.clampTolerance
-            || actual.height > placement.frame.height + Self.clampTolerance {
+            || actual.height > placement.frame.height + Self.clampTolerance
+        {
             var slot = placement.anchor.place(actual.size, in: placement.frame)
             if let canvas { slot = WindowLayout.clamped(slot, into: canvas) }
             _ = setPosition(WindowLayout.rounded(slot).origin, on: window)
@@ -221,7 +224,8 @@ final class WindowMover {
     private func toggleFullScreen(_ window: AXUIElement) -> Bool {
         let target: CFBoolean = isFullScreen(window) ? kCFBooleanFalse : kCFBooleanTrue
         if isSettable(Self.fullScreenAttribute as String, on: window),
-            AXUIElementSetAttributeValue(window, Self.fullScreenAttribute, target) == .success {
+            AXUIElementSetAttributeValue(window, Self.fullScreenAttribute, target) == .success
+        {
             return true
         }
         guard let button = element(window, Self.fullScreenButtonAttribute as String) else {
@@ -248,9 +252,11 @@ final class WindowMover {
 
     /// Cocoa screens converted into the AX space `WindowLayout` works in.
     private static func screens(_ screens: [NSScreen], geometry: AXGeometry)
-        -> [WindowLayout.Screen] {
+        -> [WindowLayout.Screen]
+    {
         screens.enumerated().map { index, screen in
-            let number = screen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")]
+            let number =
+                screen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")]
                 as? NSNumber
             // A display with no number still needs a stable, collision-free id for this call.
             return WindowLayout.Screen(
@@ -296,14 +302,15 @@ final class WindowMover {
         return size
     }
 
-    private func axValue(_ element: AXUIElement, _ attribute: String, type: AXValueType) -> AXValue? {
+    private func axValue(_ element: AXUIElement, _ attribute: String, type: AXValueType) -> AXValue?
+    {
         var value: CFTypeRef?
         guard
             AXUIElementCopyAttributeValue(element, attribute as CFString, &value) == .success,
             let value, CFGetTypeID(value) == AXValueGetTypeID()
         else { return nil }
         // Type checked by CFGetTypeID above; `as?` on a CF type is a compile error.
-        // swiftlint:disable:next force_cast
+
         let axValue = value as! AXValue
         return AXValueGetType(axValue) == type ? axValue : nil
     }
@@ -315,7 +322,7 @@ final class WindowMover {
             let value, CFGetTypeID(value) == AXUIElementGetTypeID()
         else { return nil }
         // Type checked by CFGetTypeID above; `as?` on a CF type is a compile error.
-        // swiftlint:disable:next force_cast
+
         return (value as! AXUIElement)
     }
 
@@ -366,6 +373,7 @@ struct AXGeometry {
     /// No scaling is involved at any point. `NSScreen.frame`, `visibleFrame` and AX coordinates are all
     /// in points, so `backingScaleFactor` must never appear here — mixed-DPI correctness is automatic.
     func flip(_ rect: CGRect) -> CGRect {
-        CGRect(x: rect.origin.x, y: anchorHeight - rect.maxY, width: rect.width, height: rect.height)
+        CGRect(
+            x: rect.origin.x, y: anchorHeight - rect.maxY, width: rect.width, height: rect.height)
     }
 }

@@ -173,11 +173,11 @@ The confirmation is per snippet and off by default: the only gate is `show_confi
 from the snippet's editor in **Settings → Snippets**. Nothing about it reaches settings backups.
 The feature switch — which carries keyword-monitoring consent — is likewise excluded from backups.
 
-`HUDWindowController` is shared rather than snippet-specific. It takes a message and a `ModalKind`
-(defaulting to `.success`), the same kind vocabulary `ModalWindowController`'s dialogs use, so a
-custom command confirms a run through the same panel and the same tint rules; system commands'
-success/info feedback uses it too (see [launcher.md](launcher.md#system-commands)). Its leading
-status dot, not an icon, carries the tint. Its capsule uses `Theme.frosted(in:)`, the same
+`MessageHUDController` is shared rather than snippet-specific. It takes a message and a `DialogTone`
+(defaulting to `.success`), the same tone vocabulary `DialogController`'s dialogs use, so a
+custom command confirms a run through the same panel and the same tint rules; system actions'
+success/info feedback uses it too (see [launcher.md](launcher.md#system-actions)). Its leading
+trailing glyph, after the message, carries the tint. Its capsule uses `Theme.frosted(in:)`, the same
 whitish-tinted glass as the rest of the app's floating controls (see [ui.md](ui.md#liquid-glass)).
 
 After either launcher or keyword delivery is confirmed, Tinycast may show a brief non-activating,

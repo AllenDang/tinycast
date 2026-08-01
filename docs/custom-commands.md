@@ -75,8 +75,10 @@ is dropped while the actual error survives.
 `AppCore.runCustomCommand(id:)` is the one funnel both palette activation and the global hotkey reach,
 so the gate lives there and neither path can bypass it. The palette hides before the dialog it is a
 floating panel and would sit above it. The dialog shows the command text as well as its name; ↵ runs
-it and Escape cancels, with Cancel rendered on the left of the two buttons. The gate is Tinycast's own
-modal, not an `NSAlert` ([ui.md](ui.md#modals--hud)): presentation is `async` with no nested run loop,
+it and Escape cancels, with Cancel rendered on the left of the two buttons. It carries the `terminal`
+glyph the command's launcher row uses, and reads neutral rather than destructive — running a command the
+user wrote themselves wants a deliberate second tap, not a red alarm. The gate is Tinycast's own
+dialog, not an `NSAlert` ([ui.md](ui.md#dialogs--hud)): presentation is `async` with no nested run loop,
 and the presenter itself refuses a second dialog while one is up, so a held shortcut can't stack them.
 
 ### Reporting
@@ -84,7 +86,7 @@ and the presenter itself refuses a second dialog while one is up, so a held shor
 Tinycast dismisses an open palette before starting a custom command. A zero exit status is silent; a
 launch failure or non-zero status opens a Tinycast dialog with the bounded error detail. When the
 status is 127 and **Load shell environment** is off, the dialog adds a one-line hint and an **Open
-Settings…** button that lands on the Custom Commands pane — the hint is gated on the status alone, not
+Settings…** button that lands on the Commands pane — the hint is gated on the status alone, not
 on grepping stderr, since 127 is equally a plain typo. The command string itself is never logged.
 
 ### Manual checks

@@ -45,22 +45,25 @@ Rankings are memoized one query deep and keyed by the ranking store's revision, 
 invalidates the cached order. `rank` resolves the whole learned table for a query up front via
 `boosts(query:)` — one fold and one clock read per pass, not per candidate.
 
-## System commands
+## System actions
 
-`SystemCommandCatalog` is a Foundation-only inventory of the macOS actions Tinycast exposes. Its
+`SystemActionCatalog` is a Foundation-only inventory of the macOS actions Tinycast exposes. Its
 stable entry IDs, labels, symbols and confirmation policy are covered by
-`Tools/system-command-test.swift`; platform side effects live separately in `SystemCommandRunner`.
-`AppCore.runSystemCommand` remains the one execution funnel, hiding the floating palette before any
-confirmation or value dialog and surfacing permission-aware failures.
+`Tools/system-action-test.swift`; platform side effects live separately in `SystemActionRunner`.
+`AppCore.runSystemAction(id:)` remains the one execution funnel — shared by palette activation and a
+global hotkey — hiding the floating palette before any confirmation or value dialog and surfacing
+permission-aware failures. With the palette closed it targets the frontmost app, so Hide Others and
+Quit All act on the same window a palette launch would have.
 
-System commands occupy their own launcher and Shortcuts Settings category. The empty-query publication
-order is applications, System Settings, snippets, system commands, window commands, custom commands,
+System actions occupy their own launcher section and their own Settings pane. The empty-query publication
+order is applications, System Settings, snippets, system actions, window commands, custom commands,
 then built-in commands; the sectioned view filters in that same order so the visible rows remain
 identical to the flat selection index.
-Search, favorites, visibility and learned ranking work through the normal `AppEntry` path. Dedicated
-global hotkeys are deliberately out of scope.
+Search, favorites, visibility and learned ranking work through the normal `AppEntry` path, and every
+action is bindable to a global shortcut from Settings › System Actions
+(see [hotkeys.md](hotkeys.md)).
 
-Public AppKit, CoreAudio and workspace APIs are preferred. Commands without a stable public macOS API
+Public AppKit, CoreAudio and workspace APIs are preferred. Actions without a stable public macOS API
 use fixed system tools, Apple Events, Accessibility, or a dynamically resolved Bluetooth power API.
 Those routes run only on explicit activation. Automation, Accessibility or Bluetooth permission is
 requested at first use, and denial produces an alert linking to the relevant System Settings pane.
@@ -68,20 +71,24 @@ Tinycast remains locked to dark appearance even when Toggle System Appearance ch
 
 Restart, Shut Down, Log Out, Empty Trash and Quit All Applications confirm before execution: ↵ runs
 the action, Escape cancels. Every dialog is Tinycast's own: confirmations, failure reports and the Set
-Volume slider all render through `ModalWindowController` rather than an `NSAlert`
-(see [ui.md](ui.md#modals--hud)). Volume and mute commands also show Tinycast's transient volume HUD,
-since macOS only draws its own for real media keys.
+Volume slider all render through `DialogController` rather than an `NSAlert`
+(see [ui.md](ui.md#dialogs--hud)). Each confirmation carries the action's own icon — Restart shows
+`arrow.clockwise`, Empty Trash `trash.slash` — so the dialog is recognizably about the row that
+opened it. Volume and mute actions also show Tinycast's transient volume HUD, since macOS only draws
+its own for real media keys. Volume Up/Down walk a 5% grid (`VolumeLevel.stepped`, covered by
+`Tools/volume-test.swift`): an off-grid level snaps to the next line rather than past it, so from 37%
+up lands on 40% and down on 35%, and repeated presses stay on round numbers.
 
-A command whose effect is invisible reports back through a pill (`HUDWindowController`, the same one
+An action whose effect is invisible reports back through a pill (`MessageHUDController`, the same one
 Custom Commands and Snippets confirm through) rather than finishing silently:
-`SystemCommandRunner.run` returns a `SystemCommandFeedback` naming the state it landed in
+`SystemActionRunner.run` returns a `SystemActionFeedback` naming the state it landed in
 (`Trash Emptied`, `Hidden Files Shown`, `Dark Appearance`, `Bluetooth Off`, `3 Disks Ejected`), and
-`AppCore` shows it with a `ModalKind` derived from the feedback's `isNoOp` flag: `.success` when
-something actually changed, `.info` when there was nothing to do, shown as the pill's leading status
-dot rather than a per-command icon, since the message already names the state. Commands that are
+`AppCore` shows it with a `DialogTone` derived from the feedback's `isNoOp` flag: `.success` when
+something actually changed, `.neutral` when there was nothing to do, shown as the glyph trailing the
+message rather than a per-action icon, since the message already names the state. Actions that are
 their own confirmation, such as Show Desktop, Hide Others,
 Quit All and the power actions, return nothing. Volume and mute are the one case that stays on the
-palette's own square HUD, since that one has an actual level to show, not just a message.
+palette's own box HUD, since that one has an actual level and number to show, not just a message.
 
 **Nothing-to-do is an outcome, not a failure.** Empty Trash asks Finder for `count items of trash`
 first and reports `Trash Is Already Empty`, because Finder raises an error when told to empty an empty
@@ -98,11 +105,11 @@ dismissal matches Accessibility subroles rather than English labels.
 ## Window commands
 
 `WindowCommandCatalog` supplies the 29 window actions as a static slice, published as a whole by
-`AppIndex.setWindowCommandsVisible(_:)` and shown under a "Window Management" section. Unlike system
-commands they **do** carry dedicated global hotkeys (`AppEntry.hotKeyAction` returns
-`.windowCommand(id:)`), so launcher rows render keycaps for them. Their per-command shortcut and
-visibility controls live only in Settings › Window Management, not in Settings › Shortcuts — the same
-call already made for snippets. The feature ships off. See
+`AppIndex.setWindowCommandsVisible(_:)` and shown under a "Window Management" section. Like system
+actions they carry dedicated global hotkeys (`AppEntry.hotKeyAction` returns `.windowCommand(id:)`),
+so launcher rows render keycaps for them. Their per-command shortcut and visibility controls live in
+Settings › Window Management rather than a launcher-category pane of their own — the same call already
+made for snippets. The feature ships off. See
 [window-management.md](window-management.md).
 
 ## Custom commands
@@ -144,7 +151,7 @@ running dot and the availability of the quit actions:
   `AppLauncher.quit(bundleID:)` terminates every instance of the bundle and reports whether
   anything was running; the palette only dismisses when something was, and it restores focus unless
   the app it just quit *was* `previousApp`.
-- **Quit All Applications** a system command. `AppLauncher.quitAllTargets()` is the
+- **Quit All Applications** a system action. `AppLauncher.quitAllTargets()` is the
   policy (every `.regular` app except Finder — `terminate()` only relaunches it — and Tinycast,
   excluded by PID because About/Settings temporarily flips it to `.regular`). `AppCore.quitAllApps()`
   resolves that list **once**, confirms it with an `NSAlert`, then terminates exactly what was

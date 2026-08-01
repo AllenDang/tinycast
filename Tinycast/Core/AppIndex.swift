@@ -6,8 +6,9 @@ struct AppEntry: Identifiable, Hashable, Sendable {
         case application
         case systemSettings
         case command
+        case customCommand
         case snippet
-        case systemCommand
+        case systemAction
         case windowCommand
     }
 
@@ -22,16 +23,14 @@ struct AppEntry: Identifiable, Hashable, Sendable {
     /// Stable identity for learned ranking, favorites, and other per-entry preferences.
     var preferenceKey: String { bundleID ?? id }
 
-    /// User-authored command, as opposed to a `CommandRegistry` built-in.
-    var isCustomCommand: Bool { kind == .command && CustomCommand.id(fromEntryID: id) != nil }
-
     var kindLabel: String {
         switch kind {
         case .application: return "Application"
         case .systemSettings: return "System Setting"
-        case .command: return isCustomCommand ? "Custom Command" : "Command"
+        case .command: return "Command"
+        case .customCommand: return "Custom Command"
         case .snippet: return "Snippet"
-        case .systemCommand: return "System Command"
+        case .systemAction: return "System Action"
         case .windowCommand: return "Window Command"
         }
     }
@@ -43,11 +42,13 @@ struct AppEntry: Identifiable, Hashable, Sendable {
             return bundleID.map { .app(bundleID: $0) }
         case .systemSettings:
             return bundleID.map { .settingsPane(bundleID: $0) }
-        case .command:
+        case .customCommand:
             return CustomCommand.id(fromEntryID: id).map { .customCommand(id: $0) }
+        case .systemAction:
+            return SystemActionCatalog.action(forEntryID: id).map { .systemAction(id: $0.id) }
         case .windowCommand:
             return WindowCommandCatalog.command(forEntryID: id).map { .windowCommand(id: $0.id) }
-        case .snippet, .systemCommand:
+        case .command, .snippet:
             return nil
         }
     }
@@ -56,15 +57,18 @@ struct AppEntry: Identifiable, Hashable, Sendable {
     var canRevealInFinder: Bool { kind == .application || kind == .systemSettings || kind == .snippet }
 
     /// Synthetic entries draw an SF Symbol tile; everything else uses its file icon.
-    var isSymbolIcon: Bool {
-        kind == .command || kind == .snippet || kind == .systemCommand || kind == .windowCommand
-    }
+    var isSymbolIcon: Bool { kind != .application && kind != .systemSettings }
+
     var symbolIconName: String {
-        if kind == .snippet { return "text.quote" }
-        if let window = WindowCommandCatalog.command(forEntryID: id) { return window.sfSymbol }
-        if let system = SystemCommandCatalog.command(forEntryID: id) { return system.sfSymbol }
-        if let builtIn = CommandRegistry.command(for: self) { return builtIn.sfSymbol }
-        return isCustomCommand ? "terminal" : "questionmark"
+        switch kind {
+        case .snippet: return "text.quote"
+        case .customCommand: return CustomCommand.sfSymbol
+        case .command: return CommandRegistry.command(for: self)?.sfSymbol ?? "questionmark"
+        case .systemAction: return SystemActionCatalog.action(forEntryID: id)?.sfSymbol ?? "questionmark"
+        case .windowCommand:
+            return WindowCommandCatalog.command(forEntryID: id)?.sfSymbol ?? "questionmark"
+        case .application, .systemSettings: return "questionmark"
+        }
     }
 
     var icon: NSImage {
@@ -207,12 +211,12 @@ final class AppIndex: ObservableObject {
     /// One-entry memo so repeated renders for the same query reuse the ranking instead of re-matching every frame.
     private var matchCache: MatchCache?
 
-    private static let systemCommandEntries: [AppEntry] = SystemCommandCatalog.all
+    private static let systemActionEntries: [AppEntry] = SystemActionCatalog.all
         .map { command in
             AppEntry(
                 id: command.entryID, name: command.name,
-                url: URL(string: "tinycast://system-command/" + command.id.rawValue)!,
-                bundleID: nil, kind: .systemCommand)
+                url: URL(string: "tinycast://system-action/" + command.id.rawValue)!,
+                bundleID: nil, kind: .systemAction)
         }
         .sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
 
@@ -245,7 +249,7 @@ final class AppIndex: ObservableObject {
             AppEntry(
                 id: command.entryID, name: command.name,
                 url: URL(string: "tinycast://custom-command/" + command.id.uuidString)!,
-                bundleID: nil, kind: .command)
+                bundleID: nil, kind: .customCommand)
         }
         .sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
         guard entries != customCommandEntries else { return }
@@ -342,7 +346,7 @@ final class AppIndex: ObservableObject {
     private func publishEntries() {
         // Each slice is already alphabetical; the slice order is the launcher's section order (LauncherList mirrors it), so custom commands sit in their own section ahead of the built-ins.
         let updated =
-            discoveredEntries + snippetEntries + Self.systemCommandEntries + windowCommandEntries
+            discoveredEntries + snippetEntries + Self.systemActionEntries + windowCommandEntries
             + customCommandEntries + CommandRegistry.all
         guard updated != apps else { return }
         apps = updated

@@ -93,8 +93,10 @@ swiftc -swift-version 6 Tinycast/Core/CustomCommand.swift \
 swiftc -swift-version 6 Tinycast/Core/NotificationToken.swift \
     Tinycast/Core/Snippets/*.swift \
     Tools/snippets-test.swift -o /tmp/snippets-test && /tmp/snippets-test  # snippets
-swiftc -swift-version 6 Tinycast/Core/SystemCommand.swift Tools/system-command-test.swift \
-    -o /tmp/system-command-test && /tmp/system-command-test        # system command metadata + safety
+swiftc -swift-version 6 Tinycast/Core/SystemAction.swift Tools/system-action-test.swift \
+    -o /tmp/system-action-test && /tmp/system-action-test        # system action metadata + safety
+swiftc -swift-version 6 Tinycast/Core/VolumeLevel.swift Tools/volume-test.swift \
+    -o /tmp/volume-test && /tmp/volume-test                        # volume step grid + percentage
 swiftc -swift-version 6 Tinycast/Core/WindowManagement/WindowCommand.swift \
     Tinycast/Core/WindowManagement/WindowLayout.swift \
     Tinycast/Core/WindowManagement/WindowActionMemory.swift Tools/window-command-test.swift \
@@ -103,8 +105,8 @@ swiftc -swift-version 6 Tinycast/Core/WindowManagement/WindowCommand.swift \
 
 `Tools/fuzz-test.swift` holds a **copy** of `FuzzyMatch` from `Tinycast/Core/AppIndex.swift` —
 change the scoring in one and mirror it in the other. The calc harness compiles the real engine
-sources, which is why `Tinycast/Core/Calculator/` must stay Foundation-only. The system-command harness
-similarly keeps `SystemCommand.swift` independent from AppKit and all command side effects.
+sources, which is why `Tinycast/Core/Calculator/` must stay Foundation-only. The system-action harness
+similarly keeps `SystemAction.swift` independent from AppKit and all command side effects.
 
 The clipboard harness likewise compiles the real `ClipboardStore.swift`, so that file must keep to
 Foundation + SQLite3 and depend on no other app source. Each case drives a store rooted in a
@@ -141,9 +143,9 @@ swiftlint lint           # report issues
 swiftlint lint --fix     # auto-fix what's fixable, then re-run lint to see what's left
 ```
 
-Lint is advisory, not a merge gate — CI runs it as a non-blocking check (below). Warnings are still
-worth clearing before you open a PR; CONTRIBUTING.md's "builds clean" bar is about compiler warnings,
-which SwiftLint doesn't touch.
+Lint runs on the PR as a blocking check (below), but not `--strict` — warnings annotate the diff,
+only the config's `error` thresholds fail it. Clear the warnings anyway; CONTRIBUTING.md's "builds
+clean" bar is about compiler warnings, which SwiftLint doesn't touch.
 
 ## Generated data
 
@@ -189,18 +191,20 @@ Full details in [signing.md](signing.md).
 ## Continuous integration
 
 `.github/workflows/ci.yml` runs on every PR and every push to `main`, on a `macos-26` runner with
-Xcode 26 (same selection step as the release workflow):
+Xcode 26 (same selection step as the release workflow). Both jobs are merge gates and both run in
+parallel; a new push cancels the in-flight run for the same ref:
 
-- **`build-and-test`** — pushes to `main` only (`if: github.event_name == 'push'`), so a PR isn't
-  held up by the ~3-minute macOS job. `xcodebuild` Debug build, then every `Tools/*.swift` harness
-  from [Tests](#tests) above, in order. **Run these locally before you open a PR** — CI won't catch
-  a broken build or a failing harness until the merge lands on `main`.
-- **`lint`** — advisory, on PRs and `main`. Runs `swiftlint lint --reporter github-actions-logging`
-  so warnings show up as inline PR annotations; `continue-on-error: true` means it never blocks a
-  merge.
+- **`test`** — every `Tools/*.swift` harness from [Tests](#tests) above, in order.
+- **`lint`** — `swiftlint lint --reporter github-actions-logging`, so violations land as inline
+  annotations on the PR diff. Not `--strict`: warnings annotate but don't fail, the config's `error`
+  thresholds do.
 
-Same commands locally: `xcodebuild -project Tinycast.xcodeproj -scheme Tinycast -configuration Debug
-build`, then the harness block from [Tests](#tests), then `swiftlint lint` from
+There is **no `xcodebuild` step**: a Debug build costs minutes on every run and the release workflow
+builds before it ships anyway, so CI keeps to the two checks that finish in about a minute. A change
+that compiles nowhere still turns the PR green — **build locally before you open one** (`xcodebuild
+-project Tinycast.xcodeproj -scheme Tinycast -configuration Debug build`, or just ⌘B in Xcode).
+
+Same commands locally: the harness block from [Tests](#tests), then `swiftlint lint --strict` from
 [Format & lint](#format--lint).
 
 ## CI releases
