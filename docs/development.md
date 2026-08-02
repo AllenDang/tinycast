@@ -97,6 +97,12 @@ swiftc -swift-version 6 Tinycast/Core/CustomCommand.swift \
 swiftc -swift-version 6 Tinycast/Core/NotificationToken.swift \
     Tinycast/Core/Snippets/*.swift \
     Tools/snippets-test.swift -o /tmp/snippets-test && /tmp/snippets-test  # snippets
+swiftc -swift-version 6 Tinycast/Core/HotKey/DoubleTapModifier.swift \
+    Tinycast/Core/HotKey/DoubleTapDetector.swift Tools/hotkey-test.swift \
+    -o /tmp/hotkey-test && /tmp/hotkey-test                        # double-tap modifier recognizer
+swiftc -swift-version 6 Tinycast/Core/Theme.swift \
+    Tinycast/Core/CalloutPlacement.swift Tools/callout-test.swift \
+    -o /tmp/callout-test && /tmp/callout-test                      # shortcut-recorder callout placement
 swiftc -swift-version 6 Tinycast/Core/SystemAction.swift Tools/system-action-test.swift \
     -o /tmp/system-action-test && /tmp/system-action-test        # system action metadata + safety
 swiftc -swift-version 6 Tinycast/Core/VolumeLevel.swift Tools/volume-test.swift \

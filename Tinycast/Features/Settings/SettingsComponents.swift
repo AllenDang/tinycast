@@ -23,6 +23,8 @@ struct SettingsPane<Content: View>: View {
             .overlayScroller()
         }
         .ignoresSafeArea(edges: .top)
+        // Outside the ScrollView, so an open recorder's callout draws over the pane instead of being clipped by it.
+        .shortcutRecorderPopoverHost()
     }
 }
 

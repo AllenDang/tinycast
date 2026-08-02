@@ -84,23 +84,25 @@ enum RaycastImportV1 {
         var mapped = false
 
         if let clipboard = payload.toggleClipboard {
-            hotkeys.toggleClipboard = shortcut(clipboard)
+            hotkeys.toggleClipboard = binding(clipboard)
             mapped = true
         }
         if let emoji = payload.toggleEmoji {
-            hotkeys.toggleEmoji = shortcut(emoji)
+            hotkeys.toggleEmoji = binding(emoji)
             mapped = true
         }
         if !payload.appHotkeys.isEmpty {
-            hotkeys.apps = payload.appHotkeys.mapValues(shortcut)
+            hotkeys.apps = payload.appHotkeys.mapValues(binding)
             mapped = true
         }
         return mapped ? hotkeys : nil
     }
 
-    private static func shortcut(_ hotkey: RaycastV1Payload.Hotkey) -> KeyShortcut {
-        KeyShortcut(
-            carbonKeyCode: hotkey.carbonKeyCode, carbonModifiers: hotkey.carbonModifiers)
+    /// Always a `.combo`: Raycast has no double-tap binding to import.
+    private static func binding(_ hotkey: RaycastV1Payload.Hotkey) -> HotKeyBinding {
+        .combo(
+            KeyShortcut(
+                carbonKeyCode: hotkey.carbonKeyCode, carbonModifiers: hotkey.carbonModifiers))
     }
 
     /// Enum raw values line up (`light`…`dark`); Raycast's `default` maps to none.

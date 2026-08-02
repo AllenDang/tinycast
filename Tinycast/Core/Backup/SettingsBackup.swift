@@ -2,7 +2,7 @@ import Foundation
 
 /// A passwordless, human-readable snapshot of Tinycast's configuration. Every field is optional so an import applies only the keys actually present (non-destructive merge): a partial file — or one from Raycast — leaves everything it omits untouched.
 struct SettingsBackup: Codable {
-    var version = 2
+    var version = 3
     var settings: SettingsData?
     var hotkeys: HotkeyBackup?
     var customCommands: [CustomCommand]?
@@ -38,15 +38,16 @@ struct SettingsBackup: Codable {
         var windowCycleOnRepeat: Bool?
     }
 
+    /// `HotKeyBinding` encodes a combo in the legacy `KeyShortcut` shape, so files written before double-tap bindings existed import unchanged. The reverse doesn't hold: a file containing a double-tap can't be read by a pre-double-tap build, which is what the `version` bump records.
     struct HotkeyBackup: Codable {
-        var togglePalette: KeyShortcut?
-        var toggleClipboard: KeyShortcut?
-        var toggleEmoji: KeyShortcut?
-        var apps: [String: KeyShortcut]?
-        var panes: [String: KeyShortcut]?
-        var customCommands: [String: KeyShortcut]?
-        var systemActions: [String: KeyShortcut]?
-        var windowCommands: [String: KeyShortcut]?
+        var togglePalette: HotKeyBinding?
+        var toggleClipboard: HotKeyBinding?
+        var toggleEmoji: HotKeyBinding?
+        var apps: [String: HotKeyBinding]?
+        var panes: [String: HotKeyBinding]?
+        var customCommands: [String: HotKeyBinding]?
+        var systemActions: [String: HotKeyBinding]?
+        var windowCommands: [String: HotKeyBinding]?
     }
 
     /// A tally of what an import touched, for user-facing confirmation.
@@ -92,28 +93,28 @@ extension SettingsBackup {
 
         let hk = core.hotKeys
         var hotkeys = HotkeyBackup()
-        hotkeys.togglePalette = hk.shortcut(for: .togglePalette)
-        hotkeys.toggleClipboard = hk.shortcut(for: .toggleClipboard)
-        hotkeys.toggleEmoji = hk.shortcut(for: .toggleEmoji)
+        hotkeys.togglePalette = hk.binding(for: .togglePalette)
+        hotkeys.toggleClipboard = hk.binding(for: .toggleClipboard)
+        hotkeys.toggleEmoji = hk.binding(for: .toggleEmoji)
         hotkeys.apps = Dictionary(
             uniqueKeysWithValues: hk.boundBundleIDs.compactMap { id in
-                hk.shortcut(for: .app(bundleID: id)).map { (id, $0) }
+                hk.binding(for: .app(bundleID: id)).map { (id, $0) }
             })
         hotkeys.panes = Dictionary(
             uniqueKeysWithValues: hk.boundPaneBundleIDs.compactMap { id in
-                hk.shortcut(for: .settingsPane(bundleID: id)).map { (id, $0) }
+                hk.binding(for: .settingsPane(bundleID: id)).map { (id, $0) }
             })
         hotkeys.customCommands = Dictionary(
             uniqueKeysWithValues: hk.boundCustomCommandIDs.compactMap { id in
-                hk.shortcut(for: .customCommand(id: id)).map { (id.uuidString.lowercased(), $0) }
+                hk.binding(for: .customCommand(id: id)).map { (id.uuidString.lowercased(), $0) }
             })
         hotkeys.systemActions = Dictionary(
             uniqueKeysWithValues: SystemAction.ID.allCases.compactMap { id in
-                hk.shortcut(for: .systemAction(id: id)).map { (id.rawValue, $0) }
+                hk.binding(for: .systemAction(id: id)).map { (id.rawValue, $0) }
             })
         hotkeys.windowCommands = Dictionary(
             uniqueKeysWithValues: WindowCommand.ID.allCases.compactMap { id in
-                hk.shortcut(for: .windowCommand(id: id)).map { (id.rawValue, $0) }
+                hk.binding(for: .windowCommand(id: id)).map { (id.rawValue, $0) }
             })
         backup.hotkeys = hotkeys
 
@@ -241,30 +242,30 @@ extension SettingsBackup {
     private func applyHotkeys(_ hotkeys: HotkeyBackup, to core: AppCore) -> Int {
         let hk = core.hotKeys
         var count = 0
-        // Skip a binding whose combo is already claimed by an earlier-applied (or existing) action: two actions on the same key would make Carbon's second RegisterEventHotKey fail with eventHotKeyExistsErr, silently killing that shortcut. The recorder does this check interactively; imports must too.
-        func apply(_ s: KeyShortcut, _ action: HotKeyAction) {
-            guard hk.conflictOwner(of: s, excluding: action) == nil else { return }
-            hk.setShortcut(s, for: action)
+        // Skip a binding already claimed by an earlier-applied (or existing) action: two actions on the same combo would make Carbon's second RegisterEventHotKey fail with eventHotKeyExistsErr, silently killing that shortcut, and two on the same double-tap modifier would leave the winner arbitrary. The recorder does this check interactively; imports must too.
+        func apply(_ binding: HotKeyBinding, _ action: HotKeyAction) {
+            guard hk.conflictOwner(of: binding, excluding: action) == nil else { return }
+            hk.setBinding(binding, for: action)
             count += 1
         }
-        if let s = hotkeys.togglePalette { apply(s, .togglePalette) }
-        if let s = hotkeys.toggleClipboard { apply(s, .toggleClipboard) }
-        if let s = hotkeys.toggleEmoji { apply(s, .toggleEmoji) }
-        for (id, s) in hotkeys.apps ?? [:] { apply(s, .app(bundleID: id)) }
-        for (id, s) in hotkeys.panes ?? [:] { apply(s, .settingsPane(bundleID: id)) }
-        for (rawID, s) in hotkeys.customCommands ?? [:] {
+        if let b = hotkeys.togglePalette { apply(b, .togglePalette) }
+        if let b = hotkeys.toggleClipboard { apply(b, .toggleClipboard) }
+        if let b = hotkeys.toggleEmoji { apply(b, .toggleEmoji) }
+        for (id, b) in hotkeys.apps ?? [:] { apply(b, .app(bundleID: id)) }
+        for (id, b) in hotkeys.panes ?? [:] { apply(b, .settingsPane(bundleID: id)) }
+        for (rawID, b) in hotkeys.customCommands ?? [:] {
             guard let id = UUID(uuidString: rawID), core.customCommands.command(id: id) != nil else {
                 continue
             }
-            apply(s, .customCommand(id: id))
+            apply(b, .customCommand(id: id))
         }
-        for (rawID, s) in hotkeys.systemActions ?? [:] {
+        for (rawID, b) in hotkeys.systemActions ?? [:] {
             guard let id = SystemAction.ID(rawValue: rawID) else { continue }
-            apply(s, .systemAction(id: id))
+            apply(b, .systemAction(id: id))
         }
-        for (rawID, s) in hotkeys.windowCommands ?? [:] {
+        for (rawID, b) in hotkeys.windowCommands ?? [:] {
             guard let id = WindowCommand.ID(rawValue: rawID) else { continue }
-            apply(s, .windowCommand(id: id))
+            apply(b, .windowCommand(id: id))
         }
         return count
     }

@@ -603,7 +603,7 @@ final class AppCore: ObservableObject {
         for id in ids {
             let action = HotKeyAction.customCommand(id: id)
             if hotKeys.recordingAction == action { hotKeys.recordingAction = nil }
-            hotKeys.setShortcut(nil, for: action)
+            hotKeys.setBinding(nil, for: action)
         }
         favorites.remove(keys: entryIDs)
         visibility.removeItemKeys(entryIDs)

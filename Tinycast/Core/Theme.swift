@@ -51,6 +51,24 @@ enum Theme {
         static let keyCap: CGFloat = 18
         /// Settings shortcut-recorder keycap — smaller than the palette's `keyCap` chip.
         static let recorderKeyCap: CGFloat = 16
+        /// Fixed so the recorder can't resize as its binding changes.
+        static let shortcutRecorder: CGFloat = 120
+        /// One text line in the recorder callout.
+        static let shortcutPopoverLine: CGFloat = 14
+        /// Summed from the bands the body lays out, so placement needs no measuring. The width is
+        /// load-bearing: it must stay under twice a recorder's inset from the pane edge, or the
+        /// callout clamps and the caret stops being centred. `Tools/callout-test.swift` pins that.
+        static let shortcutPopover = CGSize(
+            width: 132,
+            height: Spacing.sm * 2 + heroKeyCap + Spacing.sm + shortcutPopoverLine + Spacing.sm
+                + compactKeyCap + calloutCaretHeight)
+        /// The callout's pointer: a triangle with a rounded tip.
+        static let calloutCaretWidth: CGFloat = 15
+        static let calloutCaretHeight: CGFloat = 7
+        static let calloutCaretTip: CGFloat = 2.5
+        /// Keycaps: `compact` for a hint, `keyCap` as standard, `hero` where the cap is the content.
+        static let compactKeyCap: CGFloat = 15
+        static let heroKeyCap: CGFloat = 22
         static let menuButton: CGFloat = 36
         static let clipboardListWidth: CGFloat = 290
         static let emojiCell: CGFloat = 56
@@ -109,6 +127,9 @@ enum Theme {
         /// The big value line on the calculator answer card (both source and target sides).
         static let calcResult = Font.title
         static let keyCap = Font.caption
+        /// Pair with the matching `Size` for `KeyCapChip.Scale`.
+        static let compactKeyCap = Font.caption2
+        static let heroKeyCap = Font.body
         static let bar = Font.callout.weight(.medium)
         static let menuRow = Font.body
         static let menuShortcut = Font.callout
@@ -151,8 +172,32 @@ struct KeyCapChip: View {
         case filled
     }
 
+    /// Sanctioned cap sizes, so a bigger or smaller one is a named choice, not a stray frame.
+    enum Scale {
+        case compact
+        case standard
+        case hero
+
+        var side: CGFloat {
+            switch self {
+            case .compact: Theme.Size.compactKeyCap
+            case .standard: Theme.Size.keyCap
+            case .hero: Theme.Size.heroKeyCap
+            }
+        }
+
+        var font: Font {
+            switch self {
+            case .compact: Theme.Typography.compactKeyCap
+            case .standard: Theme.Typography.keyCap
+            case .hero: Theme.Typography.heroKeyCap
+            }
+        }
+    }
+
     let text: String
     var style: Style = .filled
+    var scale: Scale = .standard
 
     /// "↵" is absent from SF Pro and falls back to Lucida Grande UI, which seats it 1.1pt higher in the line box than the SF caps — visibly top-heavy in a chip. Nudging via `offset` is render-only, so the chip keeps the same footprint as every other cap.
     private static let returnGlyphDrop: CGFloat = 1.1
@@ -160,11 +205,11 @@ struct KeyCapChip: View {
     var body: some View {
         let shape = RoundedRectangle(cornerRadius: Theme.Radius.keyCap, style: .continuous)
         Text(text)
-            .font(Theme.Typography.keyCap)
+            .font(scale.font)
             .foregroundStyle(Theme.Colors.textSecondary)
             .offset(y: text == "↵" ? Self.returnGlyphDrop : 0)
             .padding(.horizontal, Theme.Spacing.xs)
-            .frame(minWidth: Theme.Size.keyCap, minHeight: Theme.Size.keyCap)
+            .frame(minWidth: scale.side, minHeight: scale.side)
             .background {
                 switch style {
                 case .filled: shape.fill(Theme.Colors.controlSurface)

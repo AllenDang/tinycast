@@ -305,6 +305,28 @@ shares the palette's `Theme` vocabulary. It reads as macOS System Settings, not 
 - **`SettingsCard`**: rounded `card 10` container, `cardFill` (white 0.05) fill, `cardStroke` (white 0.10) hairline border. Rows inside are split by `SettingsDivider` — an inset hairline aligned under the row title (past the icon).
 - **`SettingsRow`**: optional 20pt SF Symbol, title + optional caption subtitle, trailing control, fixed `.horizontal xl / .vertical lg` rhythm.
 
+### The shortcut recorder callout
+
+`ShortcutRecorder` is a **120pt** field showing only the binding — a combo's modifiers collapse into
+one cap (`HotKeyBinding.compactKeycaps`), so any shortcut fits in two chips. Recording is narrated by
+`ShortcutRecorderPopover`, a small **132 × 82** callout above it: caps, one label line, an `esc` cap in
+the bottom-right corner. Three states in one fixed frame — prompt (`⌥ A` at half opacity, "Type a
+shortcut"), live held modifiers, and conflict (rejected caps + owner, orange).
+
+- **An ancestor draws it.** The open recorder publishes its bounds via `ShortcutRecorderAnchorKey`;
+  `.shortcutRecorderPopoverHost()` sits on `SettingsPane` **outside** its `ScrollView` (and on
+  `OnboardingView`) and positions it. An overlay on the row would be clipped by the scroll view.
+- **`shortcutPopover.width` is load-bearing.** A recorder's centre is `xxl + xl + half the field` in
+  from the pane edge, so the callout must stay under twice that to centre on it with the caret dead
+  centre. Widen it and the clamp kicks in and skews the caret. `Tools/callout-test.swift` pins this.
+- **One glass shape.** `CalloutShape` (`Core/`) draws body and caret as a single path so `glassEffect`
+  lenses them together. The caret is two straight edges meeting at an arc — a rounded-tip triangle,
+  not a dome. Stock `.regular` glass, no hand-tuned shadow, as in `PopoverMenu`.
+- **Placement is pure.** `CalloutPlacement` (`Core/`) picks above-vs-below, clamps, and walks the caret;
+  the harness compiles it against the real `Theme` so a retuned token can't outdate the assertions.
+- **`KeyCapChip.Scale`** is `compact` / `standard` / `hero` — three tokenised sizes, no stray frames.
+- `allowsHitTesting(false)`: clicks fall through to the capture session's mouse monitor, which closes it.
+
 The calculator's inline `CalculatorCard` reuses this card language (`cardFill` + `cardStroke`) rather than the row language, since it's a highlighted answer, not a list item. A value answer is a **two-column** layout: a source column (input echo) and a target column (result), separated by a centered `arrow.right` glyph (no divider line). Each column optionally carries a word-name **badge pill** beneath its value (`keyCap` font, `controlSurface` fill, `keyCap` radius) — `Expression`→`Result` for scalar arithmetic, unit or currency names for typed results (`Expression`→`Kilograms`), and moment labels for a date/time calc (`12:18 AM`→`9:00 AM`, `Friday, 24 July`→`Friday, 9 April, 2027`). A trailing operator keeps the last complete result and its badge visible while the next operand is being typed.
 
 ---

@@ -162,10 +162,8 @@ private struct AppRow: View {
 
     /// Keycaps for this entry's hotkey, or `nil` if none is bound.
     private var shortcutCaps: [String]? {
-        guard let action = app.hotKeyAction,
-            let shortcut = hotKeys.shortcut(for: action)
-        else { return nil }
-        return shortcut.keycaps
+        guard let action = app.hotKeyAction else { return nil }
+        return hotKeys.binding(for: action)?.keycaps
     }
 
     var body: some View {

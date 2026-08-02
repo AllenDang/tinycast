@@ -33,6 +33,8 @@ struct OnboardingView: View {
         )
         // Extend under the transparent titlebar (top padding clears the traffic lights) so the window height equals the fixed content height.
         .ignoresSafeArea()
+        // Onboarding's shortcut step has a recorder too, and it isn't inside a `SettingsPane`.
+        .shortcutRecorderPopoverHost()
         .animation(.easeInOut(duration: 0.2), value: step)
         .onAppear { accessibilityTrusted = Permissions.isAccessibilityTrusted() }
         .onReceive(refreshTimer) { _ in
@@ -108,7 +110,7 @@ struct OnboardingView: View {
     }
 
     private var readyMessage: String {
-        if let caps = hotKeys.shortcut(for: .togglePalette)?.keycaps {
+        if let caps = hotKeys.binding(for: .togglePalette)?.keycaps {
             return "Press \(caps.joined()) anytime to start using Tinycast."
         }
         return "Tinycast is ready. Set a shortcut in Settings to summon it."

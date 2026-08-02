@@ -124,28 +124,28 @@ enum RaycastImportV2 {
     private static func mapHotkeys(_ json: [String: Any]) -> SettingsBackup.HotkeyBackup? {
         let settings = json["settings"] as? [String: Any]
         var hotkeys = SettingsBackup.HotkeyBackup()
-        var apps: [String: KeyShortcut] = [:]
+        var apps: [String: HotKeyBinding] = [:]
         var mapped = false
 
         if let general = settings?["general"] as? [String: Any],
-            let shortcut = keyShortcut(from: general["globalHotkey"]) {
-            hotkeys.togglePalette = shortcut
+            let binding = binding(from: general["globalHotkey"]) {
+            hotkeys.togglePalette = binding
             mapped = true
         }
 
         for command in settings?["commands"] as? [[String: Any]] ?? [] {
-            guard let shortcut = keyShortcut(from: command["macosHotkey"]) else { continue }
+            guard let binding = binding(from: command["macosHotkey"]) else { continue }
             switch command["extensionId"] as? String {
             case "e:r:clipboard-history":
-                hotkeys.toggleClipboard = shortcut
+                hotkeys.toggleClipboard = binding
                 mapped = true
             case "e:r:emoji-picker":
-                hotkeys.toggleEmoji = shortcut
+                hotkeys.toggleEmoji = binding
                 mapped = true
             case "e:r:applications":
                 if let path = appPath(fromCommandID: command["id"] as? String),
                     let bundleID = Bundle(url: URL(fileURLWithPath: path))?.bundleIdentifier {
-                    apps[bundleID] = shortcut
+                    apps[bundleID] = binding
                     mapped = true
                 }
             default:
@@ -156,8 +156,8 @@ enum RaycastImportV2 {
         return mapped ? hotkeys : nil
     }
 
-    /// Build a `KeyShortcut` from a Raycast hotkey object (`{ kind: { shortcut: { modifiers, key } } }`).
-    private static func keyShortcut(from hotkey: Any?) -> KeyShortcut? {
+    /// Build a binding from a Raycast hotkey object (`{ kind: { shortcut: { modifiers, key } } }`). Always a `.combo`: Raycast has no double-tap binding to import.
+    private static func binding(from hotkey: Any?) -> HotKeyBinding? {
         guard let dict = hotkey as? [String: Any],
             let shortcut = (dict["kind"] as? [String: Any])?["shortcut"] as? [String: Any],
             let key = shortcut["key"] as? [String: Any],
@@ -175,8 +175,9 @@ enum RaycastImportV2 {
             default: break
             }
         }
-        return KeyShortcut(
-            carbonKeyCode: code, carbonModifiers: KeyShortcut.carbonModifiers(from: flags))
+        return .combo(
+            KeyShortcut(
+                carbonKeyCode: code, carbonModifiers: KeyShortcut.carbonModifiers(from: flags)))
     }
 
     /// Raycast marks favorited items with `favoriteOrder` (0-based). Only app favorites map to Tinycast, keyed by bundle ID (the same key `FavoritesStore` uses), preserving Raycast's order.

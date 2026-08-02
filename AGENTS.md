@@ -142,7 +142,16 @@ Never break these without an explicit task to do so.
   pointers to plain values before crossing into actor code.
 - **Clipboard writes stamp a private `internalType` marker** so the poller skips Tinycast's own writes.
 - **Hotkeys persist under legacy `KeyboardShortcuts_<name>` UserDefaults keys** (from the removed
-  KeyboardShortcuts package) so old bindings survive. See [hotkeys.md](docs/hotkeys.md).
+  KeyboardShortcuts package) so old bindings survive. `HotKeyBinding` is the one thing an action is
+  bound to and it has two cases with two engines: a `.combo` is a Carbon registration, a `.doubleTap`
+  is recognized by `DoubleTapMonitor` (Carbon cannot see a lone modifier at all). Its `Codable`
+  conformance is the compatibility seam — a `.combo` must keep encoding as the bare
+  `{"carbonKeyCode":N,"carbonModifiers":N}` record and decoding must keep trying that shape first, or
+  every existing binding and backup breaks. `Core/HotKey/DoubleTapModifier.swift` and
+  `DoubleTapDetector.swift` stay Foundation-only and pure with the clock injected as a parameter, for
+  `Tools/hotkey-test.swift`; every `CGEvent` call lives in `DoubleTapMonitor.swift`, which is
+  listen-only, installs *only* while something is bound to a double-tap, and never prompts for
+  Accessibility. See [hotkeys.md](docs/hotkeys.md).
 - **Tinycast presents its own dialogs, never `NSAlert` / `NSSlider` / system popovers.** Every
   confirmation, failure report and value prompt goes through `DialogController` (`Core/Dialog/`,
   owned by `AppCore`; reachable elsewhere via `AppCore.showNotice` / `confirm`). Presentation is
