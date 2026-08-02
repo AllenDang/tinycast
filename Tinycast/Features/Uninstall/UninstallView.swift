@@ -135,7 +135,7 @@ private struct FileIconView: View {
 
     init(path: String) {
         self.path = path
-        _image = State(initialValue: IconCache.cached(forFile: path))
+        _image = State(initialValue: IconCache.cachedFitted(forFile: path))
     }
 
     var body: some View {
@@ -149,7 +149,7 @@ private struct FileIconView: View {
         }
         .task(id: path) {
             guard image == nil else { return }
-            image = await IconCache.loadAsync(forFile: path)
+            image = await IconCache.loadFittedAsync(forFile: path)
         }
     }
 }
