@@ -9,9 +9,11 @@
 /* Begin PBXBuildFile section */
 		0626264D8C719DA8366B5E28 /* VolumeHUDView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC6173CA658DA56245031FE6 /* VolumeHUDView.swift */; };
 		0674D8E1567253879EF50150 /* SnippetArgumentsPrompt.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2F919FBD5F2E0399523AA56 /* SnippetArgumentsPrompt.swift */; };
+		0962E9575CBF40B6F908031C /* UninstallView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 59D08C3AEAFB224866F23C3E /* UninstallView.swift */; };
 		0DD808F80666846F4E74BAD8 /* OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 23591B301A183579098AA019 /* OnboardingView.swift */; };
 		0FBAE98F81ECCE0D7A513EDC /* SystemActionRunner.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3B78A8741FA55F42BAF5D97F /* SystemActionRunner.swift */; };
 		11C4CC0D767EFD44AB28D6DD /* SearchScopes.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9AA0E1FD530C764A021E6053 /* SearchScopes.swift */; };
+		125A99FB5A3603488A261C6A /* UninstallRules.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6EB4BA1A385F78B9C5E7EBCF /* UninstallRules.swift */; };
 		14712478C37E6E8760CA47EC /* HyperKey.swift in Sources */ = {isa = PBXBuildFile; fileRef = C6DC5A4706854493D23FD18A /* HyperKey.swift */; };
 		14A5A5ACD35A572EE906769F /* CalcEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3B976C84AFE60E357A346224 /* CalcEngine.swift */; };
 		152E4A75BD2AF9279497F5FF /* DialogController.swift in Sources */ = {isa = PBXBuildFile; fileRef = AD0A151A3B8AC682395E621D /* DialogController.swift */; };
@@ -26,6 +28,7 @@
 		21736CC104E158BC194B1094 /* WindowMover.swift in Sources */ = {isa = PBXBuildFile; fileRef = A8859C0E99A2125D85B1233C /* WindowMover.swift */; };
 		22488569DA337BCE033552F1 /* CursorScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8214A6789CF8E3B5E16BB4C2 /* CursorScreen.swift */; };
 		24842144273FF92228540DBE /* FrequentEmojiStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A228BEF62103605DE7A8F38 /* FrequentEmojiStore.swift */; };
+		2D620B55ED68ECDF75E7155E /* UninstallRunner.swift in Sources */ = {isa = PBXBuildFile; fileRef = CEE113DF7C07BC74AD73BC4C /* UninstallRunner.swift */; };
 		32697AB3853D043A12888B96 /* Permissions.swift in Sources */ = {isa = PBXBuildFile; fileRef = F31E3ACB6D2C26ECA485C3DB /* Permissions.swift */; };
 		333BCB9C66380985400CD1E2 /* CustomCommandEditorSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = B14822405E8DA9531AFCD496 /* CustomCommandEditorSheet.swift */; };
 		344D89B83B57C1DD1E7C0BFC /* EmojiCatalog.swift in Sources */ = {isa = PBXBuildFile; fileRef = 641A8B9F099ED1521F14D81E /* EmojiCatalog.swift */; };
@@ -52,6 +55,7 @@
 		5F107A05A7EB05204465E89D /* VolumeHUDController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6256CC7C3F15BA05A216E820 /* VolumeHUDController.swift */; };
 		61176B0EB91E2F82EEE3F4B9 /* SystemActionsSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 29B90AEA968DD7B91A553E07 /* SystemActionsSettingsView.swift */; };
 		649961AA51BA4D87626C27D5 /* CalcFormatter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09093BF10EA97BDCA45A241F /* CalcFormatter.swift */; };
+		6590849AB537D8641C71AC71 /* UninstallPlan.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4954C8003947BB16ED48E326 /* UninstallPlan.swift */; };
 		68FCC30764DD44ED72EFB6BA /* TinycastApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B629EC3B716FEE881BB0075 /* TinycastApp.swift */; };
 		693E88D22D00CF6FD9CD7413 /* VisibilityStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 825AC18CE5DAFBEDA0CF3209 /* VisibilityStore.swift */; };
 		6962B8A2850A45401275F677 /* NotificationToken.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7FC5F0D4ECE8F3888DEB7642 /* NotificationToken.swift */; };
@@ -65,6 +69,7 @@
 		72ACD144841BF1117CD4E705 /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7BC2DEA0A052116A92F9A539 /* Theme.swift */; };
 		7A2C6032E0DE0346DD10A747 /* DialogRequest.swift in Sources */ = {isa = PBXBuildFile; fileRef = D8745544BFC53B27B0168CA6 /* DialogRequest.swift */; };
 		80F1A591DB0F5385F5C9A06C /* PopoverMenu.swift in Sources */ = {isa = PBXBuildFile; fileRef = 98B7211D27EDF764EC477A0F /* PopoverMenu.swift */; };
+		84096D3843E674F0B12C03D4 /* UninstallSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = 631D879F03A3A86553E7FFE5 /* UninstallSession.swift */; };
 		854C19458C8A0AE0BD757600 /* EmojiIndex.swift in Sources */ = {isa = PBXBuildFile; fileRef = 74F450E10D107C1E30EA2BC6 /* EmojiIndex.swift */; };
 		85A9ACCB19D9502A79F1A508 /* Snippet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 05970D61D4E595D0658D0D94 /* Snippet.swift */; };
 		85BCD328F402C7E09461D87F /* ThinScrollbar.swift in Sources */ = {isa = PBXBuildFile; fileRef = A31288EC60144BD31C495FE2 /* ThinScrollbar.swift */; };
@@ -75,6 +80,7 @@
 		8EF55652F19A1E0C5FF644B4 /* RaycastImport.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4049668745FD438D5792A2F /* RaycastImport.swift */; };
 		8F7431A1340D0A5783599087 /* MiscellaneousSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 297F819E291F33E43E490359 /* MiscellaneousSettingsView.swift */; };
 		903E82F78D3FCEF3A1AF3752 /* HotKeyManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = D37B6D29E8E23C6136EBFB38 /* HotKeyManager.swift */; };
+		94620E1BB1049C5D8B45392E /* UninstallSearchRoot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9C56920811CA9A5F0FA04441 /* UninstallSearchRoot.swift */; };
 		97A195E9D6480418D4944560 /* AppCore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3A64EF5A07D459753998F78C /* AppCore.swift */; };
 		9969E6858C4FDC5CCCDEB5D8 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = C45190564C9D9F1722E83943 /* Assets.xcassets */; };
 		9A254BEE278D7B78B76553A9 /* Scrypt.swift in Sources */ = {isa = PBXBuildFile; fileRef = EDE0C0DC05F958A4B4DCAA8C /* Scrypt.swift */; };
@@ -89,6 +95,7 @@
 		AB1E6D5ABF74EB00B307A7D1 /* CommandsSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 74868D1F22B3CEC5A2ECD668 /* CommandsSettingsView.swift */; };
 		AB9B998DB62EE2D18A058C78 /* SnippetsSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CD3579618BC7FA235EBF9E93 /* SnippetsSettingsView.swift */; };
 		ABBB2A811EB5C69D55A93B1C /* RaycastImportSelection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1BCCED95A78DC5BED117E960 /* RaycastImportSelection.swift */; };
+		AC6AF9FA9C6874F257D3F613 /* UninstallTarget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6A6941F59D6E8014A22F1FF7 /* UninstallTarget.swift */; };
 		AD2141EBF98A246BDA3BAB8E /* Gunzip.swift in Sources */ = {isa = PBXBuildFile; fileRef = 32A53295959552ED28D34960 /* Gunzip.swift */; };
 		AE0D0C53004C65D65BE89B6F /* BackupActions.swift in Sources */ = {isa = PBXBuildFile; fileRef = C9D8C2C59C2B578CFE61E004 /* BackupActions.swift */; };
 		B1B3F5715BE7A092F0CEFA09 /* ClipboardManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A76E4099082D59FA686C3485 /* ClipboardManager.swift */; };
@@ -100,6 +107,7 @@
 		B810158281A87CBA2AB694D0 /* EmojiData.generated.swift in Sources */ = {isa = PBXBuildFile; fileRef = 79DB24EE452A7CA120B56FA6 /* EmojiData.generated.swift */; };
 		B9CED4B06F36998A67097FC5 /* SnippetMarkdownSerializer.swift in Sources */ = {isa = PBXBuildFile; fileRef = EDE084FDBE22B01204E7BEDA /* SnippetMarkdownSerializer.swift */; };
 		BA76E53A12248B3A9C42B4F9 /* Bundle+AppName.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3FA43AD7C6FB00F555C52C2 /* Bundle+AppName.swift */; };
+		BAA957558EB8FB2D26B13D4B /* UninstallScanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = FD131E932E1B53D39CF30C13 /* UninstallScanner.swift */; };
 		C0642512B709EF0517ABF4CB /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9C37CCD024267EB21876C7E9 /* AppDelegate.swift */; };
 		C35864533DFB42DE63080ACB /* WindowManagementSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6E7DD73DC688DBFAFC4B04AC /* WindowManagementSettingsView.swift */; };
 		C359131F793C6C6BD756B901 /* SystemSettingsSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1DE4D8B82F1D4AFB025FB24 /* SystemSettingsSettingsView.swift */; };
@@ -138,6 +146,7 @@
 		F7D26DE09844A5A38787CDD2 /* VolumeLevel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0818D48887156CA562EF20B8 /* VolumeLevel.swift */; };
 		F9C1192D849B94E783D05568 /* ShortcutCaptureSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC35D5134516ECB65AABDC51 /* ShortcutCaptureSession.swift */; };
 		FBA8548636E1F1EABCC3A8CA /* LauncherItemsCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = C75F221037C057C8085CE51C /* LauncherItemsCard.swift */; };
+		FC3E8F307B25E3BC5E11AFCF /* UninstallProtection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 24F31E587DD4EAA1D7BD39AF /* UninstallProtection.swift */; };
 		FC934E5AE6A933F5BC7AC4DD /* CalcQuantity.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8D93A4CEA9FE857034D63EF7 /* CalcQuantity.swift */; };
 		FE6A9C75F87C3495F413E66E /* CalculatorHistoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 68BD5E61831CB92150C62E1F /* CalculatorHistoryView.swift */; };
 		FEA05585E8AA58506D378CAF /* AppSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = B275099E59BD2531A838F7D8 /* AppSettings.swift */; };
@@ -156,6 +165,7 @@
 		1BCCED95A78DC5BED117E960 /* RaycastImportSelection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RaycastImportSelection.swift; sourceTree = "<group>"; };
 		1DB0D6E17E2B2D6F2CB47E0D /* HotKeyCenter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HotKeyCenter.swift; sourceTree = "<group>"; };
 		23591B301A183579098AA019 /* OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingView.swift; sourceTree = "<group>"; };
+		24F31E587DD4EAA1D7BD39AF /* UninstallProtection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UninstallProtection.swift; sourceTree = "<group>"; };
 		25B8A7D8DBB0CE2ACEDB3979 /* CalcUnits.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalcUnits.swift; sourceTree = "<group>"; };
 		286B7598B81017C746558C7C /* ShellCommandRunner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShellCommandRunner.swift; sourceTree = "<group>"; };
 		297F819E291F33E43E490359 /* MiscellaneousSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MiscellaneousSettingsView.swift; sourceTree = "<group>"; };
@@ -177,6 +187,7 @@
 		45D4BA6E1BD8EB1F96A8927F /* Tinycast.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Tinycast.entitlements; sourceTree = "<group>"; };
 		46C3E740AA883770481A6A8C /* SnippetsStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SnippetsStore.swift; sourceTree = "<group>"; };
 		4802942FF89B327A76432A9B /* AboutView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AboutView.swift; sourceTree = "<group>"; };
+		4954C8003947BB16ED48E326 /* UninstallPlan.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UninstallPlan.swift; sourceTree = "<group>"; };
 		4B432D84D8F9C10521342199 /* RunningApps.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RunningApps.swift; sourceTree = "<group>"; };
 		4B940224413903867EF5A60E /* WindowActionMemory.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WindowActionMemory.swift; sourceTree = "<group>"; };
 		4C8F4B31728E49ECE0AA2636 /* ApplicationsSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ApplicationsSettingsView.swift; sourceTree = "<group>"; };
@@ -190,6 +201,7 @@
 		55D4192BC6F5A78012027488 /* HUDPresenter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HUDPresenter.swift; sourceTree = "<group>"; };
 		586627A59FDF9011136939A5 /* Tooltip.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Tooltip.swift; sourceTree = "<group>"; };
 		596ADD747B4546B1E3340094 /* ShortcutRecorder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShortcutRecorder.swift; sourceTree = "<group>"; };
+		59D08C3AEAFB224866F23C3E /* UninstallView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UninstallView.swift; sourceTree = "<group>"; };
 		5A002AC0DE601E1F65D20C4A /* SnippetTemplateEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SnippetTemplateEngine.swift; sourceTree = "<group>"; };
 		5A2EF9C70F8BC9571089D5EB /* AppLauncher.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppLauncher.swift; sourceTree = "<group>"; };
 		5D3E4F8A2BCECFF0E11441BE /* RaycastSnippetImport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RaycastSnippetImport.swift; sourceTree = "<group>"; };
@@ -198,12 +210,15 @@
 		5F3AA7727C7F5F511E7F1EF1 /* ShortcutRecorderPopover.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShortcutRecorderPopover.swift; sourceTree = "<group>"; };
 		6185011A02366B30B48B5B6C /* Paster.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Paster.swift; sourceTree = "<group>"; };
 		6256CC7C3F15BA05A216E820 /* VolumeHUDController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VolumeHUDController.swift; sourceTree = "<group>"; };
+		631D879F03A3A86553E7FFE5 /* UninstallSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UninstallSession.swift; sourceTree = "<group>"; };
 		641A8B9F099ED1521F14D81E /* EmojiCatalog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmojiCatalog.swift; sourceTree = "<group>"; };
 		6621A88681E993D49EEF07A3 /* tinycast.icon */ = {isa = PBXFileReference; lastKnownFileType = wrapper.icon; path = tinycast.icon; sourceTree = "<group>"; };
 		68952539C0BD045BA175CBB6 /* SettingsRootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsRootView.swift; sourceTree = "<group>"; };
 		68BD5E61831CB92150C62E1F /* CalculatorHistoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalculatorHistoryView.swift; sourceTree = "<group>"; };
+		6A6941F59D6E8014A22F1FF7 /* UninstallTarget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UninstallTarget.swift; sourceTree = "<group>"; };
 		6BB7C545EFD9589A77AD7BE2 /* LauncherView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LauncherView.swift; sourceTree = "<group>"; };
 		6E7DD73DC688DBFAFC4B04AC /* WindowManagementSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WindowManagementSettingsView.swift; sourceTree = "<group>"; };
+		6EB4BA1A385F78B9C5E7EBCF /* UninstallRules.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UninstallRules.swift; sourceTree = "<group>"; };
 		70D14EC2D7A6AE5F7CBB5028 /* HUDPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HUDPanel.swift; sourceTree = "<group>"; };
 		72037DA506AE1A989F858C3C /* DialogView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DialogView.swift; sourceTree = "<group>"; };
 		74868D1F22B3CEC5A2ECD668 /* CommandsSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CommandsSettingsView.swift; sourceTree = "<group>"; };
@@ -232,6 +247,7 @@
 		9A228BEF62103605DE7A8F38 /* FrequentEmojiStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FrequentEmojiStore.swift; sourceTree = "<group>"; };
 		9AA0E1FD530C764A021E6053 /* SearchScopes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchScopes.swift; sourceTree = "<group>"; };
 		9C37CCD024267EB21876C7E9 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
+		9C56920811CA9A5F0FA04441 /* UninstallSearchRoot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UninstallSearchRoot.swift; sourceTree = "<group>"; };
 		9ECE1FA4B89326C37DF12A8C /* WindowCommand.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WindowCommand.swift; sourceTree = "<group>"; };
 		9FB750D045194AE34D39D792 /* FavoritesStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FavoritesStore.swift; sourceTree = "<group>"; };
 		A31288EC60144BD31C495FE2 /* ThinScrollbar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThinScrollbar.swift; sourceTree = "<group>"; };
@@ -265,6 +281,7 @@
 		CC6173CA658DA56245031FE6 /* VolumeHUDView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VolumeHUDView.swift; sourceTree = "<group>"; };
 		CD3579618BC7FA235EBF9E93 /* SnippetsSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SnippetsSettingsView.swift; sourceTree = "<group>"; };
 		CD3764D91B2F3170690A473A /* SnippetKeywordPolicy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SnippetKeywordPolicy.swift; sourceTree = "<group>"; };
+		CEE113DF7C07BC74AD73BC4C /* UninstallRunner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UninstallRunner.swift; sourceTree = "<group>"; };
 		D2A1D759B8FC5A4573E401B8 /* CalloutPlacement.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalloutPlacement.swift; sourceTree = "<group>"; };
 		D37B6D29E8E23C6136EBFB38 /* HotKeyManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HotKeyManager.swift; sourceTree = "<group>"; };
 		D3FA43AD7C6FB00F555C52C2 /* Bundle+AppName.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Bundle+AppName.swift"; sourceTree = "<group>"; };
@@ -281,6 +298,7 @@
 		EDE0C0DC05F958A4B4DCAA8C /* Scrypt.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Scrypt.swift; sourceTree = "<group>"; };
 		F31E3ACB6D2C26ECA485C3DB /* Permissions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Permissions.swift; sourceTree = "<group>"; };
 		F793A92DD4DC73CF1D87F3FD /* CalculatorHistoryStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalculatorHistoryStore.swift; sourceTree = "<group>"; };
+		FD131E932E1B53D39CF30C13 /* UninstallScanner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UninstallScanner.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXGroup section */
@@ -302,6 +320,7 @@
 				CB742F7643800C43475DE213 /* HotKey */,
 				628C51FD0EF7D98347A4F185 /* HUD */,
 				32B8FED93732983EAE729EB1 /* Snippets */,
+				FB939500E513D49DC165EA75 /* Uninstall */,
 				36FA7A5040272D524D70EC0E /* WindowManagement */,
 				3A64EF5A07D459753998F78C /* AppCore.swift */,
 				BA7CE23482F7DF563A268806 /* AppIndex.swift */,
@@ -437,6 +456,14 @@
 			path = About;
 			sourceTree = "<group>";
 		};
+		5EC7DD3F09EBCC7AC71C230B /* Uninstall */ = {
+			isa = PBXGroup;
+			children = (
+				59D08C3AEAFB224866F23C3E /* UninstallView.swift */,
+			);
+			path = Uninstall;
+			sourceTree = "<group>";
+		};
 		628C51FD0EF7D98347A4F185 /* HUD */ = {
 			isa = PBXGroup;
 			children = (
@@ -478,6 +505,7 @@
 				0ED457107377ECF8147C6B9D /* Onboarding */,
 				E3202F504002B7792FC50B2F /* Settings */,
 				7CD438390F8FA4B3C2AE5F28 /* Snippets */,
+				5EC7DD3F09EBCC7AC71C230B /* Uninstall */,
 				98B7211D27EDF764EC477A0F /* PopoverMenu.swift */,
 				0F50886DC766B9923C3875A5 /* RootPaletteView.swift */,
 			);
@@ -601,6 +629,21 @@
 				5E08668A3C8418E2F0970300 /* CurrencyData.generated.swift */,
 			);
 			path = Calculator;
+			sourceTree = "<group>";
+		};
+		FB939500E513D49DC165EA75 /* Uninstall */ = {
+			isa = PBXGroup;
+			children = (
+				4954C8003947BB16ED48E326 /* UninstallPlan.swift */,
+				24F31E587DD4EAA1D7BD39AF /* UninstallProtection.swift */,
+				6EB4BA1A385F78B9C5E7EBCF /* UninstallRules.swift */,
+				CEE113DF7C07BC74AD73BC4C /* UninstallRunner.swift */,
+				FD131E932E1B53D39CF30C13 /* UninstallScanner.swift */,
+				9C56920811CA9A5F0FA04441 /* UninstallSearchRoot.swift */,
+				631D879F03A3A86553E7FFE5 /* UninstallSession.swift */,
+				6A6941F59D6E8014A22F1FF7 /* UninstallTarget.swift */,
+			);
+			path = Uninstall;
 			sourceTree = "<group>";
 		};
 		FB9897CCA50570B3E7630145 = {
@@ -803,6 +846,15 @@
 				85BCD328F402C7E09461D87F /* ThinScrollbar.swift in Sources */,
 				68FCC30764DD44ED72EFB6BA /* TinycastApp.swift in Sources */,
 				CAD10A49DBDEFD2A9C03A7BE /* Tooltip.swift in Sources */,
+				6590849AB537D8641C71AC71 /* UninstallPlan.swift in Sources */,
+				FC3E8F307B25E3BC5E11AFCF /* UninstallProtection.swift in Sources */,
+				125A99FB5A3603488A261C6A /* UninstallRules.swift in Sources */,
+				2D620B55ED68ECDF75E7155E /* UninstallRunner.swift in Sources */,
+				BAA957558EB8FB2D26B13D4B /* UninstallScanner.swift in Sources */,
+				94620E1BB1049C5D8B45392E /* UninstallSearchRoot.swift in Sources */,
+				84096D3843E674F0B12C03D4 /* UninstallSession.swift in Sources */,
+				AC6AF9FA9C6874F257D3F613 /* UninstallTarget.swift in Sources */,
+				0962E9575CBF40B6F908031C /* UninstallView.swift in Sources */,
 				693E88D22D00CF6FD9CD7413 /* VisibilityStore.swift in Sources */,
 				A2EA931B8B8078A1D1162B53 /* VisualEffectView.swift in Sources */,
 				5F107A05A7EB05204465E89D /* VolumeHUDController.swift in Sources */,

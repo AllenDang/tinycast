@@ -111,12 +111,19 @@ swiftc -swift-version 6 Tinycast/Core/WindowManagement/WindowCommand.swift \
     Tinycast/Core/WindowManagement/WindowLayout.swift \
     Tinycast/Core/WindowManagement/WindowActionMemory.swift Tools/window-command-test.swift \
     -o /tmp/window-command-test && /tmp/window-command-test        # window geometry + action memory
+swiftc -swift-version 6 Tinycast/Core/Uninstall/UninstallTarget.swift \
+    Tinycast/Core/Uninstall/UninstallSearchRoot.swift Tinycast/Core/Uninstall/UninstallRules.swift \
+    Tinycast/Core/Uninstall/UninstallProtection.swift Tinycast/Core/Uninstall/UninstallPlan.swift \
+    Tools/uninstall-test.swift -o /tmp/uninstall-test && /tmp/uninstall-test  # uninstall attribution + locking
 ```
 
 `Tools/fuzz-test.swift` holds a **copy** of `FuzzyMatch` from `Tinycast/Core/AppIndex.swift` —
 change the scoring in one and mirror it in the other. The calc harness compiles the real engine
 sources, which is why `Tinycast/Core/Calculator/` must stay Foundation-only. The system-action harness
-similarly keeps `SystemAction.swift` independent from AppKit and all command side effects.
+similarly keeps `SystemAction.swift` independent from AppKit and all command side effects. The
+uninstall harness is the same idea taken furthest: it touches no filesystem at all, because
+`UninstallScanner` hands the rules directory *names* and the protection classifier takes its
+environment facts as parameters.
 
 The clipboard harness likewise compiles the real `ClipboardStore.swift`, so that file must keep to
 Foundation + SQLite3 and depend on no other app source. Each case drives a store rooted in a

@@ -70,6 +70,8 @@ enum Theme {
         static let compactKeyCap: CGFloat = 15
         static let heroKeyCap: CGFloat = 22
         static let menuButton: CGFloat = 36
+        /// The uninstall list's leading checkbox / lock glyph.
+        static let checkbox: CGFloat = 16
         static let clipboardListWidth: CGFloat = 290
         static let emojiCell: CGFloat = 56
         static let menuWidth: CGFloat = 276

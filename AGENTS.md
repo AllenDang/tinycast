@@ -42,8 +42,8 @@ Full detail: [`docs/architecture.md`](docs/architecture.md).
 - **Subsystems:** [palette](docs/palette.md) · [launcher & fuzzy match](docs/launcher.md) ·
   [calculator](docs/calculator.md) · [clipboard](docs/clipboard.md) · [emoji](docs/emoji.md) ·
   [snippets](docs/snippets.md) · [window management](docs/window-management.md) ·
-  [hotkeys](docs/hotkeys.md) · [Raycast import](docs/raycast-import.md) ·
-  [UI & design system](docs/ui.md).
+  [hotkeys](docs/hotkeys.md) · [uninstall](docs/uninstall.md) ·
+  [Raycast import](docs/raycast-import.md) · [UI & design system](docs/ui.md).
 
 ## Critical Invariants
 
@@ -100,6 +100,23 @@ Never break these without an explicit task to do so.
   `Tools/window-command-test.swift` asserts it. Nothing in this feature ever touches
   `backingScaleFactor` — all three of `NSScreen.frame`, `visibleFrame` and AX coordinates are in points,
   so mixed-DPI correctness is automatic. See [window-management.md](docs/window-management.md).
+- **Uninstall moves to the Trash and never deletes.** `FileManager.trashItem` is the only removal
+  call in the feature; `removeItem` must never appear there. That is what makes display-name
+  attribution tolerable — a false positive costs a drag back, not the user's data — so a
+  "delete permanently" option would have to drop name matching in the same commit. The deciding half
+  (`UninstallTarget.swift`, `UninstallSearchRoot.swift`, `UninstallRules.swift`,
+  `UninstallProtection.swift`, `UninstallPlan.swift`) stays Foundation-only and pure for
+  `Tools/uninstall-test.swift`, with every environment fact injected: the scanner hands the rules
+  directory **names**, never URLs, and hands the classifier a `PathFacts`. Every `FileManager`,
+  `lstat` and Full Disk Access read lives in `UninstallScanner`, which **detects** FDA (a silent,
+  promptless probe) and never requests it — this feature asks for no permission and never escalates
+  privilege. `tccRelativePrefixes` is **measured, not assumed**: probe a location by creating and
+  trashing a throwaway directory there before adding it, because *listing* is not the test —
+  `~/Library/Containers` enumerates fine and still refuses the move, while
+  `~/Library/Application Scripts` allows it. A locked candidate can never enter the checked set; that invariant lives in
+  `UninstallSelection`'s one intersection, not in the view. Tinycast also refuses to plan its own
+  uninstall, compared against the **running** identity so the Dev channel refuses itself too.
+  See [uninstall.md](docs/uninstall.md).
 - **`Tools/fuzz-test.swift` holds a COPY of `FuzzyMatch`** from `Core/AppIndex.swift`. Change the
   scoring in one, mirror it in the other, or the test is meaningless.
 - **`EmojiData.generated.swift` is emitted by `node Tools/gen-emoji.js` and
@@ -194,9 +211,11 @@ Never break these without an explicit task to do so.
 - `Tinycast/Core/` — managers, stores, windows, AppKit glue (no view bodies beyond hosting).
   `Core/Calculator/` and `Core/Emoji/` are Foundation-only engines; `Core/Snippets/` is a
   standalone-harness input in full; `Core/WindowManagement/` is a pure geometry layer plus its one AX
-  file; `Core/Theme.swift` is the design-token source; `Core/HotKey/` is the in-house hotkey stack.
+  file; `Core/Uninstall/` splits the same way — five pure files, one scanner, one Trash runner;
+  `Core/Theme.swift` is the design-token source; `Core/HotKey/` is the in-house hotkey stack.
 - `Tinycast/Features/` — SwiftUI views: `RootPaletteView`, `Launcher/`, `Clipboard/`, `Calculator/`,
-  `Emoji/`, `Settings/`, `About/`, `Onboarding/`, plus shared `PopoverMenu`. Each `SettingsTab` maps to
+  `Emoji/`, `Uninstall/`, `Settings/`, `About/`, `Onboarding/`, plus shared `PopoverMenu`. Each
+  `SettingsTab` maps to
   one `…SettingsView` built on the `SettingsPane` / `SettingsCard` scaffold in `SettingsComponents.swift`;
   the four launcher-category panes (Applications, System Settings, System Actions, Commands) are thin
   wrappers over the shared `LauncherItemsCard`.
@@ -212,7 +231,8 @@ Never break these without an explicit task to do so.
   [`docs/clipboard.md`](docs/clipboard.md) · [`docs/emoji.md`](docs/emoji.md) ·
   [`docs/snippets.md`](docs/snippets.md) ·
   [`docs/window-management.md`](docs/window-management.md) ·
-  [`docs/hotkeys.md`](docs/hotkeys.md) — subsystem internals.
+  [`docs/hotkeys.md`](docs/hotkeys.md) · [`docs/uninstall.md`](docs/uninstall.md) — subsystem
+  internals.
 - [`docs/ui.md`](docs/ui.md) — the full visual design system, tokens, scrollbars, section headers.
 - [`docs/development.md`](docs/development.md) — build, test, package, release.
 - [`docs/signing.md`](docs/signing.md) — signing model and Gatekeeper.

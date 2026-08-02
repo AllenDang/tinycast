@@ -71,6 +71,12 @@ jobs:
             Tinycast/Core/WindowManagement/WindowLayout.swift \
             Tinycast/Core/WindowManagement/WindowActionMemory.swift Tools/window-command-test.swift \
             -o /tmp/window-command-test && /tmp/window-command-test
+          swiftc -swift-version 6 Tinycast/Core/Uninstall/UninstallTarget.swift \
+            Tinycast/Core/Uninstall/UninstallSearchRoot.swift \
+            Tinycast/Core/Uninstall/UninstallRules.swift \
+            Tinycast/Core/Uninstall/UninstallProtection.swift \
+            Tinycast/Core/Uninstall/UninstallPlan.swift Tools/uninstall-test.swift \
+            -o /tmp/uninstall-test && /tmp/uninstall-test
 
   lint:
     runs-on: macos-26

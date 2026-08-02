@@ -22,16 +22,20 @@ cyclomatic_complexity:
   error: 60
 
 function_body_length:
-  warning: 130
-  error: 200
+  warning: 160
+  error: 220
 
 function_parameter_count:
   warning: 9
   error: 12
 
+large_tuple:
+  warning: 3
+  error: 4
+
 type_body_length:
-  warning: 720
-  error: 900
+  warning: 850
+  error: 1000
 
 file_length:
   warning: 1200

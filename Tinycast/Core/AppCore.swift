@@ -7,6 +7,7 @@ enum PaletteMode: String, CaseIterable, Identifiable {
     case clipboard
     case calculatorHistory
     case emoji
+    case uninstall
 
     var id: String { rawValue }
     var title: String {
@@ -15,6 +16,7 @@ enum PaletteMode: String, CaseIterable, Identifiable {
         case .clipboard: return "Clipboard"
         case .calculatorHistory: return "Calculator History"
         case .emoji: return "Emoji & Symbols"
+        case .uninstall: return "Uninstall Application"
         }
     }
     var systemImage: String {
@@ -23,6 +25,7 @@ enum PaletteMode: String, CaseIterable, Identifiable {
         case .clipboard: return "doc.on.doc"
         case .calculatorHistory: return "plus.forwardslash.minus"
         case .emoji: return "face.smiling"
+        case .uninstall: return "trash"
         }
     }
     var placeholder: String {
@@ -31,6 +34,7 @@ enum PaletteMode: String, CaseIterable, Identifiable {
         case .clipboard: return "Type to filter entries…"
         case .calculatorHistory: return "Do math, convert units, or search your past calculations…"
         case .emoji: return "Search emoji and symbols…"
+        case .uninstall: return "Filter files and folders by name…"
         }
     }
 }
@@ -111,6 +115,7 @@ final class AppCore: ObservableObject {
     let frequentEmoji = FrequentEmojiStore()
     let runningApps = RunningAppsMonitor()
     let palette = PaletteViewModel()
+    let uninstall = UninstallSession()
 
     private lazy var windowController = PaletteWindowController(core: self)
     private lazy var messageHUD = MessageHUDController(settings: settings)
@@ -648,6 +653,100 @@ final class AppCore: ObservableObject {
         let quittingPreviousApp = windowController.previousApp?.bundleIdentifier == bundleID
         guard AppLauncher.quit(bundleID: bundleID) else { return }
         hidePalette(restoreFocus: !quittingPreviousApp)
+    }
+
+    // MARK: - Uninstall
+
+    /// The palette is already up when this runs, so it swaps the sub-screen in place rather than re-showing the window.
+    func beginUninstall(_ app: AppEntry) {
+        guard app.kind == .application else { return }
+        // What stops a name or a shared bundle-ID namespace being misattributed; see `UninstallIdentity`.
+        let others = appIndex.apps.filter { $0.kind == .application && $0.id != app.id }
+        uninstall.begin(
+            app: app, otherAppNames: others.map(\.name),
+            otherBundleIDs: others.compactMap(\.bundleID), isRunning: runningApps.isRunning(app))
+        palette.prepare(mode: .uninstall)
+    }
+
+    /// The one funnel for the screen's ↵ and its Actions row, so neither can skip the confirmation.
+    func performUninstall() {
+        guard let app = uninstall.app, let plan = uninstall.plan, uninstall.canConfirm else { return }
+        let items = uninstall.selectedCandidates
+        guard !items.isEmpty else { return }
+        Task {
+            let running = plan.isTargetRunning || runningApps.isRunning(app)
+            let size = MeasuredSize(bytes: items.reduce(0) { $0 + $1.size.bytes }).formatted
+            let count = items.count == 1 ? "1 item" : "\(items.count) items"
+            guard
+                await confirm(
+                    title: "Uninstall “\(app.name)”?",
+                    message: "\(count) (\(size)) will be moved to the Trash, where you can put them "
+                        + "back." + (running ? " \(app.name) will quit first." : ""),
+                    symbol: "trash", confirmTitle: "Move to Trash")
+            else { return }
+
+            if running, let bundleID = app.bundleID { _ = AppLauncher.quit(bundleID: bundleID) }
+            uninstall.setTrashing(true)
+            let report = await UninstallRunner.moveToTrash(items)
+            uninstall.setTrashing(false)
+
+            if report.removedBundle {
+                removeUninstalledReferences(app)
+                await appIndex.refresh()
+            }
+            palette.prepare(mode: .launcher)
+            await presentUninstallReport(report)
+        }
+    }
+
+    /// Stays on the screen: losing a whole scan to copy one path is a poor trade.
+    func copyUninstallPath(_ candidate: UninstallCandidate) {
+        Paster.copyPlainText(candidate.path)
+        messageHUD.show(message: "Copied path")
+    }
+
+    func showUninstallItemInFinder(_ candidate: UninstallCandidate) {
+        hidePalette(restoreFocus: false)
+        AppLauncher.showInFinder(candidate.url)
+    }
+
+    func showUninstallItemInfo(_ candidate: UninstallCandidate) {
+        hidePalette(restoreFocus: false)
+        Task {
+            guard !AppLauncher.showInfoInFinder(candidate.url) else { return }
+            await showNotice(
+                title: "Couldn’t Open Get Info",
+                message: "Allow Tinycast to control Finder in System Settings › Privacy & Security "
+                    + "› Automation, then try again.",
+                symbol: "info.circle", tone: .danger)
+        }
+    }
+
+    private func removeUninstalledReferences(_ app: AppEntry) {
+        if let action = app.hotKeyAction {
+            if hotKeys.recordingAction == action { hotKeys.recordingAction = nil }
+            hotKeys.setBinding(nil, for: action)
+        }
+        favorites.remove(keys: [app.preferenceKey])
+        visibility.removeItemKeys([app.preferenceKey])
+        launcherRanking.reset(itemKey: app.preferenceKey)
+    }
+
+    private func presentUninstallReport(_ report: UninstallReport) async {
+        guard report.hasFailures else {
+            guard report.trashedCount > 0 else { return }
+            let count = report.trashedCount == 1 ? "1 item" : "\(report.trashedCount) items"
+            let freed = MeasuredSize(bytes: report.freedBytes).formatted
+            messageHUD.show(message: "Moved \(count) to the Trash · \(freed)")
+            return
+        }
+        let listed = report.failed.prefix(5).map { "\($0.name) — \($0.reason)" }
+        let remaining = report.failed.count - listed.count
+        await showNotice(
+            title: report.trashedCount > 0 ? "Some Items Weren’t Moved" : "Nothing Was Moved",
+            message: listed.joined(separator: "\n")
+                + (remaining > 0 ? "\nand \(remaining) more." : ""),
+            symbol: "trash", tone: .danger)
     }
 
     /// Quit All: the one action whose blast radius reaches outside Tinycast, so it confirms first. The target list is resolved once and both counted and terminated, so the set the user approves is the set that quits.

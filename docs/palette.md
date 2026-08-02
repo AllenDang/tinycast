@@ -12,9 +12,11 @@ UUID) so the SwiftUI search field re-focuses. `RootPaletteView` switches its con
 - `.launcher` → `LauncherList`
 - `.clipboard` → `ClipboardList` + preview
 - `.calculatorHistory` → `CalculatorHistoryList`
+- `.uninstall` → `UninstallList` (see [uninstall.md](uninstall.md))
 
 Clipboard and Calculator History are sub-screens reached from the launcher (Tab, a command, or a
-hotkey) and back out to it.
+hotkey) and back out to it. Uninstall is one too, but reached only from a launcher app's Actions menu
+and scoped to that app; like Calculator History it stays out of the Tab cycle.
 
 The flat `selection` index is the single source of truth for highlight / activation and **must always
 match the visible row order**, including the inline calculator card at index 0 when present (see

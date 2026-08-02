@@ -13,6 +13,7 @@ struct RootPaletteView: View {
     @EnvironmentObject private var currencyRates: CurrencyRateStore
     @EnvironmentObject private var emojiIndex: EmojiIndex
     @EnvironmentObject private var frequentEmoji: FrequentEmojiStore
+    @EnvironmentObject private var uninstall: UninstallSession
     /// Observed so a skin tone changed in Settings re-renders the grid glyphs immediately.
     @ObservedObject private var settings = AppCore.shared.settings
     @FocusState private var searchFocused: Bool
@@ -47,6 +48,15 @@ struct RootPaletteView: View {
     }
     private var clipResults: [ClipboardItem] { store.search(vm.query) }
     private var histResults: [CalcHistoryEntry] { calcHistory.search(vm.query) }
+    /// The search field filters files by name or location on this screen.
+    private var uninstallResults: [UninstallCandidate] {
+        let query = vm.query.trimmingCharacters(in: .whitespaces)
+        guard !query.isEmpty else { return uninstall.candidates }
+        return uninstall.candidates.filter {
+            $0.name.localizedCaseInsensitiveContains(query)
+                || $0.locationLabel.localizedCaseInsensitiveContains(query)
+        }
+    }
     private var emojiSections: [EmojiGridSection] {
         EmojiGrid.sections(query: vm.query, index: emojiIndex, frequent: frequentEmoji)
     }
@@ -66,6 +76,7 @@ struct RootPaletteView: View {
         case .clipboard: return clipResults.count
         case .calculatorHistory: return histResults.count + calcCount
         case .emoji: return emojiResults.count
+        case .uninstall: return uninstallResults.count
         }
     }
     /// Selection clamped into the current results — the single source of truth for highlight, preview and activation so the list and preview can never disagree.
@@ -99,6 +110,9 @@ struct RootPaletteView: View {
     }
     private var selectedEmojiEntry: EmojiEntry? {
         emojiResults.indices.contains(selection) ? emojiResults[selection] : nil
+    }
+    private var selectedUninstallCandidate: UninstallCandidate? {
+        uninstallResults.indices.contains(selection) ? uninstallResults[selection] : nil
     }
 
     /// The bottom-right Actions menu content for the current mode's selection, or nil when the selection has no actions.
@@ -142,6 +156,12 @@ struct RootPaletteView: View {
                     entry: emoji, core: core, target: vm.pasteTarget)
             }
             return nil
+        case .uninstall:
+            if let candidate = selectedUninstallCandidate {
+                return UninstallActionsMenu.content(
+                    candidate: candidate, session: uninstall, core: core)
+            }
+            return nil
         }
     }
 
@@ -171,13 +191,15 @@ struct RootPaletteView: View {
         let hist = vm.mode == .calculatorHistory ? histResults : []
         let emojiSections = vm.mode == .emoji ? emojiSections : []
         let emojis = emojiSections.flatMap(\.entries)
+        let uninstallRows = vm.mode == .uninstall ? uninstallResults : []
         // Newest stored clip + the reorder token: the pair changes only when the store mutates, never when a query filters the list.
         let clipFollow = ClipFollowKey(id: store.items.first?.id, token: vm.followToken)
         // Every count/selection below derives from this one calc/offset pair — the flat selection index must always match the visible row order, calc card included.
         let calc = calcResult
         let offset = calc == nil ? 0 : 1
         // Only the active mode is non-empty.
-        let count = apps.count + offset + clips.count + hist.count + emojis.count
+        let count =
+            apps.count + offset + clips.count + hist.count + emojis.count + uninstallRows.count
         let sel = count == 0 ? 0 : min(max(vm.selection, 0), count - 1)
         let calcSelected = calc != nil && sel == 0
         // An error card is selectable but has no action: it must not drive the Copy Answer pill, ⌘K menu, or Enter.
@@ -196,8 +218,9 @@ struct RootPaletteView: View {
                 Color.clear
             } else {
                 content(
-                    apps: apps, clips: clips, hist: hist, emojiSections: emojiSections, calc: calc,
-                    selection: sel, favoriteCount: favoriteCount, showSections: showSections
+                    apps: apps, clips: clips, hist: hist, emojiSections: emojiSections,
+                    uninstallRows: uninstallRows, calc: calc, selection: sel,
+                    favoriteCount: favoriteCount, showSections: showSections
                 )
             }
         }
@@ -255,6 +278,8 @@ struct RootPaletteView: View {
             vm.selection = 0
             showActions = false
             scroll = ScrollIntent(kind: .top)
+            // Every way out of the Uninstall screen: back chevron, bare backspace, a fresh summon.
+            if vm.mode != .uninstall { uninstall.cancel() }
         }
         // Pop-to-root: `prepare` clears query/selection, but if both were already at their defaults the handlers above never fire — this intent guarantees the scroll itself snaps back to the origin.
         .onChange(of: vm.resetToken) {
@@ -365,6 +390,10 @@ struct RootPaletteView: View {
                 let index = selection - calcCount
                 guard command, histResults.indices.contains(index) else { return .ignored }
                 core.copyHistoryExpression(histResults[index])
+            case .uninstall:
+                guard command, let candidate = selectedUninstallCandidate, !candidate.isLocked
+                else { return .ignored }
+                uninstall.toggle(candidate.id)
             case .launcher:
                 guard command, let app = selectedAppEntry, app.canRevealInFinder
                 else { return .ignored }
@@ -410,7 +439,7 @@ struct RootPaletteView: View {
                 deleteSelectedClip()
             case .calculatorHistory:
                 deleteSelectedHistoryEntry()
-            case .launcher, .emoji:
+            case .launcher, .emoji, .uninstall:
                 return .ignored
             }
             return .handled
@@ -491,7 +520,7 @@ struct RootPaletteView: View {
     @ViewBuilder
     private func content(
         apps: [AppEntry], clips: [ClipboardItem], hist: [CalcHistoryEntry],
-        emojiSections: [EmojiGridSection], calc: CalcResult?,
+        emojiSections: [EmojiGridSection], uninstallRows: [UninstallCandidate], calc: CalcResult?,
         selection: Int, favoriteCount: Int, showSections: Bool
     ) -> some View {
         switch vm.mode {
@@ -601,7 +630,51 @@ struct RootPaletteView: View {
                     }
                 )
             }
+        case .uninstall:
+            switch uninstall.state {
+            case .idle, .scanning:
+                EmptyResults(text: "Looking for leftover files…")
+            case .failed(let message):
+                EmptyResults(text: message)
+            case .ready:
+                if uninstallRows.isEmpty {
+                    EmptyResults(
+                        text: isQueryEmpty ? "Nothing left to remove" : "No matching files")
+                } else {
+                    UninstallList(
+                        results: uninstallRows,
+                        selectedID: uninstallRows.indices.contains(selection)
+                            ? uninstallRows[selection].id : nil,
+                        summary: uninstallSummary,
+                        scroll: scroll,
+                        onSelect: { candidate in
+                            if let index = uninstallRows.firstIndex(of: candidate) {
+                                vm.selection = index
+                            }
+                        },
+                        onToggle: { uninstall.toggle($0.id) },
+                        onActions: { candidate in
+                            if let index = uninstallRows.firstIndex(of: candidate) {
+                                vm.selection = index
+                            }
+                            openActions()
+                        }
+                    )
+                }
+            }
         }
+    }
+
+    /// Stands in for the section headers the other lists use.
+    private var uninstallSummary: String {
+        let total = uninstall.plan?.removableIDs.count ?? 0
+        let size = MeasuredSize(bytes: uninstall.selectedBytes).formatted
+        return "\(uninstall.selectedCount) of \(total) files selected · \(size)"
+    }
+
+    /// The Uninstall screen's primary action is destructive, so its pill isn't white.
+    private var pillTint: Color {
+        vm.mode == .uninstall ? Theme.Colors.destructive : .primary
     }
 
     private func bottomBar(pillLabel: String, showActionGroup: Bool) -> some View {
@@ -629,7 +702,7 @@ struct RootPaletteView: View {
                 HStack(spacing: Theme.Spacing.sm) {
                     Text(pillLabel)
                         .font(Theme.Typography.bar)
-                        .foregroundStyle(.primary)
+                        .foregroundStyle(pillTint)
                     KeyCapChip(text: "↵", style: .outline)
                 }
             }
@@ -656,6 +729,8 @@ struct RootPaletteView: View {
             return vm.pasteTarget?.pasteTitle ?? "Paste"
         case .calculatorHistory:
             return "Copy Answer"
+        case .uninstall:
+            return "Uninstall Application"
         case .launcher:
             if calcActionable { return "Copy Answer" }
             switch selectedApp?.kind {
@@ -781,6 +856,8 @@ struct RootPaletteView: View {
         case .emoji:
             guard emojiResults.indices.contains(selection) else { return }
             core.pasteEmoji(emojiResults[selection])
+        case .uninstall:
+            core.performUninstall()
         }
     }
 }
