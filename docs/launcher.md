@@ -152,7 +152,7 @@ dismissal matches Accessibility subroles rather than English labels.
 
 ## Window commands
 
-`WindowCommandCatalog` supplies the 29 window actions as a static slice, published as a whole by
+`WindowCommandCatalog` supplies the 30 window actions as a static slice, published as a whole by
 `AppIndex.setWindowCommandsVisible(_:)` and shown under a "Window Management" section. Like system
 actions they carry dedicated global hotkeys (`AppEntry.hotKeyAction` returns `.windowCommand(id:)`),
 so launcher rows render keycaps for them. Their per-command shortcut and visibility controls live in
