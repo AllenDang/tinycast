@@ -104,8 +104,8 @@ permission-aware failures. With the palette closed it targets the frontmost app,
 Quit All act on the same window a palette launch would have.
 
 System actions occupy their own launcher section and their own Settings pane. The empty-query publication
-order is applications, System Settings, snippets, system actions, window commands, custom commands,
-then built-in commands; the sectioned view filters in that same order so the visible rows remain
+order is applications, System Settings, quicklinks, snippets, system actions, window commands, custom
+commands, then built-in commands; the sectioned view filters in that same order so the visible rows remain
 identical to the flat selection index.
 Search, favorites, visibility and learned ranking work through the normal `AppEntry` path, and every
 action is bindable to a global shortcut from Settings › System Actions
@@ -159,6 +159,15 @@ so launcher rows render keycaps for them. Their per-command shortcut and visibil
 Settings › Window Management rather than a launcher-category pane of their own — the same call already
 made for snippets. The feature ships off. See
 [window-management.md](window-management.md).
+
+## Quicklinks
+
+`QuicklinkStore` supplies its slice the same way custom commands do, sorted pinned-first then
+alphabetically by `Quicklink.precedes`. Only the name is indexed — a URL is a subsequence of nearly
+any query — and a per-item "show in root search" flag filters the slice before it is published. The
+four Quicklinks commands are dropped from the built-in slice in the same publish while the feature is
+off, so a toggle can't leave the section and its commands out of step. See
+[quicklinks.md](quicklinks.md).
 
 ## Custom commands
 

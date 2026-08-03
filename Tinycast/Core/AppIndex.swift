@@ -10,6 +10,7 @@ struct AppEntry: Identifiable, Hashable, Sendable {
         case snippet
         case systemAction
         case windowCommand
+        case quicklink
     }
 
     let id: String  // file path (or "command:…" id) — always unique
@@ -19,6 +20,8 @@ struct AppEntry: Identifiable, Hashable, Sendable {
     let kind: Kind
     /// Extra strings this entry matches on as strongly as its name — a snippet's keyword. Empty for every other kind.
     var matchAliases: [String] = []
+    /// Per-item SF Symbol, for the one kind whose glyph is the user's choice rather than its kind's. Nil elsewhere.
+    var symbolName: String?
     /// Spotlight's `kMDItemAlternateNames`, ranked below the display name. Applications only.
     var alternateNames: [String] = []
     /// `CFBundleExecutable`, matched literally as a last resort. Applications only.
@@ -42,6 +45,7 @@ struct AppEntry: Identifiable, Hashable, Sendable {
         case .snippet: return "Snippet"
         case .systemAction: return "System Action"
         case .windowCommand: return "Window Command"
+        case .quicklink: return "Quicklink"
         }
     }
 
@@ -58,19 +62,24 @@ struct AppEntry: Identifiable, Hashable, Sendable {
             return SystemActionCatalog.action(forEntryID: id).map { .systemAction(id: $0.id) }
         case .windowCommand:
             return WindowCommandCatalog.command(forEntryID: id).map { .windowCommand(id: $0.id) }
+        case .quicklink:
+            return Quicklink.id(fromEntryID: id).map { .quicklink(id: $0) }
         case .command, .snippet:
             return nil
         }
     }
 
-    /// Synthetic command entries have no file behind them to reveal.
+    /// Synthetic command entries have no file behind them to reveal. A quicklink's own entry is
+    /// synthetic too — revealing the *destination* is an action on the record, in its own menu.
     var canRevealInFinder: Bool { kind == .application || kind == .systemSettings || kind == .snippet }
 
     /// Synthetic entries draw an SF Symbol tile; everything else uses its file icon.
     var isSymbolIcon: Bool { kind != .application && kind != .systemSettings }
 
     var symbolIconName: String {
+        if let symbolName { return symbolName }
         switch kind {
+        case .quicklink: return Quicklink.sfSymbol
         case .snippet: return "text.quote"
         case .customCommand: return CustomCommand.sfSymbol
         case .command: return CommandRegistry.command(for: self)?.sfSymbol ?? "questionmark"
@@ -319,6 +328,9 @@ final class AppIndex: ObservableObject {
     private var discoveredEntries: [AppEntry] = []
     private var customCommandEntries: [AppEntry] = []
     private var windowCommandEntries: [AppEntry] = []
+    private var quicklinkEntries: [AppEntry] = []
+    /// Built-in commands minus the quicklink ones while the feature is off.
+    private var commandEntries: [AppEntry] = CommandRegistry.all
     private var alternateNameCache = SpotlightNames.Cache()
     private var isRefreshing = false
     /// Set when a refresh is requested mid-scan, so a scope edit landing during an in-flight scan isn't silently dropped.
@@ -342,6 +354,31 @@ final class AppIndex: ObservableObject {
         .sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
         guard entries != customCommandEntries else { return }
         customCommandEntries = entries
+        publishEntries()
+    }
+
+    /// Replaces the quicklink slice and, in the same publish, the built-in commands that only make
+    /// sense while the feature is on — one call so a toggle can't leave the two out of step.
+    func setQuicklinks(_ quicklinks: [Quicklink], commandsVisible: Bool) {
+        let entries = quicklinks
+            .filter(\.showsInRootSearch)
+            .sorted(by: Quicklink.precedes)
+            .map { quicklink in
+                AppEntry(
+                    id: quicklink.entryID, name: quicklink.name,
+                    url: URL(string: "tinycast://quicklink/" + quicklink.id.uuidString)!,
+                    bundleID: nil, kind: .quicklink,
+                    symbolName: quicklink.iconSymbol
+                        ?? QuicklinkDestination.detect(quicklink.link)?.defaultSymbol)
+            }
+        let commands = commandsVisible
+            ? CommandRegistry.all
+            : CommandRegistry.all.filter { entry in
+                CommandRegistry.command(for: entry).map { !$0.isQuicklinkCommand } ?? true
+            }
+        guard entries != quicklinkEntries || commands != commandEntries else { return }
+        quicklinkEntries = entries
+        commandEntries = commands
         publishEntries()
     }
 
@@ -445,10 +482,10 @@ final class AppIndex: ObservableObject {
     }
 
     private func publishEntries() {
-        // Each slice is already alphabetical; the slice order is the launcher's section order (LauncherList mirrors it), so custom commands sit in their own section ahead of the built-ins.
+        // Each slice is already in its own display order — alphabetical, or pinned-first for quicklinks. The slice order is the launcher's section order (LauncherList mirrors it), so custom commands sit in their own section ahead of the built-ins.
         let updated =
-            discoveredEntries + snippetEntries + Self.systemActionEntries + windowCommandEntries
-            + customCommandEntries + CommandRegistry.all
+            discoveredEntries + quicklinkEntries + snippetEntries + Self.systemActionEntries
+            + windowCommandEntries + customCommandEntries + commandEntries
         guard updated != apps else { return }
         apps = updated
         matchCache = nil

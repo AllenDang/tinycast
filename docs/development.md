@@ -117,6 +117,10 @@ swiftc -swift-version 6 Tinycast/Core/Uninstall/UninstallTarget.swift \
     Tinycast/Core/Uninstall/UninstallSearchRoot.swift Tinycast/Core/Uninstall/UninstallRules.swift \
     Tinycast/Core/Uninstall/UninstallProtection.swift Tinycast/Core/Uninstall/UninstallPlan.swift \
     Tools/uninstall-test.swift -o /tmp/uninstall-test && /tmp/uninstall-test  # uninstall attribution + locking
+swiftc -swift-version 6 Tinycast/Core/Quicklinks/Quicklink.swift \
+    Tinycast/Core/Quicklinks/QuicklinkDestination.swift \
+    Tinycast/Core/Quicklinks/QuicklinkStore.swift Tinycast/Core/Quicklinks/QuicklinkArchive.swift \
+    Tools/quicklink-test.swift -o /tmp/quicklink-test && /tmp/quicklink-test  # quicklink destinations + store
 ```
 
 `Tools/fuzz-test.swift` compiles the real `Tinycast/Core/SearchRelevance.swift`, which is why that
@@ -150,6 +154,13 @@ encrypted with `CCCrypt` — and feeds the mapper hand-written JSON, so no real 
 committed. Turning payload values into Tinycast's own types lives in `RaycastImportV1`, which needs
 AppKit and is covered by the app build instead. The format contract is in
 [raycast-import.md](raycast-import.md).
+
+The quicklink harness compiles the real model, destination detector, SQLite store and JSON archive,
+so those four must stay Foundation-only (plus SQLite3). Each store is rooted in a throwaway temp
+directory and every path rule is asked against an injected home, so a run can never reach a real
+library. One case deliberately corrupts a database file and asserts the store reports itself
+unavailable **and leaves the file byte-for-byte intact** — quicklinks are authored data, so unlike
+`ClipboardStore` this one never deletes and recreates.
 
 The window-command harness compiles the real catalog, geometry and action memory (Foundation +
 CoreGraphics — `CGRect`'s `Equatable` conformance lives in the CoreGraphics overlay, not Foundation).

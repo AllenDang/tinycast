@@ -79,3 +79,8 @@ jobs:
             Tinycast/Core/Uninstall/UninstallProtection.swift \
             Tinycast/Core/Uninstall/UninstallPlan.swift Tools/uninstall-test.swift \
             -o /tmp/uninstall-test && /tmp/uninstall-test
+          swiftc -swift-version 6 Tinycast/Core/Quicklinks/Quicklink.swift \
+            Tinycast/Core/Quicklinks/QuicklinkDestination.swift \
+            Tinycast/Core/Quicklinks/QuicklinkStore.swift \
+            Tinycast/Core/Quicklinks/QuicklinkArchive.swift Tools/quicklink-test.swift \
+            -o /tmp/quicklink-test && /tmp/quicklink-test
