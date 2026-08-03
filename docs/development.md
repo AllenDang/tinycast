@@ -155,21 +155,10 @@ frame. All of it runs headless because the layer is pure: `WindowMover` owns eve
 and is deliberately not compiled in. The full contract is in
 [window-management.md](window-management.md).
 
-## Format & lint
+## Formatting
 
-Formatting is whatever Xcode's own reindent does — there's no separate formatter. Linting is
-[SwiftLint](https://github.com/realm/SwiftLint), configured in [`.swiftlint.yml`](../.swiftlint.yml)
-(default ruleset, scoped to `Tinycast/`, the two `.generated.swift` files excluded):
-
-```sh
-brew install swiftlint   # once
-swiftlint lint           # report issues
-swiftlint lint --fix     # auto-fix what's fixable, then re-run lint to see what's left
-```
-
-Lint runs on the PR as a blocking check (below), but not `--strict` — warnings annotate the diff,
-only the config's `error` thresholds fail it. Clear the warnings anyway; CONTRIBUTING.md's "builds
-clean" bar is about compiler warnings, which SwiftLint doesn't touch.
+Formatting is whatever Xcode's own reindent does — there's no formatter and no linter. The bar is
+CONTRIBUTING.md's "builds clean": no new compiler warnings.
 
 ## Generated data
 
@@ -215,21 +204,17 @@ Full details in [signing.md](signing.md).
 ## Continuous integration
 
 `.github/workflows/ci.yml` runs on every PR and every push to `main`, on a `macos-26` runner with
-Xcode 26 (same selection step as the release workflow). Both jobs are merge gates and both run in
-parallel; a new push cancels the in-flight run for the same ref:
+Xcode 26 (same selection step as the release workflow). It has one job, a merge gate; a new push
+cancels the in-flight run for the same ref:
 
 - **`test`** — every `Tools/*.swift` harness from [Tests](#tests) above, in order.
-- **`lint`** — `swiftlint lint --reporter github-actions-logging`, so violations land as inline
-  annotations on the PR diff. Not `--strict`: warnings annotate but don't fail, the config's `error`
-  thresholds do.
 
 There is **no `xcodebuild` step**: a Debug build costs minutes on every run and the release workflow
-builds before it ships anyway, so CI keeps to the two checks that finish in about a minute. A change
+builds before it ships anyway, so CI keeps to the one check that finishes in about a minute. A change
 that compiles nowhere still turns the PR green — **build locally before you open one** (`xcodebuild
 -project Tinycast.xcodeproj -scheme Tinycast -configuration Debug build`, or just ⌘B in Xcode).
 
-Same commands locally: the harness block from [Tests](#tests), then `swiftlint lint` from
-[Format & lint](#format--lint).
+Same commands locally: the harness block from [Tests](#tests).
 
 ## CI releases
 
