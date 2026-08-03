@@ -117,8 +117,14 @@ Never break these without an explicit task to do so.
   `UninstallSelection`'s one intersection, not in the view. Tinycast also refuses to plan its own
   uninstall, compared against the **running** identity so the Dev channel refuses itself too.
   See [uninstall.md](docs/uninstall.md).
-- **`Tools/fuzz-test.swift` holds a COPY of `FuzzyMatch`** from `Core/AppIndex.swift`. Change the
-  scoring in one, mirror it in the other, or the test is meaningless.
+- **`Core/SearchRelevance.swift` is Foundation-only and pure**, so `Tools/fuzz-test.swift` compiles
+  the shipped scorer rather than a copy of it. It owns both `FuzzyMatch` (the tiered
+  exact/prefix/word-start/substring/subsequence scorer) and the field bands. **Searchable fields stay
+  separate** — display name, Spotlight alternate names, bundle id, executable name are never flattened
+  into one string, because the field is what picks the band. Bands are one `bandStride` apart, an
+  order of magnitude above `FuzzyMatch.maximumScore` and two above `LauncherRankingStore`'s boost cap:
+  that gap is what keeps a learned boost reordering *within* a tier and never across a tier or a
+  field. A new searchable field means a new `Band` case and a `consider` call, in priority order.
 - **`EmojiData.generated.swift` is emitted by `node Tools/gen-emoji.js` and
   `CurrencyData.generated.swift` by `node Tools/gen-currencies.js`** — never edit either by hand.
   Currency names, signs and uncontested nouns are generated (Frankfurter × CLDR); the only

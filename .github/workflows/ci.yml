@@ -37,8 +37,10 @@ jobs:
       - name: Run Tools/ harnesses
         run: |
           set -euo pipefail
-          swift Tools/fuzz-test.swift
-          swiftc -swift-version 6 Tinycast/Core/LauncherRankingStore.swift Tools/ranking-test.swift \
+          swiftc -swift-version 6 Tinycast/Core/SearchRelevance.swift Tools/fuzz-test.swift \
+            -o /tmp/fuzz-test && /tmp/fuzz-test
+          swiftc -swift-version 6 Tinycast/Core/SearchRelevance.swift \
+            Tinycast/Core/LauncherRankingStore.swift Tools/ranking-test.swift \
             -o /tmp/ranking-test && /tmp/ranking-test
           swiftc Tinycast/Core/Calculator/*.swift Tools/calc-test.swift \
             -o /tmp/calc-test && /tmp/calc-test

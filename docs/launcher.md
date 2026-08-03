@@ -35,6 +35,54 @@ frecency boost (frequency plus decaying recency). The boost can reorder results 
 tier but cannot make a weaker match kind beat a stronger one. Matching strips invisible Unicode
 format scalars first, since app metadata can contain bidi/zero-width markers before the visible name.
 
+## Searchable fields
+
+An app is matched on four fields kept deliberately separate — flattening them into one string would
+lose the thing that decides the ranking. `SearchRelevance.score` evaluates each independently and the
+strongest one becomes the entry's base relevance:
+
+| Band | Field | Match strength |
+| --- | --- | --- |
+| 5 | display name (plus a snippet's keyword) | literal — exact / prefix / word-start / substring |
+| 4 | Spotlight alternate names | literal |
+| 3 | display name | subsequence |
+| 2 | Spotlight alternate names | subsequence |
+| 1 | bundle identifier | literal only |
+| 0 | executable name (`CFBundleExecutable`) | literal only |
+
+Bands sit one `SearchRelevance.bandStride` apart, which is an order of magnitude wider than
+`FuzzyMatch`'s whole range — so a field can never reach the band above it, and the learned frecency
+boost (capped well below a stride) still reorders inside a tier without ever crossing one.
+
+A *literal* hit on a weaker field outranks a *subsequence* hit on a stronger one. That is the point of
+the split: an alias the vendor actually declared (`Codex` for ChatGPT) must beat the incidental
+c-o-d-e…x scattered through an unrelated app's name, while a real prefix hit on a display name still
+wins outright.
+
+Identifier fields never subsequence-match — reverse-DNS text is a subsequence of nearly every short
+query (`cop` ⊂ `com.apple.Photos`), which would change *which* apps appear rather than just their
+order. For the same reason a bundle id is matched with its leading component stripped
+(`apple.Photos`, not `com.apple.Photos`): `com` alone prefixes almost every installed app. The full id
+still matches exactly, so a pasted identifier resolves.
+
+### Alternate names
+
+`SpotlightNames` reads `kMDItemAlternateNames` — the aliases macOS itself knows an app by, which no
+Info.plist key exposes: `iBooks` for Books, `iCal` for Calendar, `Address Book` for Contacts,
+`System Preferences` for System Settings, `browser` / `浏览器` / `사파리` for Safari. `MDItem.h` exports
+no constant for the attribute, so it is named directly.
+
+Spotlight mixes junk in with the real aliases, and `SearchFields.usableAlternateNames` (pure, covered
+by the harness) drops it: every bundle lists its own `<Name>.app` file name, several system apps ship
+untranslated `ALTERNATE_NAME_1` placeholders, and some just repeat the display name. Indexing those
+would make `app` match the entire index.
+
+A Spotlight round trip costs ~0.8 ms per bundle cold — 76 ms over the default scopes — and the scan
+reruns on every launcher open, so `SpotlightNames.Cache` memoizes per bundle path and re-reads only
+when the bundle's modification date moves, taking later passes to ~0.2 ms. Each pass is seeded from
+the last and keeps only what it looked at, so uninstalled apps fall out instead of accumulating.
+`.appex` Settings panes carry no alternate names, so `SettingsPaneScanner` doesn't ask.
+
 Selecting a launcher result records every prefix of the submitted query, so choosing WhatsApp for
 `wha` also teaches `w` and `wh`. Direct hotkeys and empty-query favorites do not affect learned
 ranking. Learned data stays on device in `launcher-ranking.json`; a result that has learned ranking
@@ -123,9 +171,8 @@ Only the display name is indexed. Activation resolves the stable UUID through th
 to `ShellCommandRunner`; see [custom-commands.md](custom-commands.md) for persistence, hotkeys and
 execution semantics.
 
-> **Invariant:** `Tools/fuzz-test.swift` contains a **copy** of `FuzzyMatch` from
-> `Tinycast/Core/AppIndex.swift`. If you change the scoring in one, mirror it in the other or the test
-> is meaningless.
+> **Invariant:** `Tools/fuzz-test.swift` compiles the real `Tinycast/Core/SearchRelevance.swift`, so
+> that file must stay Foundation-only and pure. There is no copy of the scorer to keep in sync.
 
 The ranking harness covers prefix learning, frequency/recency scoring, persistence, and both reset
 paths; see the command in `development.md`.

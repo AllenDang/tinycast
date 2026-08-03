@@ -75,8 +75,10 @@ app; changes always apply (fixed build path — no need to delete `build/`).
 There's no XCTest target. Standalone harnesses:
 
 ```sh
-swift Tools/fuzz-test.swift                                        # launcher fuzzy matcher
-swiftc -swift-version 6 Tinycast/Core/LauncherRankingStore.swift Tools/ranking-test.swift \
+swiftc -swift-version 6 Tinycast/Core/SearchRelevance.swift Tools/fuzz-test.swift \
+    -o /tmp/fuzz-test && /tmp/fuzz-test                            # launcher matcher + field priority
+swiftc -swift-version 6 Tinycast/Core/SearchRelevance.swift \
+    Tinycast/Core/LauncherRankingStore.swift Tools/ranking-test.swift \
     -o /tmp/ranking-test && /tmp/ranking-test                      # learned launcher ranking
 swiftc Tinycast/Core/Calculator/*.swift Tools/calc-test.swift \
     -o /tmp/calc-test && /tmp/calc-test                           # calculator engine
@@ -117,8 +119,10 @@ swiftc -swift-version 6 Tinycast/Core/Uninstall/UninstallTarget.swift \
     Tools/uninstall-test.swift -o /tmp/uninstall-test && /tmp/uninstall-test  # uninstall attribution + locking
 ```
 
-`Tools/fuzz-test.swift` holds a **copy** of `FuzzyMatch` from `Tinycast/Core/AppIndex.swift` —
-change the scoring in one and mirror it in the other. The calc harness compiles the real engine
+`Tools/fuzz-test.swift` compiles the real `Tinycast/Core/SearchRelevance.swift`, which is why that
+file must stay Foundation-only and pure. Alongside the fixed cases it runs a seeded randomized loop
+(~100k queries) asserting that every score stays inside its field band, that the learned boost cap
+can never lift one out, and that scoring is deterministic. The calc harness compiles the real engine
 sources, which is why `Tinycast/Core/Calculator/` must stay Foundation-only. The system-action harness
 similarly keeps `SystemAction.swift` independent from AppKit and all command side effects. The
 uninstall harness is the same idea taken furthest: it touches no filesystem at all, because
