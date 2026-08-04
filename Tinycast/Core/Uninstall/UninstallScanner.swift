@@ -27,71 +27,76 @@ enum UninstallScanner {
         isTargetRunning: Bool, roots: [UninstallSearchRoot] = UninstallSearchRoot.all,
         budget: SizeBudget = .default
     ) throws -> UninstallPlan {
-        let home = NSHomeDirectory()
-        let environment = UninstallEnvironment(
-            home: home, hasFullDiskAccess: detectFullDiskAccess(home: home))
-        guard
-            let identity = UninstallIdentity.make(
-                target: target, otherAppNames: otherAppNames, otherBundleIDs: otherBundleIDs,
-                ownBundleID: Bundle.main.bundleIdentifier, ownBundleURL: Bundle.main.bundleURL)
-        else { throw Failure.refused }
+        try Signposts.interval("UninstallScanner.scan") {
+            let home = NSHomeDirectory()
+            let environment = UninstallEnvironment(
+                home: home, hasFullDiskAccess: detectFullDiskAccess(home: home))
+            guard
+                let identity = UninstallIdentity.make(
+                    target: target, otherAppNames: otherAppNames, otherBundleIDs: otherBundleIDs,
+                    ownBundleID: Bundle.main.bundleIdentifier, ownBundleURL: Bundle.main.bundleURL)
+            else { throw Failure.refused }
 
-        let bundlePath = target.bundleURL.standardizedFileURL.path
-        var candidates: [UninstallCandidate] = [
-            candidate(
-                path: bundlePath, evidence: .bundle, environment: environment, budget: budget,
-                displayName: target.bundleURL.deletingPathExtension().lastPathComponent)
-        ].compactMap { $0 }
+            let bundlePath = target.bundleURL.standardizedFileURL.path
+            var candidates: [UninstallCandidate] = [
+                candidate(
+                    path: bundlePath, evidence: .bundle, environment: environment, budget: budget,
+                    displayName: target.bundleURL.deletingPathExtension().lastPathComponent)
+            ].compactMap { $0 }
 
-        var seen = Set(candidates.map(\.path))
-        for root in roots {
-            try Task.checkCancellation()
-            let rootPath = root.path(home: home)
-            guard let names = childNames(of: rootPath) else { continue }
-            // One stat per root, not per row.
-            let parent = parentFacts(of: rootPath)
-            for match in UninstallRules.matches(childNames: names, in: root, identity: identity) {
-                let path = (rootPath + "/" + match.name as NSString).standardizingPath
-                guard
-                    UninstallRules.isAcceptableCandidate(
-                        path: path, rootPath: rootPath, home: home, bundlePath: bundlePath),
-                    seen.insert(path).inserted,
-                    let candidate = candidate(
-                        path: path, evidence: match.evidence, environment: environment,
-                        budget: budget, parent: parent)
-                else { continue }
-                candidates.append(candidate)
+            var seen = Set(candidates.map(\.path))
+            for root in roots {
+                try Task.checkCancellation()
+                let rootPath = root.path(home: home)
+                guard let names = childNames(of: rootPath) else { continue }
+                // One stat per root, not per row.
+                let parent = parentFacts(of: rootPath)
+                for match in UninstallRules.matches(childNames: names, in: root, identity: identity)
+                {
+                    let path = (rootPath + "/" + match.name as NSString).standardizingPath
+                    guard
+                        UninstallRules.isAcceptableCandidate(
+                            path: path, rootPath: rootPath, home: home, bundlePath: bundlePath),
+                        seen.insert(path).inserted,
+                        let candidate = candidate(
+                            path: path, evidence: match.evidence, environment: environment,
+                            budget: budget, parent: parent)
+                    else { continue }
+                    candidates.append(candidate)
+                }
             }
-        }
 
-        for directory in UninstallSearchRoot.binDirectories {
-            try Task.checkCancellation()
-            let rootPath = (directory as NSString).expandingTildeInPath
-            guard let names = childNames(of: rootPath) else { continue }
-            let parent = parentFacts(of: rootPath)
-            for name in names {
-                let path = (rootPath + "/" + name as NSString).standardizingPath
-                guard let target = try? FileManager.default.destinationOfSymbolicLink(atPath: path)
-                else { continue }
-                // A relative link resolves against its own directory, not the cwd.
-                let resolved =
-                    target.hasPrefix("/")
-                    ? target : (rootPath as NSString).appendingPathComponent(target)
-                guard UninstallRules.isBundleSymlink(target: resolved, bundlePath: bundlePath),
-                    seen.insert(path).inserted,
-                    let candidate = candidate(
-                        path: path, evidence: .binSymlink, environment: environment, budget: budget,
-                        parent: parent)
-                else { continue }
-                candidates.append(candidate)
+            for directory in UninstallSearchRoot.binDirectories {
+                try Task.checkCancellation()
+                let rootPath = (directory as NSString).expandingTildeInPath
+                guard let names = childNames(of: rootPath) else { continue }
+                let parent = parentFacts(of: rootPath)
+                for name in names {
+                    let path = (rootPath + "/" + name as NSString).standardizingPath
+                    guard
+                        let target = try? FileManager.default.destinationOfSymbolicLink(
+                            atPath: path)
+                    else { continue }
+                    // A relative link resolves against its own directory, not the cwd.
+                    let resolved =
+                        target.hasPrefix("/")
+                        ? target : (rootPath as NSString).appendingPathComponent(target)
+                    guard UninstallRules.isBundleSymlink(target: resolved, bundlePath: bundlePath),
+                        seen.insert(path).inserted,
+                        let candidate = candidate(
+                            path: path, evidence: .binSymlink, environment: environment,
+                            budget: budget, parent: parent)
+                    else { continue }
+                    candidates.append(candidate)
+                }
             }
-        }
 
-        // Bundle pinned first; the rest by path, which is the order the list shows.
-        let leftovers = candidates.filter { $0.evidence != .bundle }.sorted { $0.path < $1.path }
-        return UninstallPlan(
-            target: target, candidates: candidates.filter { $0.evidence == .bundle } + leftovers,
-            isTargetRunning: isTargetRunning)
+            // Bundle pinned first; the rest by path, which is the order the list shows.
+            let leftovers = candidates.filter { $0.evidence != .bundle }.sorted { $0.path < $1.path }
+            return UninstallPlan(
+                target: target, candidates: candidates.filter { $0.evidence == .bundle } + leftovers,
+                isTargetRunning: isTargetRunning)
+        }
     }
 
     // MARK: - Private

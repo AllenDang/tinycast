@@ -176,7 +176,7 @@ Update this table as phases land. `Blocked` requires a note in the phase's progr
 
 | #   | Status      | Branch / commit | Date | Notes |
 | --- | ----------- | --------------- | ---- | ----- |
-| 01  | Not started |                 |      |       |
+| 01  | In progress | `refactor/01-instrumentation-and-baselines` | 2026-08-05 | PR open. Build + harnesses pass; Core regression sweep and Instruments baselines outstanding. |
 | 02  | Not started |                 |      |       |
 | 03  | Not started |                 |      |       |
 | 04  | Not started |                 |      |       |

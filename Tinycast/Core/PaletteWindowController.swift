@@ -18,29 +18,31 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
     var isVisible: Bool { panel?.isVisible ?? false }
 
     func show() {
-        // Ignore ourselves as the "previous" app (e.g. summoned while Settings/About/Onboarding is frontmost) so paste/focus-restore always targets the user's real app, never Tinycast's own field.
-        let frontmost = NSWorkspace.shared.frontmostApplication
-        if frontmost?.processIdentifier != NSRunningApplication.current.processIdentifier {
-            previousApp = frontmost
-        }
-        // Resolve the name/icon path once per summon rather than per render; reading `previousApp` (not `frontmost`) keeps the label naming the same app paste will actually target.
-        core.palette.pasteTarget = PasteTarget(app: previousApp)
-        let panel = ensurePanel()
-        // Open disarmed: the pointer may already sit over a row, but nothing should be highlighted until the user actually moves it.
-        core.palette.hoverHighlightArmed = false
-        // Re-resolve the anchor for wherever the user is summoning now, then hold it for the whole session so compact↔expanded resizes never move the window.
-        anchor = nil
-        // Size + place the panel to the current collapsed state before ordering front, so a compact summon never flashes at full size.
-        positionPanel(panel, collapsed: core.paletteIsCollapsed)
-        // Flush the hosting view's first-mount layout while still off-screen, so the one-time safe-area settle of the `safeAreaInset` header doesn't nudge the search placeholder on the first visible frame.
-        panel.contentView?.layoutSubtreeIfNeeded()
-        // The `.nonactivatingPanel` takes key focus without activating the app, so summoning the palette never raises the app's Settings/onboarding windows behind it.
-        panel.makeKeyAndOrderFront(nil)
-        panel.orderFrontRegardless()
-        // A never-activated login-item process can drop the first key request before the window is registered with the window server; re-assert next turn once it is (same pattern as AuxWindowController).
-        DispatchQueue.main.async { [weak panel] in
-            guard let panel, panel.isVisible, !panel.isKeyWindow else { return }
+        Signposts.interval("PaletteWindowController.show") {
+            // Ignore ourselves as the "previous" app (e.g. summoned while Settings/About/Onboarding is frontmost) so paste/focus-restore always targets the user's real app, never Tinycast's own field.
+            let frontmost = NSWorkspace.shared.frontmostApplication
+            if frontmost?.processIdentifier != NSRunningApplication.current.processIdentifier {
+                previousApp = frontmost
+            }
+            // Resolve the name/icon path once per summon rather than per render; reading `previousApp` (not `frontmost`) keeps the label naming the same app paste will actually target.
+            core.palette.pasteTarget = PasteTarget(app: previousApp)
+            let panel = ensurePanel()
+            // Open disarmed: the pointer may already sit over a row, but nothing should be highlighted until the user actually moves it.
+            core.palette.hoverHighlightArmed = false
+            // Re-resolve the anchor for wherever the user is summoning now, then hold it for the whole session so compact↔expanded resizes never move the window.
+            anchor = nil
+            // Size + place the panel to the current collapsed state before ordering front, so a compact summon never flashes at full size.
+            positionPanel(panel, collapsed: core.paletteIsCollapsed)
+            // Flush the hosting view's first-mount layout while still off-screen, so the one-time safe-area settle of the `safeAreaInset` header doesn't nudge the search placeholder on the first visible frame.
+            panel.contentView?.layoutSubtreeIfNeeded()
+            // The `.nonactivatingPanel` takes key focus without activating the app, so summoning the palette never raises the app's Settings/onboarding windows behind it.
             panel.makeKeyAndOrderFront(nil)
+            panel.orderFrontRegardless()
+            // A never-activated login-item process can drop the first key request before the window is registered with the window server; re-assert next turn once it is (same pattern as AuxWindowController).
+            DispatchQueue.main.async { [weak panel] in
+                guard let panel, panel.isVisible, !panel.isKeyWindow else { return }
+                panel.makeKeyAndOrderFront(nil)
+            }
         }
     }
 

@@ -20,6 +20,7 @@
 		1A899FE562A7344918CE1B44 /* QuicklinkLauncher.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3ECAB8490328EA3DADD05D9D /* QuicklinkLauncher.swift */; };
 		1AF562E00FCB98B12076F01D /* SnippetKeywordListener.swift in Sources */ = {isa = PBXBuildFile; fileRef = E5051622CC6497E2151326CA /* SnippetKeywordListener.swift */; };
 		1B90AA42601E3AE7EEE3AD5D /* WindowLayout.swift in Sources */ = {isa = PBXBuildFile; fileRef = 388A58EDB35AB0CB30EE20DE /* WindowLayout.swift */; };
+		1C86B50DD6012B25DFEDE26D /* Signposts.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A206E48D7BE14B14F360CD5 /* Signposts.swift */; };
 		1D0C2F452B3801503B70EA9E /* GeneralSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4F63A3610C275E4961D60C7E /* GeneralSettingsView.swift */; };
 		1F39D145DBE2290532C93614 /* ClipboardSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 849FF3D93960B75F341D867C /* ClipboardSettingsView.swift */; };
 		1F555347D7CE8F37A2C37BAF /* SnippetRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8C069647C67120EBAED14422 /* SnippetRepository.swift */; };
@@ -222,6 +223,7 @@
 		596ADD747B4546B1E3340094 /* ShortcutRecorder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShortcutRecorder.swift; sourceTree = "<group>"; };
 		59D08C3AEAFB224866F23C3E /* UninstallView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UninstallView.swift; sourceTree = "<group>"; };
 		5A002AC0DE601E1F65D20C4A /* SnippetTemplateEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SnippetTemplateEngine.swift; sourceTree = "<group>"; };
+		5A206E48D7BE14B14F360CD5 /* Signposts.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Signposts.swift; sourceTree = "<group>"; };
 		5A2EF9C70F8BC9571089D5EB /* AppLauncher.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppLauncher.swift; sourceTree = "<group>"; };
 		5D3E4F8A2BCECFF0E11441BE /* RaycastSnippetImport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RaycastSnippetImport.swift; sourceTree = "<group>"; };
 		5D57B0AE44D21035163BD422 /* CommandRegistry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CommandRegistry.swift; sourceTree = "<group>"; };
@@ -384,6 +386,7 @@
 				9AA0E1FD530C764A021E6053 /* SearchScopes.swift */,
 				C722D73D270A3A6CED4023F7 /* SettingsPaneScanner.swift */,
 				286B7598B81017C746558C7C /* ShellCommandRunner.swift */,
+				5A206E48D7BE14B14F360CD5 /* Signposts.swift */,
 				8925E80B57FDCEAB9764C65F /* SpotlightNames.swift */,
 				5175A8F8FED58C0DAEA2AFD6 /* SymbolImage.swift */,
 				0D16E927986D415F5386CDCF /* SystemAction.swift */,
@@ -894,6 +897,7 @@
 				F9C1192D849B94E783D05568 /* ShortcutCaptureSession.swift in Sources */,
 				57AE40420A6A5349AD092878 /* ShortcutRecorder.swift in Sources */,
 				4006B894BE909BD067ED1E3A /* ShortcutRecorderPopover.swift in Sources */,
+				1C86B50DD6012B25DFEDE26D /* Signposts.swift in Sources */,
 				85A9ACCB19D9502A79F1A508 /* Snippet.swift in Sources */,
 				0674D8E1567253879EF50150 /* SnippetArgumentsPrompt.swift in Sources */,
 				1AF562E00FCB98B12076F01D /* SnippetKeywordListener.swift in Sources */,

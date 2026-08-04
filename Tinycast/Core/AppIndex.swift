@@ -449,36 +449,39 @@ final class AppIndex: ObservableObject {
     nonisolated private static func scan(
         scopes: [String], cache: SpotlightNames.Cache
     ) -> ([AppEntry], SpotlightNames.Cache) {
-        var cache = cache
-        var seenBundleIDs = Set<String>()
-        var result: [AppEntry] = []
-        for url in SearchScopes.appBundles(in: scopes) {
-            let bundle = Bundle(url: url)
-            let bundleID = bundle?.bundleIdentifier
-            // Dedup by bundle id; the earliest scope wins.
-            if let bundleID, !seenBundleIDs.insert(bundleID).inserted { continue }
+        Signposts.interval("AppIndex.scan") {
+            var cache = cache
+            var seenBundleIDs = Set<String>()
+            var result: [AppEntry] = []
+            for url in SearchScopes.appBundles(in: scopes) {
+                let bundle = Bundle(url: url)
+                let bundleID = bundle?.bundleIdentifier
+                // Dedup by bundle id; the earliest scope wins.
+                if let bundleID, !seenBundleIDs.insert(bundleID).inserted { continue }
 
-            let name =
-                (bundle?.object(forInfoDictionaryKey: "CFBundleDisplayName") as? String)
-                ?? (bundle?.object(forInfoDictionaryKey: "CFBundleName") as? String)
-                ?? url.deletingPathExtension().lastPathComponent
-            let executable = bundle?.object(forInfoDictionaryKey: "CFBundleExecutable") as? String
-            result.append(
-                AppEntry(
-                    id: url.path, name: name, url: url, bundleID: bundleID,
-                    kind: .application,
-                    alternateNames: cache.alternateNames(for: url, displayName: name),
-                    // A binary named after the app adds nothing the display name doesn't already cover.
-                    executableName: executable.flatMap {
-                        $0.caseInsensitiveCompare(name) == .orderedSame ? nil : $0
-                    }))
+                let name =
+                    (bundle?.object(forInfoDictionaryKey: "CFBundleDisplayName") as? String)
+                    ?? (bundle?.object(forInfoDictionaryKey: "CFBundleName") as? String)
+                    ?? url.deletingPathExtension().lastPathComponent
+                let executable =
+                    bundle?.object(forInfoDictionaryKey: "CFBundleExecutable") as? String
+                result.append(
+                    AppEntry(
+                        id: url.path, name: name, url: url, bundleID: bundleID,
+                        kind: .application,
+                        alternateNames: cache.alternateNames(for: url, displayName: name),
+                        // A binary named after the app adds nothing the display name doesn't already cover.
+                        executableName: executable.flatMap {
+                            $0.caseInsensitiveCompare(name) == .orderedSame ? nil : $0
+                        }))
+            }
+            // `publishEntries` appends snippets, custom commands and built-in commands after apps and Settings panes so the sectioned flat selection maps 1:1 onto rows.
+            let apps = result.sorted {
+                $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending
+            }
+            // Settings panes are `.appex` bundles, which carry no Spotlight alternate names.
+            return (apps + SettingsPaneScanner.scan(), cache)
         }
-        // `publishEntries` appends snippets, custom commands and built-in commands after apps and Settings panes so the sectioned flat selection maps 1:1 onto rows.
-        let apps = result.sorted {
-            $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending
-        }
-        // Settings panes are `.appex` bundles, which carry no Spotlight alternate names.
-        return (apps + SettingsPaneScanner.scan(), cache)
     }
 
     private func publishEntries() {
@@ -505,22 +508,24 @@ final class AppIndex: ObservableObject {
     }
 
     private func rank(_ q: String, limit: Int) -> [AppEntry] {
-        let learned = ranking.boosts(query: q)
-        let scored = apps.compactMap { app -> (AppEntry, Int)? in
-            // Base relevance comes from the entry's strongest matching field; the learned boost is added after and never knows which field that was.
-            guard let score = SearchRelevance.score(query: q, fields: app.searchFields) else {
-                return nil
+        Signposts.interval("AppIndex.rank") {
+            let learned = ranking.boosts(query: q)
+            let scored = apps.compactMap { app -> (AppEntry, Int)? in
+                // Base relevance comes from the entry's strongest matching field; the learned boost is added after and never knows which field that was.
+                guard let score = SearchRelevance.score(query: q, fields: app.searchFields) else {
+                    return nil
+                }
+                return (app, score + (learned[app.preferenceKey] ?? 0))
             }
-            return (app, score + (learned[app.preferenceKey] ?? 0))
+            return
+                scored
+                .sorted {
+                    $0.1 != $1.1
+                        ? $0.1 > $1.1
+                        : $0.0.name.localizedCaseInsensitiveCompare($1.0.name) == .orderedAscending
+                }
+                .prefix(limit)
+                .map(\.0)
         }
-        return
-            scored
-            .sorted {
-                $0.1 != $1.1
-                    ? $0.1 > $1.1
-                    : $0.0.name.localizedCaseInsensitiveCompare($1.0.name) == .orderedAscending
-            }
-            .prefix(limit)
-            .map(\.0)
     }
 }

@@ -157,113 +157,117 @@ final class AppCore: ObservableObject {
     }
 
     func start() {
-        // AppKit's default tooltip delay is ~2–3s; shorten it (in ms) so the compact-bar favorite tooltips appear promptly. Registration domain — never overrides a user default.
-        UserDefaults.standard.register(defaults: ["NSInitialToolTipDelay": 250])
-        NSApp.setActivationPolicy(.accessory)
-        // Force dark: the Liquid Glass material is tuned for a deep dark surface and renders washed-out in Light mode.
-        NSApp.appearance = NSAppearance(named: .darkAqua)
+        Signposts.interval("AppCore.start") {
+            // AppKit's default tooltip delay is ~2–3s; shorten it (in ms) so the compact-bar favorite tooltips appear promptly. Registration domain — never overrides a user default.
+            UserDefaults.standard.register(defaults: ["NSInitialToolTipDelay": 250])
+            NSApp.setActivationPolicy(.accessory)
+            // Force dark: the Liquid Glass material is tuned for a deep dark surface and renders washed-out in Light mode.
+            NSApp.appearance = NSAppearance(named: .darkAqua)
 
-        clipboardStore.maxAge = settings.clipboardRetention.maxAge
-        // Defer the initial SQLite read + stale-image prune off the synchronous launch path so the menu bar is interactive immediately; `items` is @Published, so the palette fills in when it lands.
-        Task { clipboardStore.load() }
-        clipboardManager.start()
+            clipboardStore.maxAge = settings.clipboardRetention.maxAge
+            // Defer the initial SQLite read + stale-image prune off the synchronous launch path so the menu bar is interactive immediately; `items` is @Published, so the palette fills in when it lands.
+            Task { clipboardStore.load() }
+            clipboardManager.start()
 
-        appIndex.start(settings: settings)
-        customCommands.onChange = { [weak self] _ in
-            self?.applyCustomCommandsPresence()
-        }
-        applyCustomCommandsPresence()
-        applyWindowCommandsPresence()
-        quicklinks.onChange = { [weak self] _ in
-            self?.applyQuicklinksPresence()
-        }
-        // Loaded even while the feature is off, and before `hotKeys.start`: its stale-binding prune
-        // reads this list, so an unloaded store would look like "every quicklink was deleted" and
-        // throw away the user's shortcuts. The library is small, so this is one short read.
-        quicklinks.load()
-        applyQuicklinksPresence()
-        Task { await appIndex.refresh() }
-        Task { await emojiIndex.load() }
-        currencyRates.start()
-
-        hotKeys.onTogglePalette = { [weak self] in self?.togglePalette() }
-        hotKeys.onToggleClipboard = { [weak self] in self?.toggleClipboard() }
-        hotKeys.onToggleEmoji = { [weak self] in self?.toggleEmoji() }
-        hotKeys.onRunCustomCommand = { [weak self] id in self?.runCustomCommand(id: id) }
-        hotKeys.onRunSystemAction = { [weak self] id in self?.runSystemAction(id: id) }
-        hotKeys.onRunWindowCommand = { [weak self] id in self?.runWindowCommand(id: id) }
-        hotKeys.onOpenQuicklink = { [weak self] id in self?.openQuicklink(id: id) }
-        hotKeys.start(
-            customCommandIDs: Set(customCommands.commands.map(\.id)),
-            quicklinkIDs: Set(quicklinks.quicklinks.map(\.id)))
-        // Deliberately keeps running while `hotKeys.recordingAction` pauses Carbon: the recorder relies on the tap's rewritten flags to capture Hyper shortcuts.
-        hyperKeyTap.start(settings: settings)
-
-        snippetsStore.onSnapshot = { [weak self] snapshot in
-            guard let self else { return }
-            self.applySnippetsLauncherPresence()
-            self.snippetListener.update(snapshot.records)
-        }
-        // Off out of the box, so a user who never enables snippets pays for no load, no watcher and no tap.
-        if settings.snippetsEnabled {
-            Task { await snippetsStore.start() }
-            startSnippetKeywordListener()
-        }
-
-        // @Published emits synchronously before the property is written (as in `AppIndex.start`), so every re-projection defers to a task that reads the settled value.
-        for publisher in [
-            settings.$windowManagementEnabled, settings.$windowManagementShowInLauncher
-        ] {
-            publisher.dropFirst()
-                .sink { [weak self] _ in
-                    MainActor.assumeIsolated {
-                        guard let self else { return }
-                        Task { self.applyWindowCommandsPresence() }
-                    }
-                }
-                .store(in: &cancellables)
-        }
-        for publisher in [settings.$customCommandsEnabled, settings.$customCommandsShowInLauncher] {
-            publisher.dropFirst()
-                .sink { [weak self] _ in
-                    MainActor.assumeIsolated {
-                        guard let self else { return }
-                        Task { self.applyCustomCommandsPresence() }
-                    }
-                }
-                .store(in: &cancellables)
-        }
-        for publisher in [settings.$quicklinksEnabled, settings.$quicklinksShowInLauncher] {
-            publisher.dropFirst()
-                .sink { [weak self] _ in
-                    MainActor.assumeIsolated {
-                        guard let self else { return }
-                        Task { self.applyQuicklinksPresence() }
-                    }
-                }
-                .store(in: &cancellables)
-        }
-        settings.$snippetsEnabled.dropFirst()
-            .sink { [weak self] _ in
-                MainActor.assumeIsolated {
-                    guard let self else { return }
-                    Task { self.applySnippetsEnabled() }
-                }
+            appIndex.start(settings: settings)
+            customCommands.onChange = { [weak self] _ in
+                self?.applyCustomCommandsPresence()
             }
-            .store(in: &cancellables)
-        settings.$snippetsShowInLauncher.dropFirst()
-            .sink { [weak self] _ in
-                MainActor.assumeIsolated {
-                    guard let self else { return }
-                    Task { self.applySnippetsLauncherPresence() }
-                }
+            applyCustomCommandsPresence()
+            applyWindowCommandsPresence()
+            quicklinks.onChange = { [weak self] _ in
+                self?.applyQuicklinksPresence()
             }
-            .store(in: &cancellables)
+            // Loaded even while the feature is off, and before `hotKeys.start`: its stale-binding prune
+            // reads this list, so an unloaded store would look like "every quicklink was deleted" and
+            // throw away the user's shortcuts. The library is small, so this is one short read.
+            quicklinks.load()
+            applyQuicklinksPresence()
+            Task { await appIndex.refresh() }
+            Task { await emojiIndex.load() }
+            currencyRates.start()
 
-        // First launch has no palette hotkey bound and shows nothing but the menu-bar icon; guide the user once. Marker is written at show-time so it stays one-time even if they Cmd-Q mid-flow.
-        if !OnboardingState.hasOnboarded {
-            OnboardingState.markShown()
-            showOnboarding()
+            hotKeys.onTogglePalette = { [weak self] in self?.togglePalette() }
+            hotKeys.onToggleClipboard = { [weak self] in self?.toggleClipboard() }
+            hotKeys.onToggleEmoji = { [weak self] in self?.toggleEmoji() }
+            hotKeys.onRunCustomCommand = { [weak self] id in self?.runCustomCommand(id: id) }
+            hotKeys.onRunSystemAction = { [weak self] id in self?.runSystemAction(id: id) }
+            hotKeys.onRunWindowCommand = { [weak self] id in self?.runWindowCommand(id: id) }
+            hotKeys.onOpenQuicklink = { [weak self] id in self?.openQuicklink(id: id) }
+            hotKeys.start(
+                customCommandIDs: Set(customCommands.commands.map(\.id)),
+                quicklinkIDs: Set(quicklinks.quicklinks.map(\.id)))
+            // Deliberately keeps running while `hotKeys.recordingAction` pauses Carbon: the recorder relies on the tap's rewritten flags to capture Hyper shortcuts.
+            hyperKeyTap.start(settings: settings)
+
+            snippetsStore.onSnapshot = { [weak self] snapshot in
+                guard let self else { return }
+                self.applySnippetsLauncherPresence()
+                self.snippetListener.update(snapshot.records)
+            }
+            // Off out of the box, so a user who never enables snippets pays for no load, no watcher and no tap.
+            if settings.snippetsEnabled {
+                Task { await snippetsStore.start() }
+                startSnippetKeywordListener()
+            }
+
+            // @Published emits synchronously before the property is written (as in `AppIndex.start`), so every re-projection defers to a task that reads the settled value.
+            for publisher in [
+                settings.$windowManagementEnabled, settings.$windowManagementShowInLauncher
+            ] {
+                publisher.dropFirst()
+                    .sink { [weak self] _ in
+                        MainActor.assumeIsolated {
+                            guard let self else { return }
+                            Task { self.applyWindowCommandsPresence() }
+                        }
+                    }
+                    .store(in: &cancellables)
+            }
+            for publisher in [
+                settings.$customCommandsEnabled, settings.$customCommandsShowInLauncher
+            ] {
+                publisher.dropFirst()
+                    .sink { [weak self] _ in
+                        MainActor.assumeIsolated {
+                            guard let self else { return }
+                            Task { self.applyCustomCommandsPresence() }
+                        }
+                    }
+                    .store(in: &cancellables)
+            }
+            for publisher in [settings.$quicklinksEnabled, settings.$quicklinksShowInLauncher] {
+                publisher.dropFirst()
+                    .sink { [weak self] _ in
+                        MainActor.assumeIsolated {
+                            guard let self else { return }
+                            Task { self.applyQuicklinksPresence() }
+                        }
+                    }
+                    .store(in: &cancellables)
+            }
+            settings.$snippetsEnabled.dropFirst()
+                .sink { [weak self] _ in
+                    MainActor.assumeIsolated {
+                        guard let self else { return }
+                        Task { self.applySnippetsEnabled() }
+                    }
+                }
+                .store(in: &cancellables)
+            settings.$snippetsShowInLauncher.dropFirst()
+                .sink { [weak self] _ in
+                    MainActor.assumeIsolated {
+                        guard let self else { return }
+                        Task { self.applySnippetsLauncherPresence() }
+                    }
+                }
+                .store(in: &cancellables)
+
+            // First launch has no palette hotkey bound and shows nothing but the menu-bar icon; guide the user once. Marker is written at show-time so it stays one-time even if they Cmd-Q mid-flow.
+            if !OnboardingState.hasOnboarded {
+                OnboardingState.markShown()
+                showOnboarding()
+            }
         }
     }
 
