@@ -63,7 +63,7 @@ minimal one — the interactive shell itself is ~2 ms, the rest is the user's ow
 
 Interactive prompts still cannot block. Standard input is `/dev/null`, so a `read` gets EOF and
 returns non-zero, and a launchd-launched app has no controlling terminal, so `/dev/tty` fails with
-`device not configured`. A dev build launched *from a terminal* inherits that terminal's tty, so an rc
+`device not configured`. A dev build launched _from a terminal_ inherits that terminal's tty, so an rc
 file reading `/dev/tty` can hang there but not for real users. There is **no timeout** — Tinycast
 never kills a running command, and a command outlives Tinycast quitting.
 
@@ -94,7 +94,7 @@ on grepping stderr, since 127 is equally a plain typo. The command string itself
 `requiresConfirmation` lives in `AppCore` (AppKit, `@MainActor`) and so is out of reach of the
 Foundation-only harness. Verify by hand:
 
-1. Activating a gated command from the palette hides the palette *before* the dialog appears.
+1. Activating a gated command from the palette hides the palette _before_ the dialog appears.
 2. ↵ at the dialog runs the command; Escape or clicking **Cancel** cancels.
 3. Pressing the command's hotkey while its dialog is up does not stack a second dialog.
 4. A gated command triggered by hotkey with no palette open still confirms.

@@ -1,0 +1,213 @@
+# Refactor Roadmap
+
+Execution order, dependencies, effort and risk for all 35 phases.
+Source of rationale: [`docs/architecture-review.md`](../architecture-review.md).
+**Compatibility rules: [`POLICY.md`](POLICY.md) — it overrides anything below.**
+
+**Legend**
+Effort: **S** ≤ 2 h · **M** 2–4 h · **L** 4–8 h (operator time including review, not Claude time)
+Risk: **Low** structure only · **Med** touches behaviour-adjacent code · **High** touches a
+documented invariant
+Context: expected share of one Claude conversation — **Low** < 25 % · **Med** 25–50 % · **High** 50–75 %
+
+---
+
+## Milestones
+
+| #      | Milestone      | Phases | Ships what                                                                                  |
+| ------ | -------------- | ------ | ------------------------------------------------------------------------------------------- |
+| **M0** | Baselines      | 01     | Permanent signposts + recorded numbers. Nothing else changes.                               |
+| **M1** | Zero-risk wins | 02–10  | Every measurable performance fix in the review, at near-zero risk.                          |
+| **M2** | Observation    | 11–18  | The largest CPU + RAM win. Removes ~30 `assumeIsolated` hazards.                            |
+| **M3** | Palette split  | 19–23  | `RootPaletteView` 1126 → ~350 lines. Adding a mode becomes one file.                        |
+| **M4** | AppCore split  | 24–26  | `AppCore` 1348 → ~250 lines. Kills the merge-conflict bottleneck.                           |
+| **M5** | Structure      | 27–29  | Feature-first tree. Navigability.                                                           |
+| **M6** | Consistency    | 30–33  | One naming vocabulary, compiler-enforced exhaustiveness, harness coverage.                  |
+| **M7** | Close out      | 34–35  | Comment budget, final measurement, docs, and deleting the now-dead compatibility machinery. |
+
+**Stop points.** Every phase is a valid stopping point. The natural ones are the milestone boundaries:
+after **10**, after **18**, after **23**, after **26**, after **29**. Each of those leaves a coherent,
+shippable, self-consistent codebase.
+
+---
+
+## Phase table
+
+| #   | Phase                                                        | Review ref    | Depends on | Effort | Risk     | Context |
+| --- | ------------------------------------------------------------ | ------------- | ---------- | ------ | -------- | ------- |
+| 01  | Instrumentation and baselines                                | W0            | —          | S      | Low      | Low     |
+| 02  | Async icons in the Settings launcher list                    | H-3           | 01         | S      | Low      | Low     |
+| 03  | Named paste-timing constants                                 | L-7           | 01         | S      | Low      | Low     |
+| 04  | Retire the last `NSAlert`                                    | K-6           | 01         | S      | Med      | Low     |
+| 05  | `AppPaths` — one channel-directory helper                    | M-5           | 01         | S      | Low      | Low     |
+| 06  | HotKey binding cache                                         | M-4           | 01         | M      | Low      | Med     |
+| 07  | Settings-pane scan cache                                     | H-2           | 01         | M      | Low      | Med     |
+| 08  | Parallel uninstall scan                                      | H-4           | 01         | M      | Med      | Med     |
+| 09  | `Memo` primitive and launcher result memoization             | M-7, M-3      | 01         | M      | Med      | Med     |
+| 10  | Health-timer consolidation                                   | M-2           | 01         | M      | Med      | Med     |
+| 11  | Observation pilot — `FavoritesStore`                         | C-3           | 01         | S      | Med      | Low     |
+| 12  | Observation wave A — sessions and value state                | C-3           | 11         | M      | Low      | Med     |
+| 13  | Observation wave A — leaf stores                             | C-3           | 11         | M      | Low      | Med     |
+| 14  | Observation wave A — monitors and indices                    | C-3           | 11         | M      | Med      | Med     |
+| 15  | Observation — `HotKeyManager`                                | C-3, M-4      | 06, 11     | M      | Med      | Med     |
+| 16  | Observation — `AppSettings`                                  | C-3           | 11         | L      | Med      | Med     |
+| 17  | Observation — `AppIndex` and the persisted stores            | C-3           | 09, 11     | L      | High     | High    |
+| 18  | Observation — palette, `AppCore`, retire the Combine sinks   | C-3, K-1      | 16, 17     | L      | High     | High    |
+| 19  | `PaletteScreen` scaffold and the selection harness           | C-2           | 18         | M      | Low      | Med     |
+| 20  | Screens — `quicklinkArguments` and `uninstall`               | C-2           | 19         | M      | Med      | Med     |
+| 21  | Screens — `quicklinks` and `emoji`                           | C-2           | 20         | M      | Med      | Med     |
+| 22  | Screens — `clipboard` and `calculatorHistory`                | C-2           | 21         | M      | Med      | High    |
+| 23  | Screen — `launcher`, and collapsing the calc offset          | C-2           | 22         | L      | **High** | High    |
+| 24  | `QuicklinkCoordinator` and `SnippetExpansionCoordinator`     | C-1           | 23         | L      | Med      | High    |
+| 25  | Palette, SystemAction, Uninstall, CustomCommand coordinators | C-1           | 24         | L      | Med      | High    |
+| 26  | Fix the three dependency inversions                          | §2.3          | 15, 25     | M      | Med      | Med     |
+| 27  | Extract `DesignSystem/` and `Platform/`                      | M-1           | 26         | M      | Low      | Med     |
+| 28  | Extract `Windows/`, `Palette/` and `App/`                    | M-1, M-9      | 27         | M      | Low      | Med     |
+| 29  | Feature folders and the Settings shell                       | M-1, M-8, H-5 | 28         | L      | Low      | High    |
+| 30  | Naming vocabulary renames                                    | §4.1          | 29         | M      | Low      | Med     |
+| 31  | `AppEntry.Kind` exhaustiveness and `KindDescriptor`          | H-6           | 29         | M      | Med      | Med     |
+| 32  | Retire `AppCore` forwarders, adopt `@Environment`            | §2.3          | 25, 29     | M      | Med      | Med     |
+| 33  | `SettingsBackup` completeness harness                        | M-6           | 16         | M      | Low      | Med     |
+| 34  | Comment budget, comment pass, final measurement              | H-1, W8       | 33         | L      | Low      | High    |
+| 35  | Retire the compatibility machinery                           | POLICY        | 29, 30, 34 | M      | Low      | Med     |
+
+---
+
+## Dependency graph
+
+```
+                                     01 ─── Baselines
+                                      │
+        ┌───────┬───────┬───────┬─────┼─────┬───────┬───────┬───────┬───────┐
+        │       │       │       │     │     │       │       │       │       │
+       02      03      04      05    06    07      08      09      10      11
+     icons   delays  dialog  paths  keys  panes  uninst  memo    timers  pilot
+                                      │                   │       │       │
+                                      │                   │       │  ┌────┼────┬────┐
+                                      │                   │       │  │    │    │    │
+                                      │                   │       │ 12   13   14   16
+                                      │                   │       │ sess leaf mon  settings
+                                      └───────────────────┼───────┼──┴─── 15       │
+                                                          │       │      hotkeys   │
+                                                          └───────┴──── 17 ────────┘
+                                                                     stores
+                                                                        │
+                                                                       18 ─── palette+core, retire Combine
+                                                                        │
+                                    19 ── 20 ── 21 ── 22 ── 23   (M3, strictly sequential)
+                                                             │
+                                                            24 ── 25   (M4)
+                                                                   │
+                                                            15 ────┴── 26   inversions
+                                                                        │
+                                                            27 ── 28 ── 29   (M5, strictly sequential)
+                                                                        │
+                                              ┌───────┬─────────────────┤
+                                             30      31                32
+                                           naming   kinds          forwarders
+                                              │      │                 │
+                                    16 ─── 33 ┴──────┴─────────────────┘
+                                        backup harness
+                                              │
+                                             34 ─── comments + final measurement
+                                              │
+                                             35 ─── retire the dead compatibility code
+```
+
+**Reading it.** Phases 02–11 fan out from 01 and are mutually independent — run them in any order, or in
+parallel across branches if more than one person is working. Everything from 17 onward is a chain: each
+phase assumes the previous one merged.
+
+---
+
+## Parallelisation
+
+If two engineers are working:
+
+- **M1 (02–10) parallelises cleanly.** Nine independent phases, disjoint file sets except 09/17 (both
+  touch `AppIndex`) — do 09 before anyone starts 17.
+- **M2 waves A (12, 13, 14) parallelise** once 11 has merged and established the pattern.
+- **M3, M4, M5 do not parallelise.** Each phase rewrites the file the next one edits. One engineer,
+  sequential, no exceptions.
+- **M6 (30, 31, 32) parallelises** after 29, with 33 independent from 16 onward.
+
+---
+
+## Risk register
+
+| Phase | The specific risk                                                                                                                                                                                     | Mitigation                                                                                                                                                            |
+| ----- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 04    | The snippets consent dialog is also the Accessibility permission gate. Changing its presentation could change _when_ the permission is requested.                                                     | Phase doc pins the exact ordering: consent → `settings.snippetsEnabled = true` → `Permissions.ensureAccessibility()`. Manual verification requires a fresh TCC state. |
+| 05    | Channel isolation breaks and a Dev build writes into the stable app's directory. (Path _changes_ are now fine — data is disposable.)                                                                  | Every path stays keyed by `Bundle.main.bundleIdentifier`; clean-install verification.                                                                                 |
+| 08    | Parallel scan could reorder the uninstall list or race the `seen` dedup set.                                                                                                                          | Index-ordered writeback is a hard acceptance criterion; dedup must run after the gather. Verify list order against a pre-change screenshot.                           |
+| 16    | A missed `didSet` silently stops persisting a setting. Worse: the eight absence-vs-`false` checks _look_ like dead legacy code under the new policy and are not — they encode fresh-install defaults. | AC enumerates every key; verification wipes the channel and walks all 14 panes to confirm defaults, then relaunches to confirm persistence.                           |
+| 17    | `ClipboardStore` and `QuicklinkStore` are harness-compiled; `@Observable` must not break that.                                                                                                        | `Tools/clipboard-test.swift` and `Tools/quicklink-test.swift` are mandatory gates.                                                                                    |
+| 18    | Deleting the Combine sinks changes _when_ feature-presence reconciliation runs (`@Published` fires before the write; `@Observable` after).                                                            | Phase doc requires removing the deferral `Task {}` wrappers in the same change, and verification toggles every feature switch.                                        |
+| 23    | The launcher screen owns the flat-selection invariant, favourites pinning, section ordering and the calc card offset. Highest-risk phase in the plan.                                                 | Phase 19 lands `Tools/palette-selection-test.swift` first. Phase 23 cannot start until that harness is green and covers the launcher.                                 |
+| 25    | `PaletteCoordinator` moves pop-to-root and compact-mode logic, which interact with window sizing.                                                                                                     | Verification includes the compact↔expanded swap and the pop-to-root timeout at every setting value.                                                                   |
+| 29    | Moving 13 feature folders breaks the `Tools/` harness command lines.                                                                                                                                  | Every move PR updates `docs/development.md` and `AGENTS.md` in the same commit; `checklists/testing.md` runs all 17 harnesses.                                        |
+| 34    | A comment pass can delete a load-bearing explanation.                                                                                                                                                 | Triage rule is delete/compress/**relocate** — relocation to `docs/` is the default for anything explaining an invariant.                                              |
+| 35    | Raycast import or the snippet Markdown format is deleted as "legacy". It is neither — those are formats Tinycast does not own.                                                                        | Both on the must-not-change list; `raycast-test` and `snippets-test` are gates.                                                                                       |
+
+---
+
+## Effort summary
+
+| Milestone | Phases | Total effort |
+| --------- | ------ | ------------ |
+| M0        | 1      | ~2 h         |
+| M1        | 9      | ~20 h        |
+| M2        | 8      | ~28 h        |
+| M3        | 5      | ~20 h        |
+| M4        | 3      | ~16 h        |
+| M5        | 3      | ~14 h        |
+| M6        | 4      | ~14 h        |
+| M7        | 2      | ~10 h        |
+| **Total** | **35** | **~124 h**   |
+
+Operator time, including review and manual verification. Claude's own working time is not the
+constraint — your review capacity is. Budget one to two phases per working day, no more.
+
+---
+
+## Status tracking
+
+Update this table as phases land. `Blocked` requires a note in the phase's progress file.
+
+| #   | Status      | Branch / commit | Date | Notes |
+| --- | ----------- | --------------- | ---- | ----- |
+| 01  | Not started |                 |      |       |
+| 02  | Not started |                 |      |       |
+| 03  | Not started |                 |      |       |
+| 04  | Not started |                 |      |       |
+| 05  | Not started |                 |      |       |
+| 06  | Not started |                 |      |       |
+| 07  | Not started |                 |      |       |
+| 08  | Not started |                 |      |       |
+| 09  | Not started |                 |      |       |
+| 10  | Not started |                 |      |       |
+| 11  | Not started |                 |      |       |
+| 12  | Not started |                 |      |       |
+| 13  | Not started |                 |      |       |
+| 14  | Not started |                 |      |       |
+| 15  | Not started |                 |      |       |
+| 16  | Not started |                 |      |       |
+| 17  | Not started |                 |      |       |
+| 18  | Not started |                 |      |       |
+| 19  | Not started |                 |      |       |
+| 20  | Not started |                 |      |       |
+| 21  | Not started |                 |      |       |
+| 22  | Not started |                 |      |       |
+| 23  | Not started |                 |      |       |
+| 24  | Not started |                 |      |       |
+| 25  | Not started |                 |      |       |
+| 26  | Not started |                 |      |       |
+| 27  | Not started |                 |      |       |
+| 28  | Not started |                 |      |       |
+| 29  | Not started |                 |      |       |
+| 30  | Not started |                 |      |       |
+| 31  | Not started |                 |      |       |
+| 32  | Not started |                 |      |       |
+| 33  | Not started |                 |      |       |
+| 34  | Not started |                 |      |       |
+| 35  | Not started |                 |      |       |

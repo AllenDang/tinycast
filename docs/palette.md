@@ -21,7 +21,7 @@ hotkey) and back out to it. Uninstall is one too, but reached only from a launch
 and scoped to that app; like Calculator History it stays out of the Tab cycle. So do both Quicklinks
 screens.
 
-The argument screen is the one mode where the search field is not a search field: it *is* the current
+The argument screen is the one mode where the search field is not a search field: it _is_ the current
 argument's input, so its placeholder names that argument and ↵ submits rather than activating a row.
 Its own state lives on `AppCore.quicklinkArguments`, the way `.uninstall`'s target lives on
 `UninstallSession`, and leaving the mode cancels the pending open. A bare backspace steps back an
@@ -43,7 +43,7 @@ Which display it anchors to depends on the **Follow the cursor across displays**
 - **On** — the screen holding `NSEvent.mouseLocation`, i.e. the display under the pointer.
 - **Off** — `NSScreen.main`.
 
-`NSScreen.main` alone can't implement the follow-the-cursor case: it is documented as the *key window's*
+`NSScreen.main` alone can't implement the follow-the-cursor case: it is documented as the _key window's_
 screen, and an accessory app driving a non-activating panel has no key window on the display the user is
 looking at, so `main` resolves to the menu-bar display regardless of where the pointer is.
 

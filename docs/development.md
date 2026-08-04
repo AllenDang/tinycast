@@ -130,7 +130,7 @@ can never lift one out, and that scoring is deterministic. The calc harness comp
 sources, which is why `Tinycast/Core/Calculator/` must stay Foundation-only. The system-action harness
 similarly keeps `SystemAction.swift` independent from AppKit and all command side effects. The
 uninstall harness is the same idea taken furthest: it touches no filesystem at all, because
-`UninstallScanner` hands the rules directory *names* and the protection classifier takes its
+`UninstallScanner` hands the rules directory _names_ and the protection classifier takes its
 environment facts as parameters.
 
 The clipboard harness likewise compiles the real `ClipboardStore.swift`, so that file must keep to

@@ -41,26 +41,26 @@ An app is matched on four fields kept deliberately separate — flattening them 
 lose the thing that decides the ranking. `SearchRelevance.score` evaluates each independently and the
 strongest one becomes the entry's base relevance:
 
-| Band | Field | Match strength |
-| --- | --- | --- |
-| 5 | display name (plus a snippet's keyword) | literal — exact / prefix / word-start / substring |
-| 4 | Spotlight alternate names | literal |
-| 3 | display name | subsequence |
-| 2 | Spotlight alternate names | subsequence |
-| 1 | bundle identifier | literal only |
-| 0 | executable name (`CFBundleExecutable`) | literal only |
+| Band | Field                                   | Match strength                                    |
+| ---- | --------------------------------------- | ------------------------------------------------- |
+| 5    | display name (plus a snippet's keyword) | literal — exact / prefix / word-start / substring |
+| 4    | Spotlight alternate names               | literal                                           |
+| 3    | display name                            | subsequence                                       |
+| 2    | Spotlight alternate names               | subsequence                                       |
+| 1    | bundle identifier                       | literal only                                      |
+| 0    | executable name (`CFBundleExecutable`)  | literal only                                      |
 
 Bands sit one `SearchRelevance.bandStride` apart, which is an order of magnitude wider than
 `FuzzyMatch`'s whole range — so a field can never reach the band above it, and the learned frecency
 boost (capped well below a stride) still reorders inside a tier without ever crossing one.
 
-A *literal* hit on a weaker field outranks a *subsequence* hit on a stronger one. That is the point of
+A _literal_ hit on a weaker field outranks a _subsequence_ hit on a stronger one. That is the point of
 the split: an alias the vendor actually declared (`Codex` for ChatGPT) must beat the incidental
 c-o-d-e…x scattered through an unrelated app's name, while a real prefix hit on a display name still
 wins outright.
 
 Identifier fields never subsequence-match — reverse-DNS text is a subsequence of nearly every short
-query (`cop` ⊂ `com.apple.Photos`), which would change *which* apps appear rather than just their
+query (`cop` ⊂ `com.apple.Photos`), which would change _which_ apps appear rather than just their
 order. For the same reason a bundle id is matched with its leading component stripped
 (`apple.Photos`, not `com.apple.Photos`): `com` alone prefixes almost every installed app. The full id
 still matches exactly, so a pasted identifier resolves.
@@ -206,7 +206,7 @@ running dot and the availability of the quit actions:
   swallows a press it won't act on, and it's skipped in the compact bar, which shows no selection.
   `AppLauncher.quit(bundleID:)` terminates every instance of the bundle and reports whether
   anything was running; the palette only dismisses when something was, and it restores focus unless
-  the app it just quit *was* `previousApp`.
+  the app it just quit _was_ `previousApp`.
 - **Quit All Applications** a system action. `AppLauncher.quitAllTargets()` is the
   policy (every `.regular` app except Finder — `terminate()` only relaunches it — and Tinycast,
   excluded by PID because About/Settings temporarily flips it to `.regular`). `AppCore.quitAllApps()`

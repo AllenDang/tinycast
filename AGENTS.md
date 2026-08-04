@@ -1,3 +1,21 @@
+> ## ⚠ An approved architecture refactor is in progress
+>
+> Some **structural** rules in this file — file layout, type ownership, which type does what — are being
+> changed by it. That is deliberate, and a phase contradicting one of them is **not** an error.
+>
+> **If you are executing a phase from [`docs/refactor/`](docs/refactor/), the phase document overrides
+> the architectural guidance here.** Read
+> [`docs/refactor/prompts/system-prompt.md`](docs/refactor/prompts/system-prompt.md) for the full
+> precedence ladder, and [`docs/refactor/POLICY.md`](docs/refactor/POLICY.md) for the migration and
+> compatibility rules.
+>
+> **Behavioral invariants below always hold** — UI, keyboard behaviour, accessibility, permission and
+> consent flows, Swift 6 data-race safety, and the explicitly off-limits files. A phase that contradicts
+> one of *those* is wrong: stop and say so.
+>
+> **If you are not working from a `docs/refactor/` phase**, ignore this box entirely and follow this
+> file as written.
+
 ## Project
 
 Tinycast is a native macOS menu-bar launcher (a minimal Raycast): fuzzy app launcher, global +
@@ -17,13 +35,9 @@ builds with the **Xcode 26** toolchain.
 
 ## Project Philosophy
 
-- Production-quality, as if written by a senior macOS engineer.
-- Prefer simple, maintainable solutions over clever ones; preserve existing behavior unless the task
-  changes it.
-- Keep SwiftUI views declarative and lightweight; business logic lives in models / managers.
-- Respect Swift 6 actor isolation; keep expensive work off the main actor.
-- Remove dead code rather than adding compatibility layers. Leave the codebase cleaner than you found
-  it.
+General engineering principles — simple over clever, declarative views, Swift 6 isolation, remove dead
+code — come from the global `CLAUDE.md` and are not repeated here. Tinycast adds one rule of its own:
+
 - **Comments are single-line** — no stacked / multi-line blocks. Only comment the non-obvious (a
   _why_, a gotcha, a load-bearing invariant); never restate the code.
 
@@ -245,17 +259,3 @@ Never break these without an explicit task to do so.
 - `Tinycast/App/` — `@main` app + delegate.
 - `Tools/` — standalone test harnesses and the emoji generator.
 - `.github/workflows/release.yml` — the entire release pipeline (see `docs/development.md`).
-
-## Additional Documentation
-
-- [`docs/architecture.md`](docs/architecture.md) — core ownership, windows, concurrency.
-- [`docs/palette.md`](docs/palette.md) — palette state flow, menu-open freeze, focus restoration.
-- [`docs/launcher.md`](docs/launcher.md) · [`docs/calculator.md`](docs/calculator.md) ·
-  [`docs/clipboard.md`](docs/clipboard.md) · [`docs/emoji.md`](docs/emoji.md) ·
-  [`docs/snippets.md`](docs/snippets.md) · [`docs/quicklinks.md`](docs/quicklinks.md) ·
-  [`docs/window-management.md`](docs/window-management.md) ·
-  [`docs/hotkeys.md`](docs/hotkeys.md) · [`docs/uninstall.md`](docs/uninstall.md) — subsystem
-  internals.
-- [`docs/ui.md`](docs/ui.md) — the full visual design system, tokens, scrollbars, section headers.
-- [`docs/development.md`](docs/development.md) — build, test, package, release.
-- [`docs/signing.md`](docs/signing.md) — signing model and Gatekeeper.
