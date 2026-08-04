@@ -178,7 +178,7 @@ Update this table as phases land. `Blocked` requires a note in the phase's progr
 | --- | ----------- | --------------- | ---- | ----- |
 | 01  | Complete    | `399189b` (#157) | 2026-08-05 | Merged. **Instruments baselines never captured** — later phases have no before-numbers to compare against; see `progress/01`. |
 | 02  | Complete    | `40bab1f` (#158) | 2026-08-05 | Merged. `AppEntry.icon` retained — two callers in `AppPickerPopover`, so AC5 not met; follow-ups in `progress/02`. |
-| 03  | Not started |                 |      |       |
+| 03  | Complete    | `refactor/03-named-paste-timing-constants` | 2026-08-05 | Two constants, four call sites (doc said three). Values unchanged; paste verified into fast and slow apps. |
 | 04  | Not started |                 |      |       |
 | 05  | Not started |                 |      |       |
 | 06  | Not started |                 |      |       |

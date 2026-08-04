@@ -5,6 +5,12 @@ enum Paster {
     /// Stamped on Tinycast's own synthetic keystrokes so the snippet keyword tap can skip them.
     static let tinycastEventTag: Int64 = 0x54494E59
 
+    /// Covers the gap between `activate()` returning and the target app accepting a keystroke.
+    private static let activationDelay: TimeInterval = 0.08
+
+    /// Shorter: no activation to wait on, only the pasteboard write reaching the target's process.
+    private static let directPostDelay: TimeInterval = 0.05
+
     /// Write the item onto the pasteboard and paste it into `previousApp` via a synthetic ⌘V, activating that app so the keystroke lands there. Returns whether content was written (and thus promoted).
     @MainActor @discardableResult
     static func paste(
@@ -12,7 +18,7 @@ enum Paster {
     ) -> Bool {
         guard write(item, store: store) else { return false }
         previousApp?.activate()
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.08) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + activationDelay) {
             postCommandV()
         }
         return true
@@ -38,7 +44,7 @@ enum Paster {
     static func pasteString(_ text: String, previousApp: NSRunningApplication?) {
         writeString(text)
         previousApp?.activate()
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.08) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + activationDelay) {
             postCommandV()
         }
     }
@@ -54,7 +60,7 @@ enum Paster {
     static func pasteStringInPlace(_ text: String, into app: NSRunningApplication?) {
         writeString(text)
         guard let pid = app?.processIdentifier else { return }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + directPostDelay) {
             postCommandV(toPid: pid)
         }
     }
@@ -75,7 +81,7 @@ enum Paster {
     ) -> Bool {
         guard write(item, store: store) else { return false }
         if let pid = app?.processIdentifier {
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+            DispatchQueue.main.asyncAfter(deadline: .now() + directPostDelay) {
                 postCommandV(toPid: pid)
             }
         }
