@@ -4,7 +4,7 @@ Read `docs/refactor/phases/30-naming-vocabulary.md` completely.
 
 ## Task
 
-Five renames, plus write the ten-suffix vocabulary table into `AGENTS.md`.
+Six renames, plus write the ten-suffix vocabulary table into `AGENTS.md`.
 
 | Today              | Becomes            |
 | ------------------ | ------------------ |

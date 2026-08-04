@@ -31,7 +31,7 @@ file for one of the three windows it serves.
 
 | From                                                                        | To                                  |
 | --------------------------------------------------------------------------- | ----------------------------------- |
-| `Core/Dialog/*` (4 files)                                                   | `Windows/Dialog/`                   |
+| `Core/Dialog/*` (3 files)                                                   | `Windows/Dialog/`                   |
 | `Features/Dialog/*` (2 files)                                               | `Windows/Dialog/`                   |
 | `Core/HUD/*` (4 files)                                                      | `Windows/HUD/`                      |
 | `Features/HUD/*` (2 files)                                                  | `Windows/HUD/`                      |

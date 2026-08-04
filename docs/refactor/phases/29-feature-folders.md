@@ -24,33 +24,76 @@ removed the shared-file slices; this one co-locates what remains.
 
 1. Create `Features/<Name>/{Model,Service,UI,Settings}/` for the thirteen features.
 2. Move each feature's files in.
-3. Reduce `Settings/` to `SettingsRootView.swift`, `SettingsTab.swift`, `AppSettings.swift`.
+3. Reduce `Settings/` to the shell — `SettingsRootView.swift`, `SettingsTab.swift`, `AppSettings.swift`
+   — plus `Panes/` for the two panes that belong to no feature.
 4. Update every affected harness command line.
+5. Leave `Tinycast/Core/` deleted, not thinned.
 
 ## Target layout
 
-| Feature              | Model (pure)                                                              | Service (effects)                                                                                                             | UI                                                                                | Settings                                                                                          |
-| -------------------- | ------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
-| **Launcher**         | `AppEntry`, `SearchRelevance`, `SearchScopes`, `LauncherRankingStore`     | `AppIndex`, `AppLauncher`, `SpotlightNames`, `SettingsPaneScanner`, `FavoritesStore`, `VisibilityStore`, `RunningAppsMonitor` | `LauncherScreen`, `LauncherList`, `AppRow`, `AppIconView`, `AppActionsMenu`       | `ApplicationsSettingsView`, `SystemSettingsSettingsView`, `LauncherItemsCard`, `SearchScopesCard` |
-| **Clipboard**        | `ClipboardStore`                                                          | `ClipboardManager`, `Paster`                                                                                                  | `ClipboardScreen` + views                                                         | `ClipboardSettingsView`, `AppPickerPopover`                                                       |
-| **Calculator**       | `Calculator/*`, `CurrencyData.generated`                                  | `CurrencyRateStore`, `CalculatorHistoryStore`                                                                                 | `CalculatorHistoryScreen`, `CalculatorCardView`                                   | —                                                                                                 |
-| **Emoji**            | `EmojiCatalog`, `EmojiGridGeometry`, `EmojiData.generated`                | `EmojiIndex`, `FrequentEmojiStore`                                                                                            | `EmojiScreen`                                                                     | `EmojiSettingsView`                                                                               |
-| **Quicklinks**       | `Quicklink`, `QuicklinkDestination`, `QuicklinkStore`, `QuicklinkArchive` | `QuicklinkLauncher`, `QuicklinkArgumentSession`                                                                               | screens + `QuicklinkCoordinator`                                                  | `QuicklinksSettingsView`, `QuicklinkEditorSheet`                                                  |
-| **Snippets**         | `Snippets/*` pure                                                         | `SnippetTextInjector`, `SnippetKeywordListener`                                                                               | `SnippetArgumentsPrompt` + coordinator                                            | `SnippetsSettingsView`                                                                            |
-| **WindowManagement** | `WindowCommand`, `WindowLayout`, `WindowActionMemory`                     | `WindowMover`                                                                                                                 | —                                                                                 | `WindowManagementSettingsView`                                                                    |
-| **Uninstall**        | 5 pure files                                                              | `UninstallScanner`, `UninstallRunner`, `UninstallSession`                                                                     | `UninstallScreen` + coordinator                                                   | —                                                                                                 |
-| **SystemActions**    | `SystemAction`, `VolumeLevel`                                             | `SystemActionRunner`, `VolumeState`                                                                                           | coordinator                                                                       | `SystemActionsSettingsView`                                                                       |
-| **CustomCommands**   | `CustomCommand`                                                           | `ShellCommandRunner`                                                                                                          | coordinator                                                                       | `CommandsSettingsView`, `CustomCommandEditorSheet`                                                |
-| **HotKeys**          | `KeyShortcut`, `HotKeyBinding`, `DoubleTapModifier`, `DoubleTapDetector`  | `HotKeyCenter`, `HotKeyManager`, `DoubleTapMonitor`, `HyperKeyTap`, `ShortcutCaptureSession`                                  | `ShortcutRecorder`, `ShortcutRecorderPopover`, `CalloutShape`, `CalloutPlacement` | —                                                                                                 |
-| **Backup**           | `SettingsBackup`, `Raycast*`                                              | `BackupActions`, `Scrypt`, `Gunzip`                                                                                           | —                                                                                 | `BackupSettingsView`, `RaycastImportSelection`                                                    |
-| **Onboarding**       | `OnboardingState`                                                         | —                                                                                                                             | `OnboardingView`                                                                  | —                                                                                                 |
+| Feature              | Model (pure)                                                                          | Service (effects)                                                                                                             | UI                                                                                               | Settings                                                                                          |
+| -------------------- | ------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------- |
+| **Launcher**         | `AppEntry`, `SearchRelevance`, `SearchScopes`, `LauncherRankingStore`, `CommandRegistry` | `AppIndex`, `AppLauncher`, `SpotlightNames`, `SettingsPaneScanner`, `FavoritesStore`, `VisibilityStore`, `RunningAppsMonitor` | `LauncherScreen`, `LauncherList`, `SectionHeader`, `AppRow`, `AppIconView`, `AppActionsMenu`     | `ApplicationsSettingsView`, `SystemSettingsSettingsView`, `LauncherItemsCard`, `SearchScopesCard` |
+| **Clipboard**        | `ClipboardStore`                                                                      | `ClipboardManager`, `Paster`                                                                                                  | `ClipboardScreen`, `ClipboardList`, `ClipboardPreview`, `ClipboardActionsMenu`                   | `ClipboardSettingsView`, `AppPickerPopover`                                                       |
+| **Calculator**       | `Calculator/*`, `CurrencyData.generated`                                              | `CurrencyRateStore`, `CalculatorHistoryStore`                                                                                 | `CalculatorHistoryScreen`, `CalculatorCardView`                                                  | `MiscellaneousSettingsView` — see below                                                           |
+| **Emoji**            | `EmojiCatalog`, `EmojiGridGeometry`, `EmojiData.generated`                            | `EmojiIndex`, `FrequentEmojiStore`                                                                                            | `EmojiScreen`                                                                                    | `EmojiSettingsView`                                                                               |
+| **Quicklinks**       | `Quicklink`, `QuicklinkDestination`, `QuicklinkStore`, `QuicklinkArchive`             | `QuicklinkLauncher`, `QuicklinkArgumentSession`                                                                               | screens + `QuicklinkCoordinator`                                                                 | `QuicklinksSettingsView`, `QuicklinkEditorSheet`                                                  |
+| **Snippets**         | `Snippets/*` pure                                                                     | `SnippetTextInjector`, `SnippetKeywordListener`                                                                               | `SnippetArgumentsPrompt` + coordinator                                                           | `SnippetsSettingsView`                                                                            |
+| **WindowManagement** | `WindowCommand`, `WindowLayout`, `WindowActionMemory`                                 | `WindowMover`                                                                                                                 | —                                                                                                | `WindowManagementSettingsView`                                                                    |
+| **Uninstall**        | 5 pure files                                                                          | `UninstallScanner`, `UninstallRunner`, `UninstallSession`                                                                     | `UninstallScreen` + coordinator                                                                  | —                                                                                                 |
+| **SystemActions**    | `SystemAction`, `VolumeLevel`                                                         | `SystemActionRunner`, `VolumeState`                                                                                           | coordinator                                                                                      | `SystemActionsSettingsView`                                                                       |
+| **CustomCommands**   | `CustomCommand`                                                                       | `ShellCommandRunner`                                                                                                          | coordinator                                                                                      | `CommandsSettingsView`, `CustomCommandEditorSheet`                                                |
+| **HotKeys**          | `KeyShortcut`, `HotKeyBinding`, `HyperKey`, `DoubleTapModifier`, `DoubleTapDetector`  | `HotKeyCenter`, `HotKeyManager`, `DoubleTapMonitor`, `HyperKeyTap`, `ShortcutCaptureSession`                                  | `ShortcutRecorder`, `ShortcutRecorderPopover`, `CalloutShape`, `CalloutPlacement`                | —                                                                                                 |
+| **Backup**           | `SettingsBackup`, `Raycast*`                                                          | `BackupActions`, `Scrypt`, `Gunzip`                                                                                           | —                                                                                                | `BackupSettingsView`, `RaycastImportSelection`                                                    |
+| **Onboarding**       | `OnboardingState`                                                                     | —                                                                                                                             | `OnboardingView`                                                                                 | —                                                                                                 |
 
-Also: `Core/CommandRegistry.swift` → `Features/Launcher/Model/`; `Core/HealthTicker.swift` and
-`Core/Memo.swift` → `Platform/`.
+Also: `Core/HealthTicker.swift` and `Core/Memo.swift` → `Platform/`. (`Core/Signposts.swift` and
+`Core/AppPaths.swift` already went to `Platform/` in phase 27.)
+
+The five mode views that phases 20–23 wrapped in a `…Screen` still exist and go to their feature's
+`UI/` alongside it, keeping their names — `CalculatorHistoryView`, `EmojiGridView`,
+`QuicklinkArgumentsView`, `QuicklinkListView`, `UninstallView`. A screen is the `PaletteScreen`
+conformance; the view is what it renders. Two types, two files, both in `UI/`.
+
+### The files with no feature owner
+
+Three Settings panes belong to no feature in the table above, and §4.2 did not place them. They are
+placed here, and this rule is what makes the placement decidable:
+
+> **A pane lives with its feature. A pane that has no feature lives in `Settings/Panes/`.**
+
+| Pane                        | Home                                | Why                                                                        |
+| --------------------------- | ----------------------------------- | -------------------------------------------------------------------------- |
+| `GeneralSettingsView`       | `Settings/Panes/`                   | Global shortcuts, search, Hyper key, appearance — five features, no owner  |
+| `PermissionsSettingsView`   | `Settings/Panes/`                   | App-level permission state, not one feature's                              |
+| `MiscellaneousSettingsView` | `Features/Calculator/Settings/`     | Contains **only** the Calculator card and the currency-consent sheet       |
+
+`MiscellaneousSettingsView` moves under its real owner here and is **renamed** `CalculatorSettingsView`
+in phase 30 — this phase renames no type. Its `SettingsTab` case stays `.miscellaneous`; that raw value
+is a persisted `CommandID`, and there is no reason to orphan those records for a filename.
+
+### Permitted verbatim splits
+
+Phase 29 is otherwise 100 % moves, but three files each declare several top-level views and so have no
+single correct destination filename. Splitting them is **cut-and-paste with zero content change** —
+every declaration lands byte-identical in a file named for it, in declaration order:
+
+| File                                         | Splits into                                                                                                                      |
+| -------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| `Features/Launcher/LauncherView.swift`       | `LauncherList.swift` · `SectionHeader.swift` · `AppRow.swift` · `AppIconView.swift` · `AppActionsMenu.swift`                      |
+| `Features/Clipboard/ClipboardView.swift`     | `ClipboardList.swift` (+ `DateBucket`, `ClipboardRow`, `AsyncThumbnail`) · `ClipboardActionsMenu.swift` · `ClipboardPreview.swift` (+ `ClipboardInfoSection`) |
+| `Features/Settings/SettingsRootView.swift`   | `SettingsRootView.swift` (keeps `SidebarRow` and the `Notification.Name` extension) · `SettingsTab.swift`                         |
+
+A `private` type moves into the file of the one type that uses it and stays `private`. If the compiler
+demands a wider access level anywhere, the split is wrong — put it back and say so, do not widen.
+
+**The rule this encodes, for every future file:** one top-level `View` or namespace enum per file, named
+for it. That is what keeps `Features/` navigable at fifty features instead of thirteen.
 
 ## Files that must NOT change (contents)
 
-- **Every moved file.** This phase is 100 % moves.
+- **Every moved file.** This phase is moves, plus three cut-and-paste splits that change no byte of any
+  declaration.
 - `EdgeDissolve.swift`, `ThinScrollbar.swift` — already in `DesignSystem/Scrolling/`, untouched again
 
 ## Implementation boundaries
@@ -64,7 +107,11 @@ Also: `Core/CommandRegistry.swift` → `Features/Launcher/Model/`; `Core/HealthT
   must be updated in this phase. Read the whole section and fix every reference — a stale invariant is
   worse than none.
 - Do not rename any type. Phase 30.
-- Do not merge, split or edit any file.
+- Do not merge or edit any file. **The only splits permitted are the three enumerated above** — and each
+  is cut-and-paste: no reordering, no reformatting, no "while I'm here".
+- **File renames that make a filename match the type it declares are in scope**, since the file is moving
+  anyway and the rename is free: `RunningApps.swift` → `RunningAppsMonitor.swift`. That is a *file*
+  rename; the type is untouched.
 - Do not create `Features/<Name>/` subfolders for a feature that has only one or two files — Onboarding
   and WindowManagement do not need four empty directories. Use judgement; the layer split is for
   features large enough to benefit.
@@ -73,14 +120,21 @@ Also: `Core/CommandRegistry.swift` → `Features/Launcher/Model/`; `Core/HealthT
 ## Detailed acceptance criteria
 
 1. Every file is at its target path.
-2. `git diff -M --stat` shows 100 % similarity for every move.
+2. `git diff -M --stat` shows 100 % similarity for every move. The three split files are the only
+   exception, and for those the **concatenation** of the new files must equal the old file's
+   declarations exactly — verify with `git show HEAD~1:<old path>` and a diff of the sorted bodies.
 3. All 18 harness command lines updated in all three places (`docs/development.md`, `AGENTS.md`,
    `checklists/testing.md`) and all 18 pass.
 4. Every file path referenced in `AGENTS.md`'s Critical Invariants section is correct.
-5. `Settings/` contains exactly three files.
-6. `Core/` no longer exists, or contains only what genuinely has no feature home — and that list is
-   named in the summary.
-7. Debug and Release builds succeed; UI pixel-identical.
+5. `Settings/` contains exactly `SettingsRootView.swift`, `SettingsTab.swift`, `AppSettings.swift` and
+   `Panes/` — and `Panes/` contains exactly `GeneralSettingsView.swift` and
+   `PermissionsSettingsView.swift`.
+6. **`Tinycast/Core/` no longer exists.** Every file has a home in this phase or an earlier one; if a
+   file appears to have none, that is a gap in this document — say so rather than inventing a
+   `Core/` remainder.
+7. No file declares more than one top-level `View` or namespace enum, except where it already did before
+   this phase and is not in the split list.
+8. Debug and Release builds succeed; UI pixel-identical.
 
 ## Manual verification checklist
 
@@ -90,6 +144,9 @@ Also: `Core/CommandRegistry.swift` → `Features/Launcher/Model/`; `Core/HealthT
 - [ ] `checklists/regression.md` — **the full document**
 - [ ] Read `AGENTS.md`'s Critical Invariants section end to end; every path resolves
 - [ ] `grep -rn "Tinycast/Core/" docs/ AGENTS.md` → only intentional historical references remain
+- [ ] `ls Tinycast/Core` → no such directory
+- [ ] Walk **all 14 Settings panes** — the sidebar order, each pane's cards and the palette's
+      `Settings ▸ <pane>` entries are all unchanged (this is the phase that moves every pane file)
 - [ ] Screenshot the palette and two Settings panes before/after → pixel-identical
 - [ ] `xcodegen generate` twice → stable
 
@@ -109,7 +166,8 @@ Also: `Core/CommandRegistry.swift` → `Features/Launcher/Model/`; `Core/HealthT
 
 ## Expected commit size
 
-~110 files moved across ~13 commits. Content delta zero.
+~110 files moved across ~13 commits, plus one commit for the Settings shell and its two orphan panes.
+Content delta zero — the three splits redistribute bytes without changing any.
 
 ## Suggested commit message
 
@@ -151,4 +209,7 @@ AGENTS.md. Contents unchanged.
   correct — which is the only way to be sure.
 - Check the layer placement by imports: anything in a `Model/` folder importing AppKit or SwiftUI is in
   the wrong layer, and the `Tools/` harness for that feature will tell you.
-- Similarity must be 100 % everywhere. Zero exceptions in this phase.
+- Similarity must be 100 % everywhere except the three enumerated splits. For those, read the diff as a
+  redistribution: every `+` line must have a matching `-` line in the same commit.
+- **`Core/` must be gone, not small.** A leftover `Core/` with two files in it is how a flat namespace
+  grows back — the next contributor with a homeless file puts it there, and in a year it is forty again.

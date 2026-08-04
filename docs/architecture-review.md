@@ -895,7 +895,8 @@ Pane views (`GeneralSettingsView` …), shared scaffolding (`SettingsComponents`
 layer, not a Settings component.
 
 **Fix:** §4 (each pane moves to its feature; scaffolding to `DesignSystem/`; the recorder to
-`Features/HotKeys/UI/`).
+`Features/HotKeys/UI/`). Two panes have no feature — `GeneralSettingsView` spans five of them and
+`PermissionsSettingsView` is app-level — and they stay with the shell in `Settings/Panes/`.
 
 ---
 
@@ -981,6 +982,7 @@ meaning; the problem is that some are synonyms and there is no written rule.
 | `HotKeyManager`                    | `HotKeyBindings` (a `Store`) | It persists and publishes bindings; `HotKeyCenter` is already the Carbon layer.                                         |
 | `CommandRegistry`                  | `CommandCatalog`             | Matches `SystemActionCatalog`, `WindowCommandCatalog`.                                                                  |
 | `PaletteViewModel`                 | `PaletteState`               | It is app state, not a per-view VM.                                                                                     |
+| `MiscellaneousSettingsView`        | `CalculatorSettingsView`     | It holds one Calculator card and the currency-consent sheet — "Miscellaneous" names the tab, not the pane.              |
 | `QuicklinkLauncher`, `AppLauncher` | keep                         | "Launcher" is clearer than "Runner" for opening things; document as a `Runner` synonym reserved for `NSWorkspace.open`. |
 | `SnippetTextInjector`              | keep                         | Domain term with no better alternative.                                                                                 |
 
@@ -1018,16 +1020,16 @@ names are the ones the code already has (§2.2), just made visible.
 
 ```
 Tinycast/
-├── App/                              # composition root — 4 files, and it stays 4 files
+├── App/                              # composition root — 3 files, and it stays 3 files
 │   ├── TinycastApp.swift             # @main, MenuBarExtra scene
 │   ├── AppDelegate.swift             # 3 callbacks, unchanged
-│   ├── AppCore.swift                 # ~250 lines: ownership + start() wiring + nothing else
-│   └── AppPaths.swift                # (new, M-5) the one place channel isolation is defined
+│   └── AppCore.swift                 # ~250 lines: ownership + start() wiring + nothing else
 │
 ├── Palette/                          # the shell every feature plugs a screen into
 │   ├── PalettePanel.swift
 │   ├── PaletteWindowController.swift
 │   ├── PaletteState.swift            # was PaletteViewModel
+│   ├── PaletteMode.swift             # PaletteMode + PasteTarget, extracted from AppCore
 │   ├── PaletteCoordinator.swift      # was AppCore's show/hide/mode/pop-to-root block
 │   ├── RootPaletteView.swift         # ~350 lines: header, footer, menus, key routing
 │   └── PaletteScreen.swift           # the one new protocol (C-2)
@@ -1035,20 +1037,24 @@ Tinycast/
 ├── Features/
 │   ├── Launcher/
 │   │   ├── Model/      AppEntry.swift · SearchRelevance.swift · SearchScopes.swift
-│   │   │               LauncherRankingStore.swift            ← pure, harness-compiled
+│   │   │               LauncherRankingStore.swift  ← pure, harness-compiled
+│   │   │               CommandCatalog.swift        ← was CommandRegistry
 │   │   ├── Service/    AppIndex.swift · AppLauncher.swift · SpotlightNames.swift
 │   │   │               SettingsPaneScanner.swift · FavoritesStore.swift
 │   │   │               VisibilityStore.swift · RunningAppsMonitor.swift
 │   │   ├── UI/         LauncherScreen.swift · LauncherList.swift · AppRow.swift
-│   │   │               AppIconView.swift · AppActionsMenu.swift
+│   │   │               AppIconView.swift · AppActionsMenu.swift · SectionHeader.swift
 │   │   └── Settings/   ApplicationsSettingsView.swift · SystemSettingsSettingsView.swift
 │   │                   LauncherItemsCard.swift · SearchScopesCard.swift
 │   │
 │   ├── Clipboard/      Model/ (ClipboardStore) · Service/ (ClipboardMonitor, Paster)
-│   │                   UI/ (ClipboardScreen, ClipboardList, ClipboardPreview, …)
-│   │                   Settings/ (ClipboardSettingsView, AppPickerPopover)
+│   │                   UI/ (ClipboardScreen, ClipboardList, ClipboardPreview,
+│   │                   ClipboardActionsMenu) · Settings/ (ClipboardSettingsView,
+│   │                   AppPickerPopover)
 │   ├── Calculator/     Model/ (Calc*, CurrencyData.generated) · Service/ (CurrencyRateStore,
-│   │                   CalculatorHistoryStore) · UI/ · Settings/
+│   │                   CalculatorHistoryStore) · UI/ (CalculatorHistoryScreen,
+│   │                   CalculatorCardView) · Settings/ (CalculatorSettingsView,
+│   │                   was MiscellaneousSettingsView — it only ever held the Calculator card)
 │   ├── Emoji/          Model/ (EmojiCatalog, EmojiGridGeometry, EmojiData.generated)
 │   │                   Service/ (EmojiIndex, FrequentEmojiStore) · UI/ · Settings/
 │   ├── Quicklinks/     Model/ · Service/ · UI/ · Settings/ · QuicklinkCoordinator.swift
@@ -1060,7 +1066,8 @@ Tinycast/
 │   ├── SystemActions/  Model/ (SystemAction, VolumeLevel) · Service/ (SystemActionRunner,
 │   │                   VolumeState) · Settings/ · SystemActionCoordinator.swift
 │   ├── CustomCommands/ Model/ · Service/ (ShellCommandRunner) · Settings/ · Coordinator
-│   ├── HotKeys/        Model/ (KeyShortcut, HotKeyBinding, DoubleTapModifier, DoubleTapDetector)
+│   ├── HotKeys/        Model/ (KeyShortcut, HotKeyBinding, HyperKey, DoubleTapModifier,
+│   │                   DoubleTapDetector)
 │   │                   Service/ (HotKeyCenter, HotKeyBindings, DoubleTapMonitor, HyperKeyTap,
 │   │                   ShortcutCaptureSession) · UI/ (ShortcutRecorder, ShortcutRecorderPopover,
 │   │                   CalloutShape, CalloutPlacement) · Settings/
@@ -1083,15 +1090,28 @@ Tinycast/
 │   ├── HUD/     HUDPanel · HUDPresenter · MessageHUD* · VolumeHUD*
 │   └── About/   AboutView.swift
 │
-├── Settings/                         # the shell only; panes live with their features
-│   ├── SettingsRootView.swift · SettingsTab.swift
-│   └── AppSettings.swift
+├── Settings/                         # the shell, plus the panes that belong to no feature
+│   ├── SettingsRootView.swift · SettingsTab.swift   # SettingsTab extracted from the root view
+│   ├── AppSettings.swift
+│   └── Panes/  GeneralSettingsView.swift · PermissionsSettingsView.swift
 │
 └── Platform/                         # thin, dependency-free system shims
     ├── Permissions.swift · LaunchAtLogin.swift · CursorScreen.swift
-    ├── AppDisplayName.swift · NotificationToken.swift
+    ├── AppDisplayName.swift · NotificationToken.swift · AppPaths.swift
+    ├── Signposts.swift · HealthTicker.swift · Memo.swift
     └── Images/  IconCache.swift · ImageThumbnail.swift   # IconCache extracted from AppIndex.swift
 ```
+
+**Two rules make the tree decidable** — without them the same file has two plausible homes:
+
+- **A Settings pane lives with its feature; a pane with no feature lives in `Settings/Panes/`.** Only
+  two qualify: `GeneralSettingsView` (global shortcuts, search, Hyper key, appearance) and
+  `PermissionsSettingsView`. Everything else has an owner — including `MiscellaneousSettingsView`,
+  which contains one Calculator card and the currency-consent sheet and is therefore the Calculator
+  pane under a misleading name.
+- **One top-level `View` or namespace enum per file, named for it.** `LauncherView.swift` and
+  `ClipboardView.swift` each declare five, which is why neither name appears above. Splitting them is
+  verbatim extraction, not a rewrite — see phase 29's enumerated split list.
 
 **Why this shape and not "Clean Architecture":**
 

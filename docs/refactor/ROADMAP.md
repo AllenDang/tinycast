@@ -21,7 +21,7 @@ Context: expected share of one Claude conversation — **Low** < 25 % · **Med**
 | **M2** | Observation    | 11–18  | The largest CPU + RAM win. Removes ~30 `assumeIsolated` hazards.                            |
 | **M3** | Palette split  | 19–23  | `RootPaletteView` 1126 → ~350 lines. Adding a mode becomes one file.                        |
 | **M4** | AppCore split  | 24–26  | `AppCore` 1348 → ~250 lines. Kills the merge-conflict bottleneck.                           |
-| **M5** | Structure      | 27–29  | Feature-first tree. Navigability.                                                           |
+| **M5** | Structure      | 27–29  | Feature-first tree, `Core/` deleted. Navigability.                                          |
 | **M6** | Consistency    | 30–33  | One naming vocabulary, compiler-enforced exhaustiveness, harness coverage.                  |
 | **M7** | Close out      | 34–35  | Comment budget, final measurement, docs, and deleting the now-dead compatibility machinery. |
 
@@ -146,6 +146,7 @@ If two engineers are working:
 | 23    | The launcher screen owns the flat-selection invariant, favourites pinning, section ordering and the calc card offset. Highest-risk phase in the plan.                                                 | Phase 19 lands `Tools/palette-selection-test.swift` first. Phase 23 cannot start until that harness is green and covers the launcher.                                 |
 | 25    | `PaletteCoordinator` moves pop-to-root and compact-mode logic, which interact with window sizing.                                                                                                     | Verification includes the compact↔expanded swap and the pop-to-root timeout at every setting value.                                                                   |
 | 29    | Moving 13 feature folders breaks the `Tools/` harness command lines.                                                                                                                                  | Every move PR updates `docs/development.md` and `AGENTS.md` in the same commit; `checklists/testing.md` runs all 17 harnesses.                                        |
+| 29    | A file with no obvious owner gets parked in a leftover `Core/`, and the flat namespace grows back. | AC6 requires `Tinycast/Core/` to be **deleted**. Every current file is assigned a home in phase 27, 28 or 29; a file that looks homeless is a gap in the phase doc to raise, not to park. |
 | 34    | A comment pass can delete a load-bearing explanation.                                                                                                                                                 | Triage rule is delete/compress/**relocate** — relocation to `docs/` is the default for anything explaining an invariant.                                              |
 | 35    | Raycast import or the snippet Markdown format is deleted as "legacy". It is neither — those are formats Tinycast does not own.                                                                        | Both on the must-not-change list; `raycast-test` and `snippets-test` are gates.                                                                                       |
 

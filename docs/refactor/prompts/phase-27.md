@@ -5,8 +5,8 @@ the specification.
 
 ## Task
 
-Pure file moves out of the 46-file flat `Core/` namespace, plus one extraction (`IconCache` out of
-`AppIndex.swift`).
+Pure file moves out of the 46-file flat `Core/` namespace, plus two extractions: `IconCache` out of
+`AppIndex.swift`, and `KeyCapChip` out of `Theme.swift`.
 
 ## Hard gates
 
@@ -19,6 +19,10 @@ Pure file moves out of the 46-file flat `Core/` namespace, plus one extraction (
 - Every other moved file: contents unchanged apart from removing an import the move made redundant.
 - `IconCache` is **cut and pasted** out of `AppIndex.swift`, not rewritten. `AppEntry` and `AppIndex`
   stay put.
+- `KeyCapChip` is **cut and pasted** out of `Theme.swift` into `DesignSystem/KeyCapChip.swift`. A `View`
+  does not belong in the design-token source. The `extension View` at the bottom of `Theme.swift` stays
+  — that is token application, not a view. `callout-test` compiles `Theme.swift` for `Theme.Size` only,
+  so its command line does **not** change; confirm that by running it.
 - **Two harness command lines must be updated in the same commit**, in **both** `docs/development.md`
   **and** `AGENTS.md`:
   - `callout-test` → `Core/Theme.swift` becomes `DesignSystem/Theme.swift`
