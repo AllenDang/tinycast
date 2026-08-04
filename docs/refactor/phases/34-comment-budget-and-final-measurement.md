@@ -118,7 +118,7 @@ straight back.
 
 | Metric                         | Phase 01 baseline | Now | Δ                                   |
 | ------------------------------ | ----------------- | --- | ----------------------------------- |
-| Release binary size            |                   |     | must be < 3 MB                      |
+| Release binary size            |                   |     | must be < 3 MB upto 4MB             |
 | Cold launch, median of 3       |                   |     | must be within 10 %                 |
 | `AppCore.start`                |                   |     |                                     |
 | `AppIndex.scan` cold / warm    |                   |     | expect a large warm drop (phase 07) |

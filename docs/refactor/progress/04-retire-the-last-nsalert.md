@@ -4,16 +4,16 @@
 
 ## Status
 
-| Field                         | Value                                          |
-| ----------------------------- | ---------------------------------------------- |
-| **Status**                    | Complete                                       |
-| **Started**                   | 2026-08-05                                     |
-| **Completed**                 | 2026-08-05                                     |
-| **Operator**                  | abue-ammar                                     |
-| **Branch**                    | `refactor/04-retire-the-last-nsalert`          |
-| **Commit**                    | `a49e802`                                      |
-| **Claude conversations used** | 1                                              |
-| **Actual effort**             | ~0.5h vs. estimate of S                        |
+| Field                         | Value                                 |
+| ----------------------------- | ------------------------------------- |
+| **Status**                    | Complete                              |
+| **Started**                   | 2026-08-05                            |
+| **Completed**                 | 2026-08-05                            |
+| **Operator**                  | abue-ammar                            |
+| **Branch**                    | `refactor/04-retire-the-last-nsalert` |
+| **Commit**                    | `a49e802`                             |
+| **Claude conversations used** | 1                                     |
+| **Actual effort**             | ~0.5h vs. estimate of S               |
 
 ---
 
@@ -55,12 +55,12 @@
 
 ## Verification
 
-| Checklist                  | Result | Notes                                                                     |
-| -------------------------- | ------ | ------------------------------------------------------------------------- |
+| Checklist                  | Result | Notes                                                                                                                                                                                                                                  |
+| -------------------------- | ------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `checklists/build.md`      | PASS   | §1–2 Debug `BUILD SUCCEEDED`; zero new warnings against a pre-phase baseline captured on the same tree. §3 Release `BUILD SUCCEEDED` (not required for this phase — run anyway for the size figure). §4 n-a, §5–6 do not list phase 04 |
-| `checklists/testing.md`    | PASS   | Harnesses run: `snippets-test` — ALL PASSED. `AppCore.swift` compiles into no harness, so this is the adjacent-subsystem gate the kickoff names |
-| `checklists/regression.md` | PASS   | Core sweep + **Snippets**, run by the operator from a `tccutil reset Accessibility com.tinycast.app.dev` state: cancel path, accept path, expansion in TextEdit, disable teardown, and the held-Return stacking check |
-| `checklists/review.md`     | PASS   | §1–8 mechanically clean; 1 file, +14/−12                                   |
+| `checklists/testing.md`    | PASS   | Harnesses run: `snippets-test` — ALL PASSED. `AppCore.swift` compiles into no harness, so this is the adjacent-subsystem gate the kickoff names                                                                                        |
+| `checklists/regression.md` | PASS   | Core sweep + **Snippets**, run by the operator from a `tccutil reset Accessibility com.tinycast.app.dev` state: cancel path, accept path, expansion in TextEdit, disable teardown, and the held-Return stacking check                  |
+| `checklists/review.md`     | PASS   | §1–8 mechanically clean; 1 file, +14/−12                                                                                                                                                                                               |
 
 ### Measurements
 
@@ -75,15 +75,15 @@
 This phase claims no performance effect. The +16 bytes is the `Task` closure replacing the `NSAlert`
 setup; `build.md` §3's 2 % growth budget is untouched.
 
-> The 3,473,464-byte binary is over `build.md` §4's 3 MB budget, and was already over it at phase 02.
+> The 3,473,464-byte binary is over `build.md` §4's 3 MB upto 4MB budget, and was already over it at phase 02.
 > That is a pre-existing condition of the refactor baseline, not something this phase moved.
 
 ---
 
 ## Failed tasks
 
-| What | Why it failed | Decision |
-| ---- | ------------- | -------- |
+| What                                       | Why it failed                                                                                                                                                                                                                                                  | Decision                                                              |
+| ------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------- |
 | Objective 3 / AC1 — a clean `NSAlert` grep | A second `NSAlert` lives in `SnippetArgumentsPrompt.swift`, which the phase does not list as modifiable, and converting it needs a form-field dialog `DialogController` has no API for — building one would mean editing `Core/Dialog/*`, explicitly forbidden | Left alone. Recorded as follow-up work rather than widening the phase |
 
 ---
@@ -122,12 +122,12 @@ setup; `build.md` §3's 2 % growth budget is untouched.
 
 ## Follow-up work
 
-| Observation                                                                             | Where                                       | Suggested phase   |
-| --------------------------------------------------------------------------------------- | ------------------------------------------- | ----------------- |
-| `SnippetArgumentsPrompt.run` still uses `NSAlert` + `runModal` with an `NSHostingView` accessory. Reachable from a snippet expansion, i.e. potentially from a held hotkey — the exact stacking case the invariant exists to prevent, unlike the Settings-click-only site this phase fixed. Needs a `DialogController` form-field affordance | `Features/Snippets/SnippetArgumentsPrompt.swift` | new phase |
-| Three SwiftUI `.alert(item:)` deletion confirmations present system alerts that `grep NSAlert` does not catch — same invariant, different spelling | `SnippetsSettingsView.swift:54`, `CommandsSettingsView.swift:25`, `QuicklinksSettingsView.swift:41` | new phase |
-| AC1's grep matches comments, including one in a file the phase forbids touching, so the gate is unpassable as written | `phases/04-retire-the-last-nsalert.md` | doc fix, no phase |
-| Phase 29 relocates `SnippetArgumentsPrompt` but does not convert it; nothing in the roadmap does | `phases/29-feature-folders.md`             | doc fix, no phase |
+| Observation                                                                                                                                                                                                                                                                                                                                 | Where                                                                                               | Suggested phase   |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- | ----------------- |
+| `SnippetArgumentsPrompt.run` still uses `NSAlert` + `runModal` with an `NSHostingView` accessory. Reachable from a snippet expansion, i.e. potentially from a held hotkey — the exact stacking case the invariant exists to prevent, unlike the Settings-click-only site this phase fixed. Needs a `DialogController` form-field affordance | `Features/Snippets/SnippetArgumentsPrompt.swift`                                                    | new phase         |
+| Three SwiftUI `.alert(item:)` deletion confirmations present system alerts that `grep NSAlert` does not catch — same invariant, different spelling                                                                                                                                                                                          | `SnippetsSettingsView.swift:54`, `CommandsSettingsView.swift:25`, `QuicklinksSettingsView.swift:41` | new phase         |
+| AC1's grep matches comments, including one in a file the phase forbids touching, so the gate is unpassable as written                                                                                                                                                                                                                       | `phases/04-retire-the-last-nsalert.md`                                                              | doc fix, no phase |
+| Phase 29 relocates `SnippetArgumentsPrompt` but does not convert it; nothing in the roadmap does                                                                                                                                                                                                                                            | `phases/29-feature-folders.md`                                                                      | doc fix, no phase |
 
 ---
 

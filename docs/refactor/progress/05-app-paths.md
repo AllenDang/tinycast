@@ -4,16 +4,16 @@
 
 ## Status
 
-| Field                         | Value                        |
-| ----------------------------- | ---------------------------- |
-| **Status**                    | Complete                     |
-| **Started**                   | 2026-08-05                   |
-| **Completed**                 | 2026-08-05                   |
-| **Operator**                  | abue-ammar                   |
-| **Branch**                    | `refactor/05-app-paths`      |
-| **Commit**                    | single commit on the branch  |
-| **Claude conversations used** | 1                            |
-| **Actual effort**             | ~0.5h vs. estimate of S      |
+| Field                         | Value                       |
+| ----------------------------- | --------------------------- |
+| **Status**                    | Complete                    |
+| **Started**                   | 2026-08-05                  |
+| **Completed**                 | 2026-08-05                  |
+| **Operator**                  | abue-ammar                  |
+| **Branch**                    | `refactor/05-app-paths`     |
+| **Commit**                    | single commit on the branch |
+| **Claude conversations used** | 1                           |
+| **Actual effort**             | ~0.5h vs. estimate of S     |
 
 ---
 
@@ -50,12 +50,12 @@
 
 ### Resolved paths (AC4 evidence)
 
-| Type                      | Resolved path                                                       | Changed? |
-| ------------------------- | ------------------------------------------------------------------- | -------- |
-| `CalculatorHistoryStore`  | `~/Library/Caches/<bundle-id>/calculator-history.json`              | no       |
-| `FrequentEmojiStore`      | `~/Library/Caches/<bundle-id>/emoji-frequency.json`                 | no       |
-| `CurrencyRateStore`       | `~/Library/Caches/<bundle-id>/currency-rates.json`                  | no       |
-| `OnboardingState`         | `~/Library/Application Support/<bundle-id>/onboarded`               | no       |
+| Type                     | Resolved path                                          | Changed? |
+| ------------------------ | ------------------------------------------------------ | -------- |
+| `CalculatorHistoryStore` | `~/Library/Caches/<bundle-id>/calculator-history.json` | no       |
+| `FrequentEmojiStore`     | `~/Library/Caches/<bundle-id>/emoji-frequency.json`    | no       |
+| `CurrencyRateStore`      | `~/Library/Caches/<bundle-id>/currency-rates.json`     | no       |
+| `OnboardingState`        | `~/Library/Application Support/<bundle-id>/onboarded`  | no       |
 
 `<bundle-id>` is `Bundle.main.bundleIdentifier`, i.e. `com.tinycast.app.dev` for a Debug build and
 `com.tinycast.app` for a release one. No path string changed, which `POLICY.md` would have permitted but
@@ -65,12 +65,12 @@ the phase discourages as diff noise.
 
 ## Verification
 
-| Checklist                  | Result | Notes                                                                     |
-| -------------------------- | ------ | ------------------------------------------------------------------------- |
-| `checklists/build.md`      | PASS   | Debug `BUILD SUCCEEDED`, zero Swift warnings and zero errors. **No pre-phase baseline was captured** (operator elected to skip it), so "zero *new* warnings" is asserted from an absolute zero rather than a diff against a baseline |
+| Checklist                  | Result | Notes                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| -------------------------- | ------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `checklists/build.md`      | PASS   | Debug `BUILD SUCCEEDED`, zero Swift warnings and zero errors. **No pre-phase baseline was captured** (operator elected to skip it), so "zero _new_ warnings" is asserted from an absolute zero rather than a diff against a baseline                                                                                                                                                                                                         |
 | `checklists/testing.md`    | PASS   | All 16 harnesses in `docs/development.md` run with unmodified command lines: `fuzz`, `ranking`, `calc`, `clipboard`, `scopes`, `raycast`, `emoji`, `custom-command`, `snippets`, `hotkey`, `callout`, `system-action`, `volume`, `window-command`, `uninstall`, `quicklink` — all `ALL PASSED`. The four harness-compiled stores were deliberately not touched, which is what keeps `clipboard`, `quicklink`, `ranking` and `snippets` green |
-| `checklists/regression.md` | PASS   | Core sweep + **Clean install**, run by the operator, who confirmed the app works |
-| `checklists/review.md`     | PASS   | 5 files, +25/−27 against an expected 5 files, +35/−25. Under on additions because the helper is shared rather than restated |
+| `checklists/regression.md` | PASS   | Core sweep + **Clean install**, run by the operator, who confirmed the app works                                                                                                                                                                                                                                                                                                                                                             |
+| `checklists/review.md`     | PASS   | 5 files, +25/−27 against an expected 5 files, +35/−25. Under on additions because the helper is shared rather than restated                                                                                                                                                                                                                                                                                                                  |
 
 ### Measurements
 
@@ -113,7 +113,7 @@ None.
 ## Deviations from the phase document
 
 - **`Tinycast.xcodeproj/project.pbxproj` also changed.** It is a committed generated file and `xcodegen
-  generate` registers the new source. Not listed in the phase's file table, but unavoidable and mechanical.
+generate` registers the new source. Not listed in the phase's file table, but unavoidable and mechanical.
 - **Diff is +25/−27 rather than the expected +35/−25**, i.e. net negative. Four five-line blocks collapsed
   to four one-line calls, and the helper is 26 lines including its signature wrapping.
 - **No pre-phase warning baseline.** `checklists/build.md` scores new warnings against a baseline; the
@@ -123,11 +123,11 @@ None.
 
 ## Follow-up work
 
-| Observation                                                                             | Where                                       | Suggested phase   |
-| --------------------------------------------------------------------------------------- | ------------------------------------------- | ----------------- |
-| The refactor docs say "all 17 harnesses" but `docs/development.md` defines 16. Every phase that gates on the count inherits the error | `ROADMAP.md`, `checklists/testing.md`, several phase docs | doc fix, no phase |
-| `ClipboardStore`, `QuicklinkStore`, `LauncherRankingStore` and `SnippetRepository` still each carry their own copy of the bundle-id fallback. Consolidating them needs an `AGENTS.md` invariant change to let `AppPaths.swift` join four harness command lines — deliberately out of scope here | those four files | new phase, if ever |
-| `QuicklinkStore` and `SnippetRepository` both compute the Application Support root independently, and `QuicklinkStore.defaultDirectory` documents the shared root in a comment rather than in code | `Core/Quicklinks/QuicklinkStore.swift:52` | same as above |
+| Observation                                                                                                                                                                                                                                                                                     | Where                                                     | Suggested phase    |
+| ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------- | ------------------ |
+| The refactor docs say "all 17 harnesses" but `docs/development.md` defines 16. Every phase that gates on the count inherits the error                                                                                                                                                           | `ROADMAP.md`, `checklists/testing.md`, several phase docs | doc fix, no phase  |
+| `ClipboardStore`, `QuicklinkStore`, `LauncherRankingStore` and `SnippetRepository` still each carry their own copy of the bundle-id fallback. Consolidating them needs an `AGENTS.md` invariant change to let `AppPaths.swift` join four harness command lines — deliberately out of scope here | those four files                                          | new phase, if ever |
+| `QuicklinkStore` and `SnippetRepository` both compute the Application Support root independently, and `QuicklinkStore.defaultDirectory` documents the shared root in a comment rather than in code                                                                                              | `Core/Quicklinks/QuicklinkStore.swift:52`                 | same as above      |
 
 ---
 

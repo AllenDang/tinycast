@@ -32,15 +32,15 @@ meaning; the problem is that some are synonyms for each other and no rule is wri
 
 ## Renames
 
-| Today                  | Becomes                                   | Why                                                                                   |
-| ---------------------- | ----------------------------------------- | ------------------------------------------------------------------------------------- |
-| `ClipboardManager`     | `ClipboardMonitor`                        | It polls an external stream — that is what `Monitor` means                            |
-| `HotKeyManager`        | `HotKeyBindings`                          | It persists and publishes bindings; `HotKeyCenter` is already the Carbon layer        |
-| `CommandRegistry`      | `CommandCatalog`                          | Matches `SystemActionCatalog`, `WindowCommandCatalog`                                 |
-| `PaletteViewModel`     | `PaletteState`                            | It is shared app state read by the window controller and the panel, not a per-view VM |
-| `MiscellaneousSettingsView` | `CalculatorSettingsView`             | It holds one Calculator card and the currency-consent sheet, and phase 29 moved it under `Features/Calculator/` |
-| `Bundle+AppName.swift` | already `AppDisplayName.swift` (phase 27) | Concept-named, like `CursorScreen.swift`                                              |
-| `RunningApps.swift`    | already `RunningAppsMonitor.swift` (phase 29) | Filename matches the type it declares                                             |
+| Today                       | Becomes                                       | Why                                                                                                             |
+| --------------------------- | --------------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
+| `ClipboardManager`          | `ClipboardMonitor`                            | It polls an external stream — that is what `Monitor` means                                                      |
+| `HotKeyManager`             | `HotKeyBindings`                              | It persists and publishes bindings; `HotKeyCenter` is already the Carbon layer                                  |
+| `CommandRegistry`           | `CommandCatalog`                              | Matches `SystemActionCatalog`, `WindowCommandCatalog`                                                           |
+| `PaletteViewModel`          | `PaletteState`                                | It is shared app state read by the window controller and the panel, not a per-view VM                           |
+| `MiscellaneousSettingsView` | `CalculatorSettingsView`                      | It holds one Calculator card and the currency-consent sheet, and phase 29 moved it under `Features/Calculator/` |
+| `Bundle+AppName.swift`      | already `AppDisplayName.swift` (phase 27)     | Concept-named, like `CursorScreen.swift`                                                                        |
+| `RunningApps.swift`         | already `RunningAppsMonitor.swift` (phase 29) | Filename matches the type it declares                                                                           |
 
 ## Expected files to modify
 
@@ -59,7 +59,7 @@ Every file referencing a renamed type — roughly 20 — plus `AGENTS.md`.
 - **`SettingsTab.miscellaneous` keeps its case name and raw value** even though its view is renamed. That
   raw value is a persisted `CommandID` behind the palette's `Settings ▸ Miscellaneous` entry; orphaning
   favourites and ranking records to match a filename is not a trade worth making. Rename the tab's
-  user-facing *title* only if the Calculator pane's title is wrong today — check before touching it.
+  user-facing _title_ only if the Calculator pane's title is wrong today — check before touching it.
 - **Persisted identifiers may be renamed** — but every producer and consumer must move together, or the
   app breaks _within this build_. The four that bite (POLICY carve-out 2):
   - `ClipboardManager.internalType` — the writer and the poller must agree, or Tinycast re-captures its

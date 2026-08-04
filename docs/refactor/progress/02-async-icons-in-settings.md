@@ -4,16 +4,16 @@
 
 ## Status
 
-| Field                         | Value                                       |
-| ----------------------------- | ------------------------------------------- |
-| **Status**                    | Complete                                    |
-| **Started**                   | 2026-08-05                                  |
-| **Completed**                 | 2026-08-05                                  |
-| **Operator**                  | abue-ammar                                  |
-| **Branch**                    | `refactor/02-async-icons-in-settings`       |
-| **Commit**                    | `40bab1f` (#158)                            |
-| **Claude conversations used** | 1                                           |
-| **Actual effort**             | ~0.5h vs. estimate of S                     |
+| Field                         | Value                                 |
+| ----------------------------- | ------------------------------------- |
+| **Status**                    | Complete                              |
+| **Started**                   | 2026-08-05                            |
+| **Completed**                 | 2026-08-05                            |
+| **Operator**                  | abue-ammar                            |
+| **Branch**                    | `refactor/02-async-icons-in-settings` |
+| **Commit**                    | `40bab1f` (#158)                      |
+| **Claude conversations used** | 1                                     |
+| **Actual effort**             | ~0.5h vs. estimate of S               |
 
 ---
 
@@ -48,12 +48,12 @@
 
 ## Verification
 
-| Checklist                  | Result  | Notes                                                                         |
-| -------------------------- | ------- | ----------------------------------------------------------------------------- |
-| `checklists/build.md`      | PASS    | §1–4. Debug + Release `BUILD SUCCEEDED`, zero new warnings; binary +0 B        |
-| `checklists/testing.md`    | PASS    | Harnesses run: **none** — the one touched file is in no row of the source map  |
-| `checklists/regression.md` | PASS    | Core sweep + **Launcher & icons** run by the operator before merge             |
-| `checklists/review.md`     | PASS    | §1–8 mechanically clean; 1 file, +1/−2, under the expected commit size         |
+| Checklist                  | Result | Notes                                                                         |
+| -------------------------- | ------ | ----------------------------------------------------------------------------- |
+| `checklists/build.md`      | PASS   | §1–4. Debug + Release `BUILD SUCCEEDED`, zero new warnings; binary +0 B       |
+| `checklists/testing.md`    | PASS   | Harnesses run: **none** — the one touched file is in no row of the source map |
+| `checklists/regression.md` | PASS   | Core sweep + **Launcher & icons** run by the operator before merge            |
+| `checklists/review.md`     | PASS   | §1–8 mechanically clean; 1 file, +1/−2, under the expected commit size        |
 
 ### Measurements
 
@@ -72,8 +72,8 @@ measures. Confirmation is the regression sweep's "scrolls smoothly with no hitch
 
 ## Failed tasks
 
-| What                     | Why it failed                                                | Decision                    |
-| ------------------------ | ------------------------------------------------------------ | --------------------------- |
+| What                     | Why it failed                                                 | Decision                      |
+| ------------------------ | ------------------------------------------------------------- | ----------------------------- |
 | Deleting `AppEntry.icon` | Two live callers that cannot move inside the phase boundaries | Deferred — see Follow-up work |
 
 ---
@@ -110,11 +110,11 @@ measures. Confirmation is the regression sweep's "scrolls smoothly with no hitch
 
 ## Follow-up work
 
-| Observation                                                                                                   | Where                                | Suggested phase |
-| ------------------------------------------------------------------------------------------------------------- | ------------------------------------ | --------------- |
-| The app picker's own `LazyVStack` row still rasterises synchronously — same bug class as this phase fixed     | `AppPickerPopover.swift:35`          | new small phase |
-| Retiring `AppEntry.icon` needs `AppPresentation.resolve` to stop returning an `NSImage`, which reaches into `ClipboardView`'s `InfoRow` | `AppPickerPopover.swift:75-83`, `ClipboardView.swift:389-441` | new small phase |
-| AC5 as written is unsatisfiable alongside AC3's escape hatch — the two criteria contradict                    | `phases/02-async-icons-in-settings.md` | doc fix, no phase |
+| Observation                                                                                                                             | Where                                                         | Suggested phase   |
+| --------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------- | ----------------- |
+| The app picker's own `LazyVStack` row still rasterises synchronously — same bug class as this phase fixed                               | `AppPickerPopover.swift:35`                                   | new small phase   |
+| Retiring `AppEntry.icon` needs `AppPresentation.resolve` to stop returning an `NSImage`, which reaches into `ClipboardView`'s `InfoRow` | `AppPickerPopover.swift:75-83`, `ClipboardView.swift:389-441` | new small phase   |
+| AC5 as written is unsatisfiable alongside AC3's escape hatch — the two criteria contradict                                              | `phases/02-async-icons-in-settings.md`                        | doc fix, no phase |
 
 ---
 

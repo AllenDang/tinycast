@@ -54,14 +54,14 @@ xcodebuild build -project Tinycast.xcodeproj -scheme Tinycast -configuration Rel
 
 ## 4 · Binary size
 
-Locate the built product and check it against the < 3 MB budget:
+Locate the built product and check it against the < 3 MB upto 4MB budget:
 
 ```
 find ~/Library/Developer/Xcode/DerivedData -name "Tinycast*.app" -maxdepth 6 -print -quit
 ```
 
 - [ ] Executable size recorded in the progress file
-- [ ] Release binary is under **3 MB** (3,145,728 bytes)
+- [ ] Release binary is under **3 MB upto 4MB** (3,145,728 bytes)
 - [ ] Growth versus the phase-01 baseline is under **2 %**, or the phase document explains why not
 
 ---

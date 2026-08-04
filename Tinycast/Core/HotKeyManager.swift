@@ -32,7 +32,10 @@ final class HotKeyManager: ObservableObject {
 
     private let center = HotKeyCenter()
     private var doubleTaps: [DoubleTapModifier: HotKeyAction] = [:]
-    // Reused: a scan decodes once per candidate action, so a per-call coder allocates dozens per edit.
+    /// Every binding, loaded once in `start()` and written through on change.
+    private var bindings: [HotKeyAction: HotKeyBinding] = [:]
+    private var candidateActionsCache: [HotKeyAction]?
+    // Reused: the startup load decodes once per candidate action.
     private let decoder = JSONDecoder()
     private let encoder = JSONEncoder()
     private let boundKey = "boundAppBundleIDs"
@@ -43,6 +46,8 @@ final class HotKeyManager: ObservableObject {
     func start(customCommandIDs: Set<UUID>, quicklinkIDs: Set<UUID>) {
         prune(key: boundCustomCommandKey, live: customCommandIDs) { .customCommand(id: $0) }
         prune(key: boundQuicklinkKey, live: quicklinkIDs) { .quicklink(id: $0) }
+        // After the prunes, so a dropped record can't survive in memory this session.
+        for action in candidateActions { bindings[action] = storedBinding(for: action) }
 
         // `register` no-ops on an unbound item, so the fixed catalogs need no index of their own.
         for action in candidateActions { register(action) }
@@ -71,7 +76,9 @@ final class HotKeyManager: ObservableObject {
     /// Quicklink UUIDs with a binding — the same index, its own namespace.
     var boundQuicklinkIDs: [UUID] { boundIDs(key: boundQuicklinkKey) }
 
-    func binding(for action: HotKeyAction) -> HotKeyBinding? {
+    func binding(for action: HotKeyAction) -> HotKeyBinding? { bindings[action] }
+
+    private func storedBinding(for action: HotKeyAction) -> HotKeyBinding? {
         // The stored value is a JSON *string* (a legacy package format); anything else reads as unbound.
         guard
             let json = UserDefaults.standard.string(forKey: action.defaultsKey),
@@ -83,12 +90,14 @@ final class HotKeyManager: ObservableObject {
     /// Persists (or clears, when `nil`) the binding, swaps the live registration, and publishes so the launcher and recorders re-render.
     func setBinding(_ binding: HotKeyBinding?, for action: HotKeyAction) {
         objectWillChange.send()
-        let previous = self.binding(for: action)
+        let previous = bindings[action]
         if let binding,
             let data = try? encoder.encode(binding),
             let json = String(data: data, encoding: .utf8) {
+            bindings[action] = binding
             UserDefaults.standard.set(json, forKey: action.defaultsKey)
         } else {
+            bindings[action] = nil
             UserDefaults.standard.removeObject(forKey: action.defaultsKey)
         }
         // Unregister unconditionally: the previous binding may have been a combo even when the new one isn't.
@@ -111,7 +120,8 @@ final class HotKeyManager: ObservableObject {
         case .togglePalette, .toggleClipboard, .toggleEmoji, .systemAction, .windowCommand:
             break
         }
-        // A rebuild re-decodes every action; only a double-tap entering or leaving changes the map.
+        candidateActionsCache = nil
+        // A rebuild walks every candidate; only a double-tap entering or leaving changes the map.
         if previous?.doubleTapModifier != nil || binding?.doubleTapModifier != nil {
             syncDoubleTaps()
         }
@@ -128,6 +138,7 @@ final class HotKeyManager: ObservableObject {
 
     /// Every action that could currently hold a binding — the search space for conflicts and for rebuilding the double-tap map.
     private var candidateActions: [HotKeyAction] {
+        if let candidateActionsCache { return candidateActionsCache }
         var actions: [HotKeyAction] = [.togglePalette, .toggleClipboard, .toggleEmoji]
         actions += boundBundleIDs.map { .app(bundleID: $0) }
         actions += boundPaneBundleIDs.map { .settingsPane(bundleID: $0) }
@@ -135,6 +146,7 @@ final class HotKeyManager: ObservableObject {
         actions += boundQuicklinkIDs.map { .quicklink(id: $0) }
         actions += SystemAction.ID.allCases.map { .systemAction(id: $0) }
         actions += WindowCommand.ID.allCases.map { .windowCommand(id: $0) }
+        candidateActionsCache = actions
         return actions
     }
 

@@ -44,7 +44,7 @@ Supersedes the compatibility clauses in **§2.4 hotkeys**, the `HotKeyBinding` n
 | `Features/HotKeys/Model/KeyShortcut.swift`      | Only if its `Codable` was shaped by the legacy record.                                                                |
 | `Features/Clipboard/Model/ClipboardStore.swift` | Delete the `source_app` and `pinned_at` `ALTER TABLE` migrations and `columnExists`; fold both columns into `schema`. |
 | `Features/Backup/Model/SettingsBackup.swift`    | Drop the `version` field's back-compat comment; keep the field.                                                       |
-| `AGENTS.md`                                     | Amend the three superseded clauses; remove the refactor banner.                                                             |
+| `AGENTS.md`                                     | Amend the three superseded clauses; remove the refactor banner.                                                       |
 | `Tools/clipboard-test.swift`                    | Only if it asserts on the migration path.                                                                             |
 
 ## Files that must NOT change

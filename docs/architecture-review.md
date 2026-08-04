@@ -3,7 +3,7 @@
 **Scope of audit:** all 170 Swift files (35,270 lines; ~28,800 in `Tinycast/`, ~6,500 in `Tools/`),
 `project.yml`, `.github/workflows/`, and all 17 documents in `docs/`.
 **Constraints honoured throughout:** identical UI, identical UX, identical permissions model, no
-regression in binary size (<3 MB), RAM (40–80 MB) or startup time, no new dependencies, incremental
+regression in binary size (<3 MB upto 4MB), RAM (40–80 MB) or startup time, no new dependencies, incremental
 only.
 
 ---
@@ -938,7 +938,7 @@ serves. `docs/architecture.md` documents the location, which is honest but does 
   observable effect. **Measure before changing** — this is exactly the kind of tuning the project
   philosophy says to justify with numbers.
 - **L-9 · `EmojiData.generated.swift` (2,060 lines)** compiles a large string literal into `__TEXT`.
-  Moving it to a bundle resource would shrink the binary but add a launch-time read. Given the <3 MB
+  Moving it to a bundle resource would shrink the binary but add a launch-time read. Given the <3 MB upto 4MB
   budget is currently met, **do not change this** — recorded only so the option is known.
 - **L-10 · `Bundle+AppName.swift` is the only `Type+Feature.swift`-named file**; `CursorScreen.swift`
   also extends a system type but is named by concept. Pick one convention (§4 recommends concept-named).

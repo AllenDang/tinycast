@@ -31,21 +31,21 @@ XcodeGen derives sources from `sources: - path: Tinycast`, so moves are free at 
 
 **→ `Tinycast/DesignSystem/`**
 
-| From                                         | To                                               |
-| -------------------------------------------- | ------------------------------------------------ |
-| `Core/Theme.swift`                           | `DesignSystem/Theme.swift`                       |
-| `KeyCapChip` (extracted from `Core/Theme.swift`) | `DesignSystem/KeyCapChip.swift`              |
-| `Core/Tooltip.swift`                         | `DesignSystem/Tooltip.swift`                     |
-| `Core/SymbolImage.swift`                     | `DesignSystem/SymbolImage.swift`                 |
-| `Core/VisualEffectView.swift`                | `DesignSystem/VisualEffectView.swift`            |
-| `Features/PopoverMenu.swift`                 | `DesignSystem/PopoverMenu.swift`                 |
-| `Features/Settings/SettingsComponents.swift` | `DesignSystem/SettingsComponents.swift`          |
-| `Core/EdgeDissolve.swift`                    | `DesignSystem/Scrolling/EdgeDissolve.swift`      |
-| `Core/ThinScrollbar.swift`                   | `DesignSystem/Scrolling/ThinScrollbar.swift`     |
-| `Core/ScrollIntent.swift`                    | `DesignSystem/Scrolling/ScrollIntent.swift`      |
-| `Core/OverlayScroller.swift`                 | `DesignSystem/Scrolling/OverlayScroller.swift`   |
-| `Core/RightClick.swift`                      | `DesignSystem/Interaction/RightClick.swift`      |
-| `Core/PanelTransition.swift`                 | `DesignSystem/Interaction/PanelTransition.swift` |
+| From                                             | To                                               |
+| ------------------------------------------------ | ------------------------------------------------ |
+| `Core/Theme.swift`                               | `DesignSystem/Theme.swift`                       |
+| `KeyCapChip` (extracted from `Core/Theme.swift`) | `DesignSystem/KeyCapChip.swift`                  |
+| `Core/Tooltip.swift`                             | `DesignSystem/Tooltip.swift`                     |
+| `Core/SymbolImage.swift`                         | `DesignSystem/SymbolImage.swift`                 |
+| `Core/VisualEffectView.swift`                    | `DesignSystem/VisualEffectView.swift`            |
+| `Features/PopoverMenu.swift`                     | `DesignSystem/PopoverMenu.swift`                 |
+| `Features/Settings/SettingsComponents.swift`     | `DesignSystem/SettingsComponents.swift`          |
+| `Core/EdgeDissolve.swift`                        | `DesignSystem/Scrolling/EdgeDissolve.swift`      |
+| `Core/ThinScrollbar.swift`                       | `DesignSystem/Scrolling/ThinScrollbar.swift`     |
+| `Core/ScrollIntent.swift`                        | `DesignSystem/Scrolling/ScrollIntent.swift`      |
+| `Core/OverlayScroller.swift`                     | `DesignSystem/Scrolling/OverlayScroller.swift`   |
+| `Core/RightClick.swift`                          | `DesignSystem/Interaction/RightClick.swift`      |
+| `Core/PanelTransition.swift`                     | `DesignSystem/Interaction/PanelTransition.swift` |
 
 **→ `Tinycast/Platform/`**
 

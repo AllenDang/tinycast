@@ -4,16 +4,16 @@
 
 ## Status
 
-| Field                         | Value                                    |
-| ----------------------------- | ---------------------------------------- |
-| **Status**                    | Complete                                 |
-| **Started**                   | 2026-08-05                               |
-| **Completed**                 | 2026-08-05                               |
-| **Operator**                  | abue-ammar                               |
+| Field                         | Value                                       |
+| ----------------------------- | ------------------------------------------- |
+| **Status**                    | Complete                                    |
+| **Started**                   | 2026-08-05                                  |
+| **Completed**                 | 2026-08-05                                  |
+| **Operator**                  | abue-ammar                                  |
 | **Branch**                    | `refactor/01-instrumentation-and-baselines` |
-| **Commit**                    | `399189b` (#157)                         |
-| **Claude conversations used** | 1                                        |
-| **Actual effort**             | ~1h vs. estimate of S                    |
+| **Commit**                    | `399189b` (#157)                            |
+| **Claude conversations used** | 1                                           |
+| **Actual effort**             | ~1h vs. estimate of S                       |
 
 ---
 
@@ -44,22 +44,22 @@
 
 ## Verification
 
-| Checklist                  | Result  | Notes                                                                     |
-| -------------------------- | ------- | ------------------------------------------------------------------------- |
-| `checklists/build.md`      | PASS    | Debug + Release, zero new warnings; binary +1,856 B (+0.053 %)            |
-| `checklists/testing.md`    | PASS    | Harnesses run: all 16 in `docs/development.md`                            |
-| `checklists/regression.md` | PASS    | Core sweep run by the operator before merge                                |
-| `checklists/review.md`     | PASS    | Caught one overlong new comment line, fixed before commit                 |
+| Checklist                  | Result | Notes                                                          |
+| -------------------------- | ------ | -------------------------------------------------------------- |
+| `checklists/build.md`      | PASS   | Debug + Release, zero new warnings; binary +1,856 B (+0.053 %) |
+| `checklists/testing.md`    | PASS   | Harnesses run: all 16 in `docs/development.md`                 |
+| `checklists/regression.md` | PASS   | Core sweep run by the operator before merge                    |
+| `checklists/review.md`     | PASS   | Caught one overlong new comment line, fixed before commit      |
 
 ### Measurements
 
-| Metric                     | Before    | After     | Δ                 |
-| -------------------------- | --------- | --------- | ----------------- |
-| Binary size (Release)      | 3,471,592 | 3,473,448 | +1,856 B (+0.053 %) |
+| Metric                     | Before    | After     | Δ                      |
+| -------------------------- | --------- | --------- | ---------------------- |
+| Binary size (Release)      | 3,471,592 | 3,473,448 | +1,856 B (+0.053 %)    |
 | Clean install verified?    | —         | n-a       | phase persists nothing |
-| Cold launch, median of 3   | —         | —         | operator, Instruments |
-| RSS after 10 palette opens | —         | —         | operator          |
-| Phase-specific signpost    | —         | —         | operator, Instruments |
+| Cold launch, median of 3   | —         | —         | operator, Instruments  |
+| RSS after 10 palette opens | —         | —         | operator               |
+| Phase-specific signpost    | —         | —         | operator, Instruments  |
 
 ### Baselines never captured — carried forward as an open item
 
@@ -109,9 +109,9 @@ final measurement has no baseline column. Capture at least `AppIndex.scan` and c
 
 ## Follow-up work
 
-| Observation                                                                                                    | Where                                     | Suggested phase |
-| -------------------------------------------------------------------------------------------------------------- | ----------------------------------------- | --------------- |
-| AC2 and the Regression-risks table both treat `withIntervalSignpost` as leak-proof on throw. It is not.        | `phases/01-instrumentation-and-baselines.md` | doc fix, no phase |
+| Observation                                                                                             | Where                                        | Suggested phase   |
+| ------------------------------------------------------------------------------------------------------- | -------------------------------------------- | ----------------- |
+| AC2 and the Regression-risks table both treat `withIntervalSignpost` as leak-proof on throw. It is not. | `phases/01-instrumentation-and-baselines.md` | doc fix, no phase |
 
 ---
 

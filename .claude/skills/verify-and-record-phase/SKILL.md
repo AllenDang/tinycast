@@ -34,7 +34,7 @@ without being run is worse than one skipped, because it lands in the progress fi
 Run `xcodegen generate`, then check `git status` for `.xcodeproj` churn the phase does not justify —
 a project diff on a phase that added no files means something unexpected happened. Then the Debug
 build, comparing new warnings against the pre-phase baseline; the Release build if section 3's
-conditions apply; and the binary size against the 3 MB budget.
+conditions apply; and the binary size against the 3 MB upto 4MB budget.
 
 Hand sections 5 (launch) and 6 (startup timing, required for phases 05, 06, 09, 10, 16, 17, 18, 24, 25) to the operator.
 

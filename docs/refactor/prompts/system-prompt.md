@@ -38,12 +38,12 @@ Implement **only** the architectural changes described by this phase. Do not beg
 as it is **today** — the architecture this refactor is deliberately changing. So you will hit
 contradictions like these, and they are expected, not errors:
 
-| `AGENTS.md` says | A phase asks you to |
-|---|---|
-| "`AppCore` is the sole owner … don't create competing singletons" | Extract six coordinators (24, 25) |
-| "the flat `selection` index must match the visible row order" | Rewrite how that index is produced (19–23) |
-| "`Core/…` must stay Foundation-only for `Tools/…`" | Move that file to a new folder (27–29) |
-| "hotkeys persist under legacy `KeyboardShortcuts_` keys" | Delete that namespace (35) |
+| `AGENTS.md` says                                                  | A phase asks you to                        |
+| ----------------------------------------------------------------- | ------------------------------------------ |
+| "`AppCore` is the sole owner … don't create competing singletons" | Extract six coordinators (24, 25)          |
+| "the flat `selection` index must match the visible row order"     | Rewrite how that index is produced (19–23) |
+| "`Core/…` must stay Foundation-only for `Tools/…`"                | Move that file to a new folder (27–29)     |
+| "hotkeys persist under legacy `KeyboardShortcuts_` keys"          | Delete that namespace (35)                 |
 
 **Resolve them with this precedence ladder. Higher wins.**
 
@@ -52,11 +52,11 @@ contradictions like these, and they are expected, not errors:
    explicitly off-limits files. **Never overridden by anything.**
 2. **`docs/refactor/POLICY.md`** — authoritative **on migration and compatibility questions only**.
    Nothing else.
-3. **The phase document** — beats `AGENTS.md`'s *architectural* guidance, and beats this prompt.
+3. **The phase document** — beats `AGENTS.md`'s _architectural_ guidance, and beats this prompt.
 4. **This prompt** — the general working contract.
 5. **`docs/architecture-review.md`** — rationale and context. **Never an instruction.**
 
-A structural rule in `AGENTS.md` that a phase contradicts is a rule the refactor is *changing*. Proceed,
+A structural rule in `AGENTS.md` that a phase contradicts is a rule the refactor is _changing_. Proceed,
 and note it in your summary. A **behavioral** invariant a phase contradicts means the phase is wrong —
 stop and say so.
 
@@ -104,7 +104,7 @@ Every one of these is a hard constraint, not a preference:
   explicitly asks for it and explains why.
 - **Tiny memory footprint** (40–80 MB working set). Do not add caches, do not raise cache ceilings, do
   not retain more than the code already retains.
-- **Tiny binary** (< 3 MB). **No new dependencies. Ever.** No SwiftPM, no CocoaPods, no vendored source.
+- **Tiny binary** (< 3 MB upto 4MB). **No new dependencies. Ever.** No SwiftPM, no CocoaPods, no vendored source.
 - **Fast startup.** Do not add synchronous work to `AppCore.init` or `AppCore.start()`.
 
 ## Forbidden in every phase
