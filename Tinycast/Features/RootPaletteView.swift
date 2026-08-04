@@ -35,18 +35,16 @@ struct RootPaletteView: View {
 
     /// Favorite slots shown in the compact bar: up to 5 launchable apps, or the first 4 plus an overflow "…" that expands the window. Evaluated only in the compact render and on the rare ⌘N keypress.
     private var compactFavoriteSlots: [CompactFavoriteSlot] {
-        let favs = favorites.ordered(appIndex.matches("").filter(visibility.isVisible)).favorites
+        let ordered = appIndex.orderedResults(
+            query: "", visibility: visibility, favorites: favorites)
+        let favs = ordered.prefix(while: favorites.isFavorite)
         if favs.count <= 5 { return favs.map(CompactFavoriteSlot.app) }
         return favs.prefix(4).map(CompactFavoriteSlot.app) + [.more]
     }
 
     /// Ordered launcher results (the single source of truth for list, selection and activation): empty query pins favorites to the top, otherwise plain ranked matches.
     private var appResults: [AppEntry] {
-        // Visibility filtering stays downstream of `matches` so its one-deep memo cache is never keyed on hidden state; hidden favorites drop out here too.
-        let base = appIndex.matches(vm.query).filter(visibility.isVisible)
-        guard isQueryEmpty, !favorites.keys.isEmpty else { return base }
-        let split = favorites.ordered(base)
-        return split.favorites + split.rest
+        appIndex.orderedResults(query: vm.query, visibility: visibility, favorites: favorites)
     }
     private var clipResults: [ClipboardItem] { store.search(vm.query) }
     private var histResults: [CalcHistoryEntry] { calcHistory.search(vm.query) }

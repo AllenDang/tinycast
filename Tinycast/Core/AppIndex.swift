@@ -298,14 +298,25 @@ final class AppIndex: ObservableObject {
 
     private var snippetEntries: [AppEntry] = []
 
-    private struct MatchCache {
+    private struct MatchKey: Equatable {
         let query: String
+        let entriesRevision: Int
         let rankingRevision: Int
-        let result: [AppEntry]
     }
 
-    /// One-entry memo so repeated renders for the same query reuse the ranking instead of re-matching every frame.
-    private var matchCache: MatchCache?
+    private struct ResultsKey: Equatable {
+        let query: String
+        let entriesRevision: Int
+        let rankingRevision: Int
+        let visibilityRevision: Int
+        let favoritesRevision: Int
+    }
+
+    /// Repeated renders for the same query reuse the ranking instead of re-matching every frame.
+    private var matchMemo = Memo<MatchKey, [AppEntry]>()
+    private var resultsMemo = Memo<ResultsKey, [AppEntry]>()
+    /// Bumped whenever `apps` changes, so both memos above name the entry set they were built from.
+    private var entriesRevision = 0
 
     private static let systemActionEntries: [AppEntry] = SystemActionCatalog.all
         .map { command in
@@ -497,20 +508,33 @@ final class AppIndex: ObservableObject {
             + windowCommandEntries + customCommandEntries + commandEntries
         guard updated != apps else { return }
         apps = updated
-        matchCache = nil
+        entriesRevision &+= 1
     }
 
     /// Ranked matches. Empty query returns the full alphabetical list.
     func matches(_ query: String, limit: Int = 200) -> [AppEntry] {
         let q = query.trimmingCharacters(in: .whitespaces)
         guard !q.isEmpty else { return apps }
-        if let matchCache, matchCache.query == q,
-            matchCache.rankingRevision == ranking.revision {
-            return matchCache.result
+        let key = MatchKey(
+            query: q, entriesRevision: entriesRevision, rankingRevision: ranking.revision)
+        return matchMemo.value(for: key) { rank(q, limit: limit) }
+    }
+
+    /// The launcher's ordered list: ranked matches minus hidden entries, favorites pinned first.
+    func orderedResults(
+        query: String, visibility: VisibilityStore, favorites: FavoritesStore
+    ) -> [AppEntry] {
+        let q = query.trimmingCharacters(in: .whitespaces)
+        let key = ResultsKey(
+            query: q, entriesRevision: entriesRevision, rankingRevision: ranking.revision,
+            visibilityRevision: visibility.revision, favoritesRevision: favorites.revision)
+        return resultsMemo.value(for: key) {
+            // Filtering stays downstream of `matches` so that memo is never keyed on hidden state.
+            let base = matches(q).filter(visibility.isVisible)
+            guard q.isEmpty, !favorites.keys.isEmpty else { return base }
+            let split = favorites.ordered(base)
+            return split.favorites + split.rest
         }
-        let result = rank(q, limit: limit)
-        matchCache = MatchCache(query: q, rankingRevision: ranking.revision, result: result)
-        return result
     }
 
     private func rank(_ q: String, limit: Int) -> [AppEntry] {

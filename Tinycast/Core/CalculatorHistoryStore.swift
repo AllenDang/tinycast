@@ -17,8 +17,15 @@ final class CalculatorHistoryStore: ObservableObject {
 
     @Published private(set) var entries: [CalcHistoryEntry]  // newest first
 
-    /// One-entry memo so repeated renders (e.g. arrow-key nav) for the same query reuse the filter instead of re-scanning every entry each frame; invalidated on any mutation.
-    private var searchCache: (query: String, result: [CalcHistoryEntry])?
+    private struct SearchKey: Equatable {
+        let query: String
+        let revision: Int
+    }
+
+    /// Repeated renders (arrow-key nav) reuse the filter instead of re-scanning every entry.
+    private var searchMemo = Memo<SearchKey, [CalcHistoryEntry]>()
+    /// Bumped on every persisted mutation, so the key above names the entries it filtered.
+    private var revision = 0
 
     init() {
         fileURL = AppPaths.caches().appendingPathComponent("calculator-history.json")
@@ -57,17 +64,16 @@ final class CalculatorHistoryStore: ObservableObject {
     func search(_ query: String) -> [CalcHistoryEntry] {
         let q = query.trimmingCharacters(in: .whitespaces)
         guard !q.isEmpty else { return entries }
-        if let searchCache, searchCache.query == q { return searchCache.result }
-        let result = entries.filter {
-            $0.expression.localizedCaseInsensitiveContains(q)
-                || $0.result.localizedCaseInsensitiveContains(q)
+        return searchMemo.value(for: SearchKey(query: q, revision: revision)) {
+            entries.filter {
+                $0.expression.localizedCaseInsensitiveContains(q)
+                    || $0.result.localizedCaseInsensitiveContains(q)
+            }
         }
-        searchCache = (q, result)
-        return result
     }
 
     private func persist() {
-        searchCache = nil
+        revision &+= 1
         if let data = try? JSONEncoder().encode(entries) {
             try? data.write(to: fileURL, options: .atomic)
         }

@@ -16,8 +16,9 @@ final class FrequentEmojiStore: ObservableObject {
 
     @Published private(set) var records: [FrequentEmoji]
 
-    /// Cached glyphs in ranked order so the empty-query grid (which re-reads `top()` every render, incl. arrow-key nav) doesn't re-sort all records each frame; invalidated on `record()`.
-    private var sortedGlyphs: [String]?
+    /// The empty-query grid re-reads `top()` every render, so this sorts once per tally.
+    private var sortedMemo = Memo<Int, [String]>()
+    private var revision = 0
 
     init() {
         fileURL = AppPaths.caches().appendingPathComponent("emoji-frequency.json")
@@ -31,7 +32,7 @@ final class FrequentEmojiStore: ObservableObject {
     }
 
     func record(_ glyph: String) {
-        sortedGlyphs = nil
+        revision &+= 1
         if let index = records.firstIndex(where: { $0.glyph == glyph }) {
             records[index].count += 1
             records[index].lastUsed = Date()
@@ -48,13 +49,11 @@ final class FrequentEmojiStore: ObservableObject {
 
     /// Most-used glyphs (recency breaks ties), newest habits first.
     func top(_ n: Int = 16) -> [String] {
-        let sorted = sortedGlyphs ?? {
-            let ranked = records
+        let sorted = sortedMemo.value(for: revision) {
+            records
                 .sorted { $0.count != $1.count ? $0.count > $1.count : $0.lastUsed > $1.lastUsed }
                 .map(\.glyph)
-            sortedGlyphs = ranked
-            return ranked
-        }()
+        }
         return Array(sorted.prefix(n))
     }
 

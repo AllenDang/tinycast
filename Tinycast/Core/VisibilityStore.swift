@@ -9,6 +9,8 @@ final class VisibilityStore: ObservableObject {
 
     @Published private(set) var hiddenItemKeys: Set<String>
     @Published private(set) var hiddenKinds: Set<String>
+    /// AppIndex includes this in its result key, invalidating a list when the visible set moves.
+    private(set) var revision = 0
 
     init() {
         hiddenItemKeys = Set(defaults.stringArray(forKey: itemsKey) ?? [])
@@ -19,6 +21,7 @@ final class VisibilityStore: ObservableObject {
     func replace(hiddenItems: [String], hiddenKinds newKinds: [String]) {
         hiddenItemKeys = Set(hiddenItems)
         hiddenKinds = Set(newKinds)
+        revision &+= 1
         defaults.set(Array(hiddenItemKeys), forKey: itemsKey)
         defaults.set(Array(hiddenKinds), forKey: kindsKey)
     }
@@ -37,6 +40,7 @@ final class VisibilityStore: ObservableObject {
     func setItemVisible(_ visible: Bool, for entry: AppEntry) {
         let k = key(for: entry)
         if visible { hiddenItemKeys.remove(k) } else { hiddenItemKeys.insert(k) }
+        revision &+= 1
         defaults.set(Array(hiddenItemKeys), forKey: itemsKey)
     }
 
@@ -45,6 +49,7 @@ final class VisibilityStore: ObservableObject {
         let previous = hiddenItemKeys
         hiddenItemKeys.subtract(keys)
         guard hiddenItemKeys != previous else { return }
+        revision &+= 1
         defaults.set(Array(hiddenItemKeys), forKey: itemsKey)
     }
 
@@ -54,6 +59,7 @@ final class VisibilityStore: ObservableObject {
 
     func setKindVisible(_ visible: Bool, for kind: AppEntry.Kind) {
         if visible { hiddenKinds.remove(kind.rawValue) } else { hiddenKinds.insert(kind.rawValue) }
+        revision &+= 1
         defaults.set(Array(hiddenKinds), forKey: kindsKey)
     }
 }

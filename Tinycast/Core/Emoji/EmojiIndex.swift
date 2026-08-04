@@ -13,8 +13,15 @@ final class EmojiIndex: ObservableObject {
         let order: Int
     }
 
+    private struct SearchKey: Equatable {
+        let query: String
+        let revision: Int
+    }
+
     private var byGlyph: [String: EmojiEntry] = [:]
-    private var searchCache: (query: String, result: [EmojiEntry])?
+    private var searchMemo = Memo<SearchKey, [EmojiEntry]>()
+    /// Bumped on each load, so the key above names the catalog it scored.
+    private var revision = 0
 
     var isLoaded: Bool { !entries.isEmpty }
 
@@ -27,7 +34,7 @@ final class EmojiIndex: ObservableObject {
             grouped[category].map { (category, $0) }
         }
         byGlyph = Dictionary(parsed.map { ($0.glyph, $0) }, uniquingKeysWith: { first, _ in first })
-        searchCache = nil
+        revision &+= 1
     }
 
     func entry(for glyph: String) -> EmojiEntry? { byGlyph[glyph] }
@@ -36,24 +43,23 @@ final class EmojiIndex: ObservableObject {
     func search(_ query: String, limit: Int = 320) -> [EmojiEntry] {
         let q = query.trimmingCharacters(in: .whitespaces)
         guard !q.isEmpty else { return [] }
-        if let searchCache, searchCache.query == q { return searchCache.result }
-
-        // A keyword hit is penalized just under half a tier so an equal-quality name match always outranks it.
-        var scored: [ScoredEntry] = []
-        for (order, entry) in entries.enumerated() {
-            let nameScore = FuzzyMatch.score(query: q, candidate: entry.name)
-            var best = nameScore
-            if !entry.keywords.isEmpty,
-                let keywordScore = FuzzyMatch.score(query: q, candidate: entry.keywords) {
-                best = max(best ?? Int.min, keywordScore - 500)
+        return searchMemo.value(for: SearchKey(query: q, revision: revision)) {
+            // A keyword hit is penalized just under half a tier so an equal-quality name match always outranks it.
+            var scored: [ScoredEntry] = []
+            for (order, entry) in entries.enumerated() {
+                let nameScore = FuzzyMatch.score(query: q, candidate: entry.name)
+                var best = nameScore
+                if !entry.keywords.isEmpty,
+                    let keywordScore = FuzzyMatch.score(query: q, candidate: entry.keywords) {
+                    best = max(best ?? Int.min, keywordScore - 500)
+                }
+                if let best { scored.append(ScoredEntry(entry: entry, score: best, order: order)) }
             }
-            if let best { scored.append(ScoredEntry(entry: entry, score: best, order: order)) }
+            return
+                scored
+                .sorted { $0.score != $1.score ? $0.score > $1.score : $0.order < $1.order }
+                .prefix(limit)
+                .map(\.entry)
         }
-        let result = scored
-            .sorted { $0.score != $1.score ? $0.score > $1.score : $0.order < $1.order }
-            .prefix(limit)
-            .map(\.entry)
-        searchCache = (q, result)
-        return result
     }
 }

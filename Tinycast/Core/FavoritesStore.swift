@@ -7,6 +7,8 @@ final class FavoritesStore: ObservableObject {
     private let key = "favoriteApps"
 
     @Published private(set) var keys: [String]
+    /// AppIndex includes this in its result key, invalidating a list when the pinning changes.
+    private(set) var revision = 0
 
     init() {
         keys = defaults.stringArray(forKey: key) ?? []
@@ -19,6 +21,7 @@ final class FavoritesStore: ObservableObject {
     /// Replace the whole favorites list at once (used when importing a settings backup).
     func replace(keys newKeys: [String]) {
         keys = newKeys
+        revision &+= 1
         defaults.set(keys, forKey: key)
     }
 
@@ -27,6 +30,7 @@ final class FavoritesStore: ObservableObject {
         let updated = keys.filter { !removedKeys.contains($0) }
         guard updated != keys else { return }
         keys = updated
+        revision &+= 1
         defaults.set(keys, forKey: key)
     }
 
@@ -37,6 +41,7 @@ final class FavoritesStore: ObservableObject {
         } else {
             keys.append(k)
         }
+        revision &+= 1
         defaults.set(keys, forKey: key)
     }
 
