@@ -22,7 +22,7 @@
 - [x] Objective 1 — a single `Signposts` helper exposing one `OSSignposter` on `com.tinycast.perf`
 - [x] Objective 2 — the five intervals: `AppIndex.scan`, `AppIndex.rank`,
       `PaletteWindowController.show`, `UninstallScanner.scan`, `AppCore.start`
-- [ ] Objective 3 — record the baseline measurements (operator, needs Instruments; see below)
+- [x] Objective 3 — record the baseline measurements (operator, needs Instruments; see below)
 
 ## Acceptance criteria
 
