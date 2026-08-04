@@ -20,12 +20,7 @@ final class FrequentEmojiStore: ObservableObject {
     private var sortedGlyphs: [String]?
 
     init() {
-        let bundleID = Bundle.main.bundleIdentifier ?? "com.tinycast.app"
-        let base = FileManager.default
-            .urls(for: .cachesDirectory, in: .userDomainMask)[0]
-            .appendingPathComponent(bundleID, isDirectory: true)
-        try? FileManager.default.createDirectory(at: base, withIntermediateDirectories: true)
-        fileURL = base.appendingPathComponent("emoji-frequency.json")
+        fileURL = AppPaths.caches().appendingPathComponent("emoji-frequency.json")
 
         if let data = try? Data(contentsOf: fileURL),
             let decoded = try? JSONDecoder().decode([FrequentEmoji].self, from: data) {

@@ -39,12 +39,7 @@ final class CurrencyRateStore: ObservableObject {
     init() {
         // Absent reads as false, which is the only safe default for a network feature.
         isEnabled = defaults.bool(forKey: Self.consentKey)
-        let bundleID = Bundle.main.bundleIdentifier ?? "com.tinycast.app"
-        let base = FileManager.default
-            .urls(for: .cachesDirectory, in: .userDomainMask)[0]
-            .appendingPathComponent(bundleID, isDirectory: true)
-        try? FileManager.default.createDirectory(at: base, withIntermediateDirectories: true)
-        fileURL = base.appendingPathComponent("currency-rates.json")
+        fileURL = AppPaths.caches().appendingPathComponent("currency-rates.json")
 
         // Guard 1 — a disabled feature doesn't even read back a snapshot left on disk.
         guard isEnabled, let data = try? Data(contentsOf: fileURL) else { return }

@@ -99,6 +99,7 @@
 		A0C1BAEE55481326EEE81471 /* RaycastImportV1.swift in Sources */ = {isa = PBXBuildFile; fileRef = CAE385AAF41C4CB276025211 /* RaycastImportV1.swift */; };
 		A0DB31CA35D9A980CA984EDE /* LaunchAtLogin.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0D045D032498C2294A99890E /* LaunchAtLogin.swift */; };
 		A2EA931B8B8078A1D1162B53 /* VisualEffectView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EB20A38DA4C5603DF7430B3C /* VisualEffectView.swift */; };
+		A32BEBD97EBF2BD911516733 /* AppPaths.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1AC80C1AD8E37995B77272F3 /* AppPaths.swift */; };
 		A3855695DA55ADA137630DCE /* QuicklinkArgumentSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = 031271DE1EEF68A443713D32 /* QuicklinkArgumentSession.swift */; };
 		A41C0DCB2DEBCCA46F6C4B10 /* FavoritesStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9FB750D045194AE34D39D792 /* FavoritesStore.swift */; };
 		A9D8B54D88A60DE9FC1F43BF /* CalcDateTime.swift in Sources */ = {isa = PBXBuildFile; fileRef = E0D3EBB9D877817D10D120A8 /* CalcDateTime.swift */; };
@@ -177,6 +178,7 @@
 		0D16E927986D415F5386CDCF /* SystemAction.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SystemAction.swift; sourceTree = "<group>"; };
 		0F50886DC766B9923C3875A5 /* RootPaletteView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootPaletteView.swift; sourceTree = "<group>"; };
 		1A4B045F847659544FA182D4 /* DoubleTapModifier.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DoubleTapModifier.swift; sourceTree = "<group>"; };
+		1AC80C1AD8E37995B77272F3 /* AppPaths.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppPaths.swift; sourceTree = "<group>"; };
 		1BCCED95A78DC5BED117E960 /* RaycastImportSelection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RaycastImportSelection.swift; sourceTree = "<group>"; };
 		1C6D4DFAC1D761ECC2DE1112 /* QuicklinksSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuicklinksSettingsView.swift; sourceTree = "<group>"; };
 		1DB0D6E17E2B2D6F2CB47E0D /* HotKeyCenter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HotKeyCenter.swift; sourceTree = "<group>"; };
@@ -354,6 +356,7 @@
 				3A64EF5A07D459753998F78C /* AppCore.swift */,
 				BA7CE23482F7DF563A268806 /* AppIndex.swift */,
 				5A2EF9C70F8BC9571089D5EB /* AppLauncher.swift */,
+				1AC80C1AD8E37995B77272F3 /* AppPaths.swift */,
 				B275099E59BD2531A838F7D8 /* AppSettings.swift */,
 				D3FA43AD7C6FB00F555C52C2 /* Bundle+AppName.swift */,
 				F793A92DD4DC73CF1D87F3FD /* CalculatorHistoryStore.swift */,
@@ -789,6 +792,7 @@
 				C0642512B709EF0517ABF4CB /* AppDelegate.swift in Sources */,
 				D322804853973E1C19F2A408 /* AppIndex.swift in Sources */,
 				DA2EBB18F026BD055E0270CD /* AppLauncher.swift in Sources */,
+				A32BEBD97EBF2BD911516733 /* AppPaths.swift in Sources */,
 				BE9EE0864C315080A4E4780F /* AppPickerPopover.swift in Sources */,
 				FEA05585E8AA58506D378CAF /* AppSettings.swift in Sources */,
 				CDBB4E26FCABEEE8817D12B2 /* ApplicationsSettingsView.swift in Sources */,

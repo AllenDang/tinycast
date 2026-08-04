@@ -21,12 +21,7 @@ final class CalculatorHistoryStore: ObservableObject {
     private var searchCache: (query: String, result: [CalcHistoryEntry])?
 
     init() {
-        let bundleID = Bundle.main.bundleIdentifier ?? "com.tinycast.app"
-        let base = FileManager.default
-            .urls(for: .cachesDirectory, in: .userDomainMask)[0]
-            .appendingPathComponent(bundleID, isDirectory: true)
-        try? FileManager.default.createDirectory(at: base, withIntermediateDirectories: true)
-        fileURL = base.appendingPathComponent("calculator-history.json")
+        fileURL = AppPaths.caches().appendingPathComponent("calculator-history.json")
 
         if let data = try? Data(contentsOf: fileURL),
             let decoded = try? JSONDecoder().decode([CalcHistoryEntry].self, from: data) {

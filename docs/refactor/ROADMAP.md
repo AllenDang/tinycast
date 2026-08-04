@@ -181,7 +181,7 @@ Update this table as phases land. `Blocked` requires a note in the phase's progr
 | 02  | Complete    | `40bab1f` (#158) | 2026-08-05 | Merged. `AppEntry.icon` retained — two callers in `AppPickerPopover`, so AC5 not met; follow-ups in `progress/02`. |
 | 03  | Complete    | `refactor/03-named-paste-timing-constants` | 2026-08-05 | Two constants, four call sites (doc said three). Values unchanged; paste verified into fast and slow apps. |
 | 04  | Complete    | `refactor/04-retire-the-last-nsalert` | 2026-08-05 | One call site converted; text and consent→persist→permission ordering unchanged. **AC1 not met** — a second `NSAlert` remains in `SnippetArgumentsPrompt`, outside this phase's files; see `progress/04`. |
-| 05  | Not started |                 |      |       |
+| 05  | Complete    | `refactor/05-app-paths` | 2026-08-05 | `AppPaths` adopted in the four non-harness stores; the four harness-compiled ones keep their injected parameter. No resolved path changed. |
 | 06  | Not started |                 |      |       |
 | 07  | Not started |                 |      |       |
 | 08  | Not started |                 |      |       |
