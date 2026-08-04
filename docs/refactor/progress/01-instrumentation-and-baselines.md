@@ -6,12 +6,12 @@
 
 | Field                         | Value                                    |
 | ----------------------------- | ---------------------------------------- |
-| **Status**                    | In progress                              |
+| **Status**                    | Complete                                 |
 | **Started**                   | 2026-08-05                               |
-| **Completed**                 | —                                        |
+| **Completed**                 | 2026-08-05                               |
 | **Operator**                  | abue-ammar                               |
 | **Branch**                    | `refactor/01-instrumentation-and-baselines` |
-| **Commit**                    | filled in on merge                       |
+| **Commit**                    | `399189b` (#157)                         |
 | **Claude conversations used** | 1                                        |
 | **Actual effort**             | ~1h vs. estimate of S                    |
 
@@ -48,7 +48,7 @@
 | -------------------------- | ------- | ------------------------------------------------------------------------- |
 | `checklists/build.md`      | PASS    | Debug + Release, zero new warnings; binary +1,856 B (+0.053 %)            |
 | `checklists/testing.md`    | PASS    | Harnesses run: all 16 in `docs/development.md`                            |
-| `checklists/regression.md` | PENDING | Core sweep is a manual UI pass — not run; see Issues                       |
+| `checklists/regression.md` | PASS    | Core sweep run by the operator before merge                                |
 | `checklists/review.md`     | PASS    | Caught one overlong new comment line, fixed before commit                 |
 
 ### Measurements
@@ -61,15 +61,19 @@
 | RSS after 10 palette opens | —         | —         | operator          |
 | Phase-specific signpost    | —         | —         | operator, Instruments |
 
-### Baselines still to capture (operator)
+### Baselines never captured — carried forward as an open item
 
-The phase document assigns these to the operator, and they need Instruments and Activity Monitor:
-`AppCore.start` duration · `AppIndex.scan` cold vs. warm (first open vs. tenth) ·
+Objective 3 did not land. These need Instruments and Activity Monitor and were not run before the phase
+merged: `AppCore.start` duration · `AppIndex.scan` cold vs. warm (first open vs. tenth) ·
 `PaletteWindowController.show` · `UninstallScanner.scan` on an app with a large support folder ·
 cold launch median of 3 · RSS after 10 palette opens · RSS after browsing 50 clipboard images ·
 the four comment-density `grep` figures from review H-1.
 
-Every later phase compares against these, so capture them before starting phase 02.
+The signposts are in place, so any of these can still be taken from `main` at any point — the numbers
+are only "before" numbers until a phase actually changes the path they measure. The consequence of the
+gap: phases 06–10 and 17 claim performance wins with nothing to measure them against, and phase 34's
+final measurement has no baseline column. Capture at least `AppIndex.scan` and cold launch before M2
+(phase 11), which is where the review predicts the largest CPU and RAM movement.
 
 ---
 
@@ -89,9 +93,7 @@ Every later phase compares against these, so capture them before starting phase 
   emitted 26 begins against 13 ends. The helper therefore owns an explicit `defer` around
   `beginInterval`/`endInterval`; the same test then gave 27/27. This matters for
   `UninstallScanner.scan`, which throws on `Failure.refused` and on `Task.checkCancellation()`.
-- The Core regression sweep in `checklists/regression.md` was not run — it is a manual keyboard and
-  visual pass. The diff is instrumentation-only (`git diff -w` is five wrapper lines), so the risk is
-  low, but the sweep is still owed before this merges.
+- The Core regression sweep was run by the operator before merge, after this file was first written.
 
 ---
 
@@ -125,9 +127,9 @@ Every later phase compares against these, so capture them before starting phase 
 
 ## Sign-off
 
-- [x] All acceptance criteria met
-- [ ] All four checklists passed — regression sweep outstanding
+- [x] All acceptance criteria met — AC1–AC6; objective 3 (baselines) deliberately not done, see above
+- [x] All four checklists passed
 - [x] `ROADMAP.md` status table updated
 - [x] Follow-ups recorded above, not fixed in this phase
-- [ ] Merged to `main`
-- [ ] **Stopped.** Next phase is a separate session.
+- [x] Merged to `main` — `399189b` (#157)
+- [x] **Stopped.** Next phase is a separate session.

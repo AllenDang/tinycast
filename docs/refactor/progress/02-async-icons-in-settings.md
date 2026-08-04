@@ -6,12 +6,12 @@
 
 | Field                         | Value                                       |
 | ----------------------------- | ------------------------------------------- |
-| **Status**                    | In progress                                 |
+| **Status**                    | Complete                                    |
 | **Started**                   | 2026-08-05                                  |
-| **Completed**                 | —                                           |
+| **Completed**                 | 2026-08-05                                  |
 | **Operator**                  | abue-ammar                                  |
 | **Branch**                    | `refactor/02-async-icons-in-settings`       |
-| **Commit**                    | filled in on merge                          |
+| **Commit**                    | `40bab1f` (#158)                            |
 | **Claude conversations used** | 1                                           |
 | **Actual effort**             | ~0.5h vs. estimate of S                     |
 
@@ -52,7 +52,7 @@
 | -------------------------- | ------- | ----------------------------------------------------------------------------- |
 | `checklists/build.md`      | PASS    | §1–4. Debug + Release `BUILD SUCCEEDED`, zero new warnings; binary +0 B        |
 | `checklists/testing.md`    | PASS    | Harnesses run: **none** — the one touched file is in no row of the source map  |
-| `checklists/regression.md` | PENDING | Core sweep + **Launcher & icons** are manual UI passes — not run; see Issues   |
+| `checklists/regression.md` | PASS    | Core sweep + **Launcher & icons** run by the operator before merge             |
 | `checklists/review.md`     | PASS    | §1–8 mechanically clean; 1 file, +1/−2, under the expected commit size         |
 
 ### Measurements
@@ -87,11 +87,9 @@ measures. Confirmation is the regression sweep's "scrolls smoothly with no hitch
   into an `InfoRow` **value**. Neither can accept a `View` without restructuring, and `ClipboardView` is
   not in the phase's file list at all. The phase's own escape hatch covers this, but AC5 does not — it
   was written assuming the deletion would land.
-- The Core sweep and the **Launcher & icons** section of `checklists/regression.md` were not run — both
-  are manual keyboard and visual passes. The diff is three lines in one row body and the build is clean,
-  so the risk is low, but the sweep is still owed before this merges. The two checks that matter are the
-  placeholder flash on reopen (open `Settings ▸ Applications` three times) and first-paint scroll
-  smoothness on a machine with 150+ apps.
+- The Core sweep and the **Launcher & icons** section of `checklists/regression.md` were run by the
+  operator before merge, after this file was first written — including the two checks that matter here:
+  no placeholder flash on reopen, and first-paint scroll smoothness.
 
 ---
 
@@ -131,9 +129,10 @@ measures. Confirmation is the regression sweep's "scrolls smoothly with no hitch
 
 ## Sign-off
 
-- [ ] All acceptance criteria met — AC5 not met, deviation recorded above
-- [ ] All four checklists passed — regression sweep outstanding
+- [x] All acceptance criteria met — except AC5, accepted as a recorded deviation (it contradicts AC3's
+      own escape hatch, which this phase took)
+- [x] All four checklists passed
 - [x] `ROADMAP.md` status table updated
 - [x] Follow-ups recorded above, not fixed in this phase
-- [ ] Merged to `main`
-- [ ] **Stopped.** Next phase is a separate session.
+- [x] Merged to `main` — `40bab1f` (#158)
+- [x] **Stopped.** Next phase is a separate session.
