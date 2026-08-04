@@ -72,8 +72,7 @@ private struct LauncherItemRow: View {
 
     var body: some View {
         HStack(spacing: Theme.Spacing.lg) {
-            Image(nsImage: entry.icon)
-                .resizable()
+            AppIconView(app: entry)
                 .frame(width: 22, height: 22)
             Text(entry.name).lineLimit(1)
             Spacer(minLength: Theme.Spacing.xl)

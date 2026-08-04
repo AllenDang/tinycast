@@ -177,7 +177,7 @@ Update this table as phases land. `Blocked` requires a note in the phase's progr
 | #   | Status      | Branch / commit | Date | Notes |
 | --- | ----------- | --------------- | ---- | ----- |
 | 01  | In progress | `refactor/01-instrumentation-and-baselines` | 2026-08-05 | PR open. Build + harnesses pass; Core regression sweep and Instruments baselines outstanding. |
-| 02  | Not started |                 |      |       |
+| 02  | In progress | `refactor/02-async-icons-in-settings` | 2026-08-05 | PR open. Build + review pass; regression sweep outstanding. `AppEntry.icon` retained — two callers in `AppPickerPopover`, so AC5 not met. |
 | 03  | Not started |                 |      |       |
 | 04  | Not started |                 |      |       |
 | 05  | Not started |                 |      |       |
