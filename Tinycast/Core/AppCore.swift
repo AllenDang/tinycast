@@ -1204,18 +1204,20 @@ final class AppCore: ObservableObject {
         }
 
         NSApp.activate(ignoringOtherApps: true)
-        let alert = NSAlert()
-        alert.messageText = "Enable snippets?"
-        alert.informativeText =
-            "Keyword expansion requires the Accessibility permission. Keystrokes stay on this Mac."
-        alert.alertStyle = .informational
-        alert.addButton(withTitle: "Continue")
-        alert.addButton(withTitle: "Cancel")
-        guard alert.runModal() == .alertFirstButtonReturn else { return }
+        Task {
+            guard
+                await confirm(
+                    title: "Enable snippets?",
+                    message:
+                        "Keyword expansion requires the Accessibility permission. Keystrokes stay on this Mac.",
+                    symbol: "curlybraces", confirmTitle: "Continue", tone: .neutral,
+                    confirmRole: .standard)
+            else { return }
 
-        settings.snippetsEnabled = true
-        // The one prompt for this feature, raised from the gesture that asked for it.
-        Permissions.ensureAccessibility()
+            settings.snippetsEnabled = true
+            // The one prompt for this feature, raised from the gesture that asked for it.
+            Permissions.ensureAccessibility()
+        }
     }
 
     private func startSnippetKeywordListener() {
