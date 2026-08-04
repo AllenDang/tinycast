@@ -43,15 +43,10 @@ final class UninstallSession: ObservableObject {
         let url = app.url
         let name = app.name
         let bundleID = app.bundleID
-        scanTask = Task { [weak self] in
-            let result = await Task.detached(priority: .userInitiated) {
-                Result {
-                    try UninstallScanner.scan(
-                        target: Self.makeTarget(url: url, name: name, bundleID: bundleID),
-                        otherAppNames: otherAppNames, otherBundleIDs: otherBundleIDs,
-                        isTargetRunning: isRunning)
-                }
-            }.value
+        scanTask = Task(priority: .userInitiated) { [weak self] in
+            let result = await Self.runScan(
+                url: url, name: name, bundleID: bundleID, otherAppNames: otherAppNames,
+                otherBundleIDs: otherBundleIDs, isRunning: isRunning)
             guard let self, !Task.isCancelled else { return }
             switch result {
             case .success(let plan):
@@ -81,6 +76,22 @@ final class UninstallSession: ObservableObject {
 
     func setTrashing(_ trashing: Bool) {
         isTrashing = trashing
+    }
+
+    /// Off-main, and `scanTask`'s own child: that is what makes `cancel()` release the scan itself.
+    private nonisolated static func runScan(
+        url: URL, name: String, bundleID: String?, otherAppNames: [String],
+        otherBundleIDs: [String], isRunning: Bool
+    ) async -> Result<UninstallPlan, Error> {
+        do {
+            return .success(
+                try await UninstallScanner.scan(
+                    target: makeTarget(url: url, name: name, bundleID: bundleID),
+                    otherAppNames: otherAppNames, otherBundleIDs: otherBundleIDs,
+                    isTargetRunning: isRunning))
+        } catch {
+            return .failure(error)
+        }
     }
 
     /// Off-main: it opens a file.
