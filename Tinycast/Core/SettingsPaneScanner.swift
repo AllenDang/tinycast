@@ -15,13 +15,22 @@ enum SettingsPaneScanner {
     /// Panes that shouldn't appear in the launcher at all (contextual/one-shot panes).
     private static let skippedBundleIDs: Set<String> = []
 
+    /// Panes change only on an OS update, and an unreadable listing or date is never cached.
+    struct Cache: Sendable {
+        fileprivate let modified: Date
+        fileprivate let panes: [AppEntry]
+    }
+
     /// All Settings panes, sorted by display name.
-    nonisolated static func scan() -> [AppEntry] {
+    nonisolated static func scan(cache: Cache?) -> ([AppEntry], Cache?) {
         let fm = FileManager.default
+        let modified = try? extensionsDir.resourceValues(forKeys: [.contentModificationDateKey])
+            .contentModificationDate
+        if let cache, cache.modified == modified { return (cache.panes, cache) }
         guard
             let items = try? fm.contentsOfDirectory(
                 at: extensionsDir, includingPropertiesForKeys: nil, options: [.skipsHiddenFiles])
-        else { return [] }
+        else { return ([], nil) }
 
         var result: [AppEntry] = []
         for url in items where url.pathExtension == "appex" {
@@ -37,9 +46,10 @@ enum SettingsPaneScanner {
                     id: url.path, name: name, url: url, bundleID: bundleID,
                     kind: .systemSettings))
         }
-        return result.sorted {
+        let panes = result.sorted {
             $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending
         }
+        return (panes, modified.map { Cache(modified: $0, panes: panes) })
     }
 
     private static func isSettingsPane(info: [String: Any]) -> Bool {

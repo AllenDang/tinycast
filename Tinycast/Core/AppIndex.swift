@@ -332,6 +332,7 @@ final class AppIndex: ObservableObject {
     /// Built-in commands minus the quicklink ones while the feature is off.
     private var commandEntries: [AppEntry] = CommandRegistry.all
     private var alternateNameCache = SpotlightNames.Cache()
+    private var paneCache: SettingsPaneScanner.Cache?
     private var isRefreshing = false
     /// Set when a refresh is requested mid-scan, so a scope edit landing during an in-flight scan isn't silently dropped.
     private var refreshPending = false
@@ -436,10 +437,14 @@ final class AppIndex: ObservableObject {
             refreshPending = false
             let scopes = settings?.searchScopes ?? SearchScopes.defaults
             let reusing = alternateNameCache
-            let (found, cache) = await Task.detached(priority: .utility) {
-                AppIndex.scan(scopes: scopes, cache: SpotlightNames.Cache(reusing: reusing))
+            let reusingPanes = paneCache
+            let (found, cache, panes) = await Task.detached(priority: .utility) {
+                AppIndex.scan(
+                    scopes: scopes, cache: SpotlightNames.Cache(reusing: reusing),
+                    paneCache: reusingPanes)
             }.value
             alternateNameCache = cache
+            paneCache = panes
             guard found != discoveredEntries else { continue }
             discoveredEntries = found
             publishEntries()
@@ -447,8 +452,8 @@ final class AppIndex: ObservableObject {
     }
 
     nonisolated private static func scan(
-        scopes: [String], cache: SpotlightNames.Cache
-    ) -> ([AppEntry], SpotlightNames.Cache) {
+        scopes: [String], cache: SpotlightNames.Cache, paneCache: SettingsPaneScanner.Cache?
+    ) -> ([AppEntry], SpotlightNames.Cache, SettingsPaneScanner.Cache?) {
         Signposts.interval("AppIndex.scan") {
             var cache = cache
             var seenBundleIDs = Set<String>()
@@ -480,7 +485,8 @@ final class AppIndex: ObservableObject {
                 $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending
             }
             // Settings panes are `.appex` bundles, which carry no Spotlight alternate names.
-            return (apps + SettingsPaneScanner.scan(), cache)
+            let (panes, panesCache) = SettingsPaneScanner.scan(cache: paneCache)
+            return (apps + panes, cache, panesCache)
         }
     }
 
