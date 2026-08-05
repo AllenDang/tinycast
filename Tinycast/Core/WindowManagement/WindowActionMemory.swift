@@ -49,8 +49,10 @@ struct WindowActionMemory<Key: Hashable> {
         self.cycleTimeout = cycleTimeout
     }
 
+    // periphery:ignore - only read by Tools/window-command-test.swift, which Periphery doesn't index.
     var count: Int { records.count }
 
+    // periphery:ignore - only called by Tools/window-command-test.swift, which Periphery doesn't index.
     func record(for key: Key) -> Record? { records[key] }
 
     /// Resolves the cycle step and restore point for a press. Pure — `commit` performs the write, once
@@ -113,6 +115,7 @@ struct WindowActionMemory<Key: Hashable> {
         order.removeAll { doomed.contains($0) }
     }
 
+    // periphery:ignore - only called by Tools/window-command-test.swift, which Periphery doesn't index.
     mutating func forget(key: Key) {
         guard records.removeValue(forKey: key) != nil else { return }
         order.removeAll { $0 == key }

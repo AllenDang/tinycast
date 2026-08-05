@@ -1,0 +1,20 @@
+project: Tinycast.xcodeproj
+schemes:
+  - Tinycast
+
+# Equatable/Hashable and Codable synthesize `==`/`hash(into:)`/`encode(to:)`/`init(from:)` that read
+# every stored property, but Periphery can't see compiler-synthesized code, so it reports those
+# properties as assign-only. These flags retain properties on types conforming to either.
+retain_equatable_properties: true
+retain_codable_properties: true
+
+# Off-limits per AGENTS.md — tuned by eye, never edited, not even for a lint/analysis comment.
+# EmojiData.generated.swift / CurrencyData.generated.swift are `node Tools/gen-*.js` output, also
+# never hand-edited. Tools/ is a set of standalone swiftc harnesses outside the Xcode target Periphery
+# indexes, so it is excluded from the report the same way .swiftlint.yml excludes it from lint.
+report_exclude:
+  - Tinycast/Core/EdgeDissolve.swift
+  - Tinycast/Core/ThinScrollbar.swift
+  - Tinycast/Core/Emoji/EmojiData.generated.swift
+  - Tinycast/Core/Calculator/CurrencyData.generated.swift
+  - Tools

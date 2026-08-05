@@ -79,6 +79,7 @@ final class QuicklinkStore {
         quicklinks.first { $0.id == id }
     }
 
+    // periphery:ignore - only exercised by Tools/quicklink-test.swift, which Periphery doesn't index.
     func quicklink(entryID: String) -> Quicklink? {
         Quicklink.id(fromEntryID: entryID).flatMap(quicklink)
     }

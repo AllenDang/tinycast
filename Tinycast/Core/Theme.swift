@@ -134,7 +134,6 @@ enum Theme {
         static let heroKeyCap = Font.body
         static let bar = Font.callout.weight(.medium)
         static let menuRow = Font.body
-        static let menuShortcut = Font.callout
         static let menuIcon = Font.body
     }
 

@@ -521,7 +521,8 @@ final class SnippetTextInjector {
             CFGetTypeID(focusedValue) == AXUIElementGetTypeID()
         else { return nil }
 
-        let element = focusedValue as! AXUIElement
+        // Type checked by CFGetTypeID above; `as?` on a CF type is a compile error.
+        let element = focusedValue as! AXUIElement  // swiftlint:disable:this force_cast
         AXUIElementSetMessagingTimeout(element, Self.accessibilityTimeout)
         return element
     }
@@ -548,7 +549,8 @@ final class SnippetTextInjector {
             CFGetTypeID(value) == AXValueGetTypeID()
         else { return nil }
 
-        let axValue = value as! AXValue
+        // Type checked by CFGetTypeID above; `as?` on a CF type is a compile error.
+        let axValue = value as! AXValue  // swiftlint:disable:this force_cast
         guard AXValueGetType(axValue) == .cfRange else { return nil }
         var range = CFRange()
         guard AXValueGetValue(axValue, .cfRange, &range) else { return nil }
@@ -704,6 +706,7 @@ final class SnippetDeliveryQueue {
     private var tail: (id: UUID, task: Task<Void, Never>)?
     private var automaticTaskID: UUID?
 
+    // periphery:ignore - only read by Tools/snippets-test.swift, which Periphery doesn't index.
     var isIdle: Bool { tasks.isEmpty }
 
     func enqueue(
@@ -737,6 +740,7 @@ final class SnippetDeliveryQueue {
         automaticTaskID = nil
     }
 
+    // periphery:ignore - only called by Tools/snippets-test.swift, which Periphery doesn't index.
     func drain() async {
         await tail?.task.value
     }

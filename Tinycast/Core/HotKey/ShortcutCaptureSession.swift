@@ -106,8 +106,7 @@ final class ShortcutCaptureSession {
     private func updateEscapeProbe(
         flags: NSEvent.ModifierFlags, action: HotKeyAction, hotKeys: HotKeyManager?
     ) {
-        escapeProbe.update(carbonModifiers: KeyShortcut.carbonModifiers(from: flags)) {
-            [weak self, weak hotKeys] in
+        escapeProbe.update(carbonModifiers: KeyShortcut.carbonModifiers(from: flags)) { [weak self, weak hotKeys] in
             guard let self, let hotKeys else { return }
             // Mirrors the top of `handleKeyDown`: this counts as other input for any pending double-tap.
             _ = self.detector.handle(.otherInput, at: ProcessInfo.processInfo.systemUptime)

@@ -3,7 +3,7 @@ import Carbon.HIToolbox
 
 /// C entry point for the tap (always on the main thread): reduce the `CGEvent` to Sendable scalars, then cross into the actor. Listen-only, so the event is always returned untouched.
 private func doubleTapEventTapCallback(
-    proxy: CGEventTapProxy, type: CGEventType, event: CGEvent,
+    _: CGEventTapProxy, type: CGEventType, event: CGEvent,
     userInfo: UnsafeMutableRawPointer?
 ) -> Unmanaged<CGEvent>? {
     guard let userInfo else { return Unmanaged.passUnretained(event) }

@@ -13,17 +13,6 @@ enum PaletteMode: String, CaseIterable, Identifiable {
     case quicklinkArguments
 
     var id: String { rawValue }
-    var title: String {
-        switch self {
-        case .launcher: return "Apps"
-        case .clipboard: return "Clipboard"
-        case .calculatorHistory: return "Calculator History"
-        case .emoji: return "Emoji & Symbols"
-        case .uninstall: return "Uninstall Application"
-        case .quicklinks: return "Quicklinks"
-        case .quicklinkArguments: return "Open Quicklink"
-        }
-    }
     var systemImage: String {
         switch self {
         case .launcher: return "magnifyingglass"

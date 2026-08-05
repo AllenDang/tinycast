@@ -72,10 +72,6 @@ final class CustomCommandStore {
         commands.first { $0.id == id }
     }
 
-    func command(entryID: String) -> CustomCommand? {
-        CustomCommand.id(fromEntryID: entryID).flatMap(command)
-    }
-
     // Takes a whole draft rather than a parameter per field so adding an option doesn't churn every call site.
     @discardableResult
     func add(_ draft: CustomCommand) throws -> CustomCommand {

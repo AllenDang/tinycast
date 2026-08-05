@@ -50,17 +50,6 @@ enum EmojiSkinTone: String, CaseIterable, Identifiable, Sendable {
         }
     }
 
-    var title: String {
-        switch self {
-        case .none: return "Default"
-        case .light: return "Light"
-        case .mediumLight: return "Medium Light"
-        case .medium: return "Medium"
-        case .mediumDark: return "Medium Dark"
-        case .dark: return "Dark"
-        }
-    }
-
     /// Picker swatch: a waving hand rendered in this tone.
     var sample: String { EmojiCatalog.applyTone(self, to: "👋") }
 }

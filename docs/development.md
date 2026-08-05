@@ -13,6 +13,12 @@ Create the `Tinycast Self-Signed` code-signing identity once — builds sign wit
 macOS Accessibility grant from being forgotten every rebuild. Follow **[signing.md](signing.md) §1**
 (a few `openssl`/`security` commands).
 
+Then point Git at the versioned hooks directory so the pre-commit lint gate (below) is active:
+
+```sh
+git config core.hooksPath .githooks
+```
+
 ## Build & run
 
 Open the project in Xcode and run it:
@@ -182,8 +188,55 @@ other across a sweep of section shapes, and a clamped selection always resolves 
 
 ## Formatting
 
-Formatting is whatever Xcode's own reindent does — there's no formatter and no linter. The bar is
-CONTRIBUTING.md's "builds clean": no new compiler warnings.
+Formatting is whatever Xcode's own reindent does — there's no formatter. The bar is CONTRIBUTING.md's
+"builds clean": no new compiler warnings.
+
+## Linting
+
+```sh
+brew install swiftlint periphery
+```
+
+Two tools, both configured at the repo root and both required to be at **zero** warnings/errors:
+
+- **SwiftLint** (`.swiftlint.yml`) — style and correctness. Thresholds are tuned to this codebase's
+  actual scale rather than the defaults (`AppCore.swift`'s single-owner size, the house style of a
+  long single-line comment over wrapping one, `{` on its own line after a wrapped condition/signature)
+  — see the comments in the config for the reasoning per rule. `EmojiData.generated.swift`,
+  `CurrencyData.generated.swift`, `ThinScrollbar.swift`, `EdgeDissolve.swift` and `Tools/` are excluded
+  (generated, off-limits per AGENTS.md, or outside the Xcode target, respectively — the same reasons
+  `.periphery.yml` excludes them below). A handful of individual lines carry a narrow
+  `// swiftlint:disable:this <rule>` with a reason in an adjacent comment (e.g. the provably-safe
+  `as!` casts in `WindowMover.swift`/`SnippetTextInjector.swift`, checked by `CFGetTypeID` the line
+  before) — that is the pattern for a new justified exception; don't reach for a project-wide
+  `disabled_rules` entry unless the whole codebase disagrees with a rule, the way it does with
+  `opening_brace` and `optional_data_string_conversion`.
+  ```sh
+  swiftlint lint --strict       # what the hook runs
+  swiftlint --fix                # auto-fixes the mechanical rules
+  ```
+- **Periphery** (`.periphery.yml`) — unused declarations. `retain_equatable_properties` and
+  `retain_codable_properties` cover the biggest class of false positive: a synthesized `==`/`hash
+  (into:)`/`Codable` implementation reads every stored property, but Periphery can't see synthesized
+  code, so without those flags every memoization cache-key struct (`AppIndex.MatchKey` and friends)
+  reports its fields as unused. A declaration consumed only by a `Tools/` harness (which Periphery,
+  like SwiftLint, doesn't index) or held only for its RAII side effect (`WindowMover.terminationToken`)
+  gets a one-line `// periphery:ignore` with the reason directly above it — use a plain hyphen, not an
+  em dash, in that comment, since Periphery's directive parser splits on non-rule-name tokens and
+  chokes on `—`.
+  ```sh
+  periphery scan --config .periphery.yml --strict   # what the hook runs
+  ```
+
+## Pre-commit hook
+
+`.githooks/pre-commit` runs both tools and blocks the commit if either reports anything — see
+**First-time setup** above for the one-time `git config core.hooksPath .githooks`. It fails loudly if
+either binary is missing rather than silently skipping. Periphery does a real (incremental, not
+clean) build to index the project, so an ordinary commit costs roughly what an incremental Xcode
+build costs; that cost is the point — see the module docstring in `.githooks/pre-commit` for the exact
+commands it runs. Neither tool runs in CI yet (`ci.yml` stays the fast Tools/-harness-only gate); the
+hook is the enforcement point today.
 
 ## Generated data
 

@@ -55,7 +55,7 @@ final class EscapeComboProbe {
 
 /// C entry point for the probe's Carbon handler, mirroring `HotKeyCenter`'s own: Carbon dispatches on the main thread, so the `EventRef` is decoded to a plain `EventHotKeyID` before `assumeIsolated` crosses into actor code.
 private func escapeComboProbeHandler(
-    _: EventHandlerCallRef?, event: EventRef?, userData: UnsafeMutableRawPointer?
+    _: EventHandlerCallRef?, event: EventRef?, _: UnsafeMutableRawPointer?
 ) -> OSStatus {
     guard let event else { return OSStatus(eventNotHandledErr) }
     var hotKeyID = EventHotKeyID()

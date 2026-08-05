@@ -1,0 +1,53 @@
+excluded:
+  - Tinycast/Core/Emoji/EmojiData.generated.swift
+  - Tinycast/Core/Calculator/CurrencyData.generated.swift
+  - Tinycast/Core/ThinScrollbar.swift
+  - Tinycast/Core/EdgeDissolve.swift
+  - Tools
+
+disabled_rules:
+  - opening_brace
+  - optional_data_string_conversion
+
+line_length:
+  ignores_comments: true
+  ignores_urls: true
+  warning: 200
+  error: 260
+
+identifier_name:
+  min_length:
+    warning: 1
+  excluded:
+    - SQLITE_TRANSIENT
+
+type_name:
+  excluded:
+    - ID
+
+nesting:
+  type_level:
+    warning: 2
+
+large_tuple:
+  warning: 3
+
+function_parameter_count:
+  warning: 10
+  error: 12
+
+function_body_length:
+  warning: 150
+  error: 200
+
+type_body_length:
+  warning: 1050
+  error: 1500
+
+file_length:
+  warning: 1400
+  error: 2000
+
+cyclomatic_complexity:
+  warning: 45
+  error: 60

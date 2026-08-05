@@ -2,7 +2,7 @@ import AppKit
 import Carbon.HIToolbox
 
 private func snippetKeywordCallback(
-    proxy: CGEventTapProxy, type: CGEventType, event: CGEvent,
+    _: CGEventTapProxy, type: CGEventType, event: CGEvent,
     userInfo: UnsafeMutableRawPointer?
 ) -> Unmanaged<CGEvent>? {
     guard let userInfo else { return Unmanaged.passUnretained(event) }

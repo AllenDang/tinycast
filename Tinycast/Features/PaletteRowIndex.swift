@@ -1,11 +1,13 @@
 import Foundation
 
+// periphery:ignore - only consumed by Tools/palette-selection-test.swift, which Periphery doesn't index; kept Foundation-only so that harness compiles the shipped type.
 /// What a flat selection index resolves to. Section headers aren't selectable and take no index.
 enum PaletteRow: Equatable {
     case calculator
     case element(section: Int, offset: Int)
 }
 
+// periphery:ignore - only consumed by Tools/palette-selection-test.swift, which Periphery doesn't index; kept Foundation-only so that harness compiles the shipped type.
 /// A screen's visible row order: the calculator card at index 0 when present, then each section.
 struct PaletteRowIndex: Equatable {
     let hasCalculator: Bool

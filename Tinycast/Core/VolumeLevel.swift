@@ -5,6 +5,7 @@ import Foundation
 enum VolumeLevel {
     /// 20 steps of 5%, which keeps every level round and puts the 0/25/50/75/100 presets on the grid.
     static let steps = 20
+    // periphery:ignore - only read by Tools/volume-test.swift, which Periphery doesn't index.
     static let step = 1 / Double(steps)
 
     static func clamped(_ level: Double) -> Double {

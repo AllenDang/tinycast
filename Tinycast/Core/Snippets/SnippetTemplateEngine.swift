@@ -42,6 +42,7 @@ enum SnippetTemplateEngine {
             self.makeUUID = makeUUID
         }
 
+        // periphery:ignore - only exercised by Tools/snippets-test.swift, which Periphery doesn't index.
         /// Convenience for a caller that only knows the current clipboard.
         init(
             clipboard: String,

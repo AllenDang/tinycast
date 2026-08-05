@@ -35,6 +35,7 @@ final class WindowMover {
     private static let fullScreenButtonAttribute = "AXFullScreenButton" as CFString
 
     private var memory = WindowActionMemory<WindowKey>()
+    // periphery:ignore - RAII: held only to keep the observer registered for `self`'s lifetime, never read.
     private var terminationToken: NotificationToken?
 
     init() {
@@ -311,7 +312,7 @@ final class WindowMover {
         else { return nil }
         // Type checked by CFGetTypeID above; `as?` on a CF type is a compile error.
 
-        let axValue = value as! AXValue
+        let axValue = value as! AXValue  // swiftlint:disable:this force_cast
         return AXValueGetType(axValue) == type ? axValue : nil
     }
 
@@ -323,7 +324,7 @@ final class WindowMover {
         else { return nil }
         // Type checked by CFGetTypeID above; `as?` on a CF type is a compile error.
 
-        return (value as! AXUIElement)
+        return (value as! AXUIElement)  // swiftlint:disable:this force_cast
     }
 
     private func string(_ element: AXUIElement, _ attribute: String) -> String? {

@@ -1,0 +1,28 @@
+#!/bin/sh
+# Blocks a commit unless SwiftLint and Periphery both report zero warnings/errors.
+# One-time setup per clone: `git config core.hooksPath .githooks` (see docs/development.md).
+set -eu
+
+cd "$(git rev-parse --show-toplevel)"
+
+missing=""
+command -v swiftlint >/dev/null 2>&1 || missing="$missing swiftlint"
+command -v periphery >/dev/null 2>&1 || missing="$missing periphery"
+if [ -n "$missing" ]; then
+    echo "pre-commit: missing tool(s):$missing — run: brew install swiftlint periphery" >&2
+    exit 1
+fi
+
+echo "pre-commit: swiftlint lint --strict"
+if ! swiftlint lint --strict --quiet; then
+    echo "pre-commit: SwiftLint found violations — fix them (or 'swiftlint --fix' the safe ones) before committing." >&2
+    exit 1
+fi
+
+echo "pre-commit: periphery scan --strict (this builds the project; can take a minute)"
+if ! periphery scan --config .periphery.yml --strict --quiet; then
+    echo "pre-commit: Periphery found unused code — remove it, or if it's a known false positive, retain it in .periphery.yml or mark the declaration '// periphery:ignore' with a one-line reason." >&2
+    exit 1
+fi
+
+echo "pre-commit: SwiftLint and Periphery are both clean."

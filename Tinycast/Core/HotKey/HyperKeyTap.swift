@@ -7,7 +7,7 @@ private let machTaskSelf = mach_task_self_
 
 /// C entry point for the event tap (always on the main thread): decode the `CGEvent`, cross into the actor via `assumeIsolated` for a Sendable `Decision`, then apply it out here (`Unmanaged<CGEvent>` isn't Sendable).
 private func hyperKeyEventTapCallback(
-    proxy: CGEventTapProxy, type: CGEventType, event: CGEvent,
+    _: CGEventTapProxy, type: CGEventType, event: CGEvent,
     userInfo: UnsafeMutableRawPointer?
 ) -> Unmanaged<CGEvent>? {
     guard let userInfo else { return Unmanaged.passUnretained(event) }

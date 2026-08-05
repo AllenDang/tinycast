@@ -95,7 +95,7 @@ struct SnippetRepository: Sendable {
         }
     }
 
-    let bundleIdentifier: String
+    // periphery:ignore - read only by Tools/snippets-test.swift, which Periphery doesn't index.
     let channelDirectory: URL
     let snippetsDirectory: URL
 
@@ -110,7 +110,6 @@ struct SnippetRepository: Sendable {
         )[0],
         mutationHooks: MutationHooks = MutationHooks()
     ) {
-        self.bundleIdentifier = bundleIdentifier
         let channelDirectory = applicationSupportRoot.appendingPathComponent(
             bundleIdentifier,
             isDirectory: true)
@@ -290,15 +289,6 @@ struct SnippetRepository: Sendable {
         } catch {
             try? FileManager.default.removeItem(at: temporaryURL)
             throw error
-        }
-    }
-
-    private func nextAvailableFileURL(for name: String, in directory: URL) -> URL {
-        var suffix = 1
-        while true {
-            let candidate = uniqueFileURL(for: name, suffix: suffix, in: directory)
-            if !FileManager.default.fileExists(atPath: candidate.path) { return candidate }
-            suffix += 1
         }
     }
 

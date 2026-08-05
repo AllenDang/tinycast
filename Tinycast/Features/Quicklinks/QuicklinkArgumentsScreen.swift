@@ -5,7 +5,6 @@ struct QuicklinkArgumentsScreen: PaletteScreen {
     /// Options can repeat, so position is the identity — the key the list has always used.
     struct Choice: Identifiable {
         let id: Int
-        let title: String
     }
 
     let session: QuicklinkArgumentSession
@@ -14,7 +13,7 @@ struct QuicklinkArgumentsScreen: PaletteScreen {
     let scrollToTop: () -> Void
 
     var rows: [Choice] {
-        options.enumerated().map { Choice(id: $0.offset, title: $0.element) }
+        options.indices.map { Choice(id: $0) }
     }
 
     var primaryActionTitle: String { session.isLastArgument ? "Open Quicklink" : "Next" }
