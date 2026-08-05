@@ -121,6 +121,9 @@ swiftc -swift-version 6 Tinycast/Core/Quicklinks/Quicklink.swift \
     Tinycast/Core/Quicklinks/QuicklinkDestination.swift \
     Tinycast/Core/Quicklinks/QuicklinkStore.swift Tinycast/Core/Quicklinks/QuicklinkArchive.swift \
     Tools/quicklink-test.swift -o /tmp/quicklink-test && /tmp/quicklink-test  # quicklink destinations + store
+swiftc -swift-version 6 Tinycast/Features/PaletteRowIndex.swift \
+    Tools/palette-selection-test.swift \
+    -o /tmp/palette-selection-test && /tmp/palette-selection-test  # palette flat-selection row order
 ```
 
 `Tools/fuzz-test.swift` compiles the real `Tinycast/Core/SearchRelevance.swift`, which is why that
@@ -169,6 +172,13 @@ It covers tiling, gaps, cycling, restore, display moves and the memory's reset r
 frame. All of it runs headless because the layer is pure: `WindowMover` owns every `AXUIElement` call
 and is deliberately not compiled in. The full contract is in
 [window-management.md](window-management.md).
+
+The palette-selection harness compiles `PaletteRowIndex`, the pure map from the flat selection index
+to the visible row order, which is why that file must stay Foundation-only even though it lives under
+`Features/`. It cannot import SwiftUI, so it tests no `body` — instead it asserts the row-order
+contract the palette guarantees: the calculator card occupies index 0 when present, section headers
+consume no index, empty sections are stepped over, `row(at:)` and `index(section:offset:)` invert each
+other across a sweep of section shapes, and a clamped selection always resolves to a row.
 
 ## Formatting
 

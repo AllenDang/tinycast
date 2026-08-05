@@ -73,7 +73,9 @@ Never break these without an explicit task to do so.
   only; do not add light-mode styling.
 - **The flat `selection` index must match the visible row order exactly**, including the inline
   calculator card at index 0 when present. Selection is the single source of truth for highlight /
-  activation.
+  activation. `Features/PaletteRowIndex.swift` is that mapping, and it stays **Foundation-only and
+  pure** — no SwiftUI, no AppKit — so `Tools/palette-selection-test.swift` compiles the shipped type
+  rather than a copy. Section headers are not selectable and never consume an index.
 - **`AppEntry.Kind` is the only thing that says what an entry is.** One case per launcher section, per
   `VisibilityStore` category and per Settings pane — never re-derive a category by sniffing an entry ID
   (that's what `isCustomCommand` used to do). A new category means a new case, a slice in
@@ -251,7 +253,7 @@ Never break these without an explicit task to do so.
   `Core/Theme.swift` is the design-token source; `Core/HotKey/` is the in-house hotkey stack.
 - `Tinycast/Features/` — SwiftUI views: `RootPaletteView`, `Launcher/`, `Clipboard/`, `Calculator/`,
   `Emoji/`, `Quicklinks/`, `Uninstall/`, `Settings/`, `About/`, `Onboarding/`, plus shared
-  `PopoverMenu`. Each
+  `PopoverMenu`, the `PaletteScreen` protocol and the harness-compiled `PaletteRowIndex`. Each
   `SettingsTab` maps to
   one `…SettingsView` built on the `SettingsPane` / `SettingsCard` scaffold in `SettingsComponents.swift`;
   the four launcher-category panes (Applications, System Settings, System Actions, Commands) are thin

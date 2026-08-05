@@ -41,7 +41,7 @@ the harness in the left column is **mandatory**.
 | `window-command-test`    | `Core/WindowManagement/WindowCommand.swift`, `WindowLayout.swift`, `WindowActionMemory.swift`                                                   |
 | `uninstall-test`         | `Core/Uninstall/UninstallTarget.swift`, `UninstallSearchRoot.swift`, `UninstallRules.swift`, `UninstallProtection.swift`, `UninstallPlan.swift` |
 | `quicklink-test`         | `Core/Quicklinks/Quicklink.swift`, `QuicklinkDestination.swift`, `QuicklinkStore.swift`, `QuicklinkArchive.swift`                               |
-| `palette-selection-test` | **Added in phase 19.** The palette screens' `rows` arrays.                                                                                      |
+| `palette-selection-test` | `Features/PaletteRowIndex.swift` — the flat selection index's map onto visible row order                                                        |
 
 - [ ] Every harness whose sources this phase touched has been run
 - [ ] Each one printed a pass result and exited 0
@@ -61,6 +61,7 @@ pure file.
 - [ ] `Core/Uninstall/`'s deciding half still receives directory **names** and a `PathFacts`, never URLs
 - [ ] `Core/HotKey/DoubleTap*` still take the clock as a parameter
 - [ ] `Core/WindowManagement/` geometry still takes no `NSScreen` and no AX call
+- [ ] `Features/PaletteRowIndex.swift` still imports Foundation alone, despite living under `Features/`
 
 **This is the most likely way a refactor silently breaks the test suite.** A phase that moves files
 (27–29) must re-run the full suite, because the harness command lines encode file paths.
