@@ -4,7 +4,7 @@ import SwiftUI
 struct QuicklinksSettingsView: View {
     @EnvironmentObject private var store: QuicklinkStore
     @ObservedObject private var core = AppCore.shared
-    @ObservedObject private var settings = AppCore.shared.settings
+    @Bindable private var settings = AppCore.shared.settings
     @State private var query = ""
     @State private var pendingDeletion: Quicklink?
 

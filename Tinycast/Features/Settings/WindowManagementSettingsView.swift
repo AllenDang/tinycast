@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct WindowManagementSettingsView: View {
-    @ObservedObject private var settings = AppCore.shared.settings
+    @Bindable private var settings = AppCore.shared.settings
 
     var body: some View {
         SettingsPane(

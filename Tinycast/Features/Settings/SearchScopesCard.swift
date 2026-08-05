@@ -3,7 +3,7 @@ import UniformTypeIdentifiers
 
 /// The editable list of folders (and individual `.app` bundles) the launcher indexes.
 struct SearchScopesCard: View {
-    @ObservedObject private var settings = AppCore.shared.settings
+    private let settings = AppCore.shared.settings
     /// Recomputed only when the list changes — a `fileExists` per row is cheap, but not cheap enough to run on every body render.
     @State private var missing: Set<String> = []
 

@@ -3,7 +3,7 @@ import SwiftUI
 /// Both flavours of command in one pane: Tinycast's own built-ins, then the shell commands the user writes.
 struct CommandsSettingsView: View {
     @EnvironmentObject private var store: CustomCommandStore
-    @ObservedObject private var settings = AppCore.shared.settings
+    @Bindable private var settings = AppCore.shared.settings
     @State private var editor: EditorTarget?
     @State private var pendingDeletion: CustomCommand?
 

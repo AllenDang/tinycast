@@ -16,8 +16,7 @@ struct RootPaletteView: View {
     @Environment(UninstallSession.self) private var uninstall
     @EnvironmentObject private var quicklinks: QuicklinkStore
     @Environment(QuicklinkArgumentSession.self) private var quicklinkArguments
-    /// Observed so a skin tone changed in Settings re-renders the grid glyphs immediately.
-    @ObservedObject private var settings = AppCore.shared.settings
+    private let settings = AppCore.shared.settings
     @FocusState private var searchFocused: Bool
     @State private var showActions = false
     @State private var showAppMenu = false

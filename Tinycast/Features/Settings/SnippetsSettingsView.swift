@@ -3,7 +3,7 @@ import SwiftUI
 struct SnippetsSettingsView: View {
     @EnvironmentObject private var core: AppCore
     @EnvironmentObject private var snippetsStore: SnippetsStore
-    @ObservedObject private var settings = AppCore.shared.settings
+    @Bindable private var settings = AppCore.shared.settings
     @ObservedObject private var keywordListener = AppCore.shared.snippetListener
 
     @State private var editor: EditorTarget?

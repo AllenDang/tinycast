@@ -25,8 +25,9 @@ enum PopToRootTimeout: Int, CaseIterable, Identifiable, Sendable {
 }
 
 @MainActor
-final class AppSettings: ObservableObject {
-    private let defaults = UserDefaults.standard
+@Observable
+final class AppSettings {
+    @ObservationIgnored private let defaults = UserDefaults.standard
     private enum Key {
         static let clipboardRetention = "clipboardRetentionDays"
         static let clipboardDisabledApps = "clipboardDisabledApps"
@@ -56,133 +57,133 @@ final class AppSettings: ObservableObject {
     }
 
     /// Folders (and individual `.app` bundles) `AppIndex` scans, in scan order. Editing this re-indexes — `AppIndex.start(settings:)` observes it.
-    @Published var searchScopes: [String] {
+    var searchScopes: [String] {
         didSet { defaults.set(searchScopes, forKey: Key.searchScopes) }
     }
 
-    @Published var clipboardRetention: ClipboardRetention {
+    var clipboardRetention: ClipboardRetention {
         didSet { defaults.set(clipboardRetention.rawValue, forKey: Key.clipboardRetention) }
     }
 
     /// Bundle IDs whose clipboard changes are never recorded. Ordered so the Settings list is stable.
-    @Published var clipboardDisabledApps: [String] {
+    var clipboardDisabledApps: [String] {
         didSet { defaults.set(clipboardDisabledApps, forKey: Key.clipboardDisabledApps) }
     }
 
-    @Published var launchAtLogin: Bool {
+    var launchAtLogin: Bool {
         didSet { LaunchAtLogin.set(launchAtLogin) }
     }
 
-    /// The physical key remapped to the Hyper chord; `HyperKeyTap` reacts via its publisher.
-    @Published var hyperKey: HyperKeyPhysicalKey {
+    /// The physical key remapped to the Hyper chord; `HyperKeyTap` reacts via its observer.
+    var hyperKey: HyperKeyPhysicalKey {
         didSet { defaults.set(hyperKey.rawValue, forKey: Key.hyperKey) }
     }
 
     /// Whether Hyper is ⌃⌥⇧⌘ (on) or ⌃⌥⌘ (off).
-    @Published var hyperKeyIncludesShift: Bool {
+    var hyperKeyIncludesShift: Bool {
         didSet { defaults.set(hyperKeyIncludesShift, forKey: Key.hyperKeyIncludesShift) }
     }
 
-    @Published var hyperKeyQuickPress: HyperKeyQuickPress {
+    var hyperKeyQuickPress: HyperKeyQuickPress {
         didSet { defaults.set(hyperKeyQuickPress.rawValue, forKey: Key.hyperKeyQuickPress) }
     }
 
     /// Collapse the Hyper modifier set to "✦" wherever shortcut keycaps render.
-    @Published var hyperKeyReplacesGlyph: Bool {
+    var hyperKeyReplacesGlyph: Bool {
         didSet { defaults.set(hyperKeyReplacesGlyph, forKey: Key.hyperKeyReplacesGlyph) }
     }
 
     /// Preferred skin tone applied to modifier-capable emoji at render and copy time.
-    @Published var emojiSkinTone: EmojiSkinTone {
+    var emojiSkinTone: EmojiSkinTone {
         didSet { defaults.set(emojiSkinTone.rawValue, forKey: Key.emojiSkinTone) }
     }
 
     /// How long a closed palette keeps its state before popping back to the root launcher.
-    @Published var popToRootTimeout: PopToRootTimeout {
+    var popToRootTimeout: PopToRootTimeout {
         didSet { defaults.set(popToRootTimeout.rawValue, forKey: Key.popToRootTimeout) }
     }
 
     /// Summon the launcher as a slim search bar that expands into the full list on typing.
-    @Published var compactMode: Bool {
+    var compactMode: Bool {
         didSet { defaults.set(compactMode, forKey: Key.compactMode) }
     }
 
     /// Pin favorite app icons to the right of the compact search bar (⌘1–⌘5 to launch).
-    @Published var showFavoritesInCompactMode: Bool {
+    var showFavoritesInCompactMode: Bool {
         didSet { defaults.set(showFavoritesInCompactMode, forKey: Key.showFavoritesInCompactMode) }
     }
 
     /// Summon the palette on the display under the pointer instead of the one holding the menu bar.
-    @Published var openOnCursorScreen: Bool {
+    var openOnCursorScreen: Bool {
         didSet { defaults.set(openOnCursorScreen, forKey: Key.openOnCursorScreen) }
     }
 
     // Feature switches, off out of the box: off means fully off — no launcher entries, no shortcuts, no keyword expansion, no store. `AppCore` observes all four and re-projects.
-    @Published var customCommandsEnabled: Bool {
+    var customCommandsEnabled: Bool {
         didSet { defaults.set(customCommandsEnabled, forKey: Key.customCommandsEnabled) }
     }
 
     /// With the feature on, controls only whether its launcher section appears.
-    @Published var customCommandsShowInLauncher: Bool {
+    var customCommandsShowInLauncher: Bool {
         didSet {
             defaults.set(customCommandsShowInLauncher, forKey: Key.customCommandsShowInLauncher)
         }
     }
 
     /// Doubles as keyword-expansion consent, so it only flips on through `AppCore.setSnippetsEnabled`'s confirmation and never rides in a settings backup.
-    @Published var snippetsEnabled: Bool {
+    var snippetsEnabled: Bool {
         didSet { defaults.set(snippetsEnabled, forKey: Key.snippetsEnabled) }
     }
 
-    @Published var snippetsShowInLauncher: Bool {
+    var snippetsShowInLauncher: Bool {
         didSet { defaults.set(snippetsShowInLauncher, forKey: Key.snippetsShowInLauncher) }
     }
 
     /// Off means fully off: no launcher entries, and a still-registered shortcut moves nothing.
-    @Published var windowManagementEnabled: Bool {
+    var windowManagementEnabled: Bool {
         didSet { defaults.set(windowManagementEnabled, forKey: Key.windowManagementEnabled) }
     }
 
-    @Published var windowManagementShowInLauncher: Bool {
+    var windowManagementShowInLauncher: Bool {
         didSet {
             defaults.set(windowManagementShowInLauncher, forKey: Key.windowManagementShowInLauncher)
         }
     }
 
     /// Points left between tiled windows and around the screen edge. `WindowLayout` caps anything absurd.
-    @Published var windowGap: Int {
+    var windowGap: Int {
         didSet { defaults.set(windowGap, forKey: Key.windowGap) }
     }
 
     /// Re-triggering a half steps it through ⅓ and ⅔ instead of re-applying the same frame.
-    @Published var windowCycleOnRepeat: Bool {
+    var windowCycleOnRepeat: Bool {
         didSet { defaults.set(windowCycleOnRepeat, forKey: Key.windowCycleOnRepeat) }
     }
 
     /// Off means fully off: no launcher entries, no Quicklinks commands, and a still-registered
     /// shortcut opens nothing.
-    @Published var quicklinksEnabled: Bool {
+    var quicklinksEnabled: Bool {
         didSet { defaults.set(quicklinksEnabled, forKey: Key.quicklinksEnabled) }
     }
 
-    @Published var quicklinksShowInLauncher: Bool {
+    var quicklinksShowInLauncher: Bool {
         didSet { defaults.set(quicklinksShowInLauncher, forKey: Key.quicklinksShowInLauncher) }
     }
 
     /// Ask the handler for a new window rather than reusing its frontmost tab. Off is the macOS
     /// default, which is what "prefer existing tabs" means.
-    @Published var quicklinkOpensNewWindow: Bool {
+    var quicklinkOpensNewWindow: Bool {
         didSet { defaults.set(quicklinkOpensNewWindow, forKey: Key.quicklinkOpensNewWindow) }
     }
 
     /// What `{selection}` does when there is no readable selection to pass.
-    @Published var quicklinkSelectionFallback: QuicklinkSelectionFallback {
+    var quicklinkSelectionFallback: QuicklinkSelectionFallback {
         didSet {
             defaults.set(quicklinkSelectionFallback.rawValue, forKey: Key.quicklinkSelectionFallback)
         }
     }
 
-    @Published var quicklinkConfirmsBeforeDelete: Bool {
+    var quicklinkConfirmsBeforeDelete: Bool {
         didSet {
             defaults.set(quicklinkConfirmsBeforeDelete, forKey: Key.quicklinkConfirmsBeforeDelete)
         }

@@ -349,7 +349,6 @@ final class AppIndex: ObservableObject {
     private var refreshPending = false
     private let ranking: LauncherRankingStore
     private var settings: AppSettings?
-    private var cancellables: Set<AnyCancellable> = []
 
     init(ranking: LauncherRankingStore) {
         self.ranking = ranking
@@ -424,16 +423,22 @@ final class AppIndex: ObservableObject {
     /// Wires the search scopes, re-indexing when the user edits them so Settings changes land without waiting for the next launcher open.
     func start(settings: AppSettings) {
         self.settings = settings
-        settings.$searchScopes
-            .dropFirst()
-            // @Published emits synchronously on the main actor (hence assumeIsolated), before the property is written, so the scan is deferred to a task that reads the settled value.
-            .sink { [weak self] _ in
-                MainActor.assumeIsolated {
-                    guard let self else { return }
-                    Task { await self.refresh() }
+        observeSearchScopes()
+    }
+
+    /// Fires synchronously on main before the write lands, so the task re-arms, then rescans.
+    private func observeSearchScopes() {
+        withObservationTracking {
+            _ = settings?.searchScopes
+        } onChange: { [weak self] in
+            MainActor.assumeIsolated {
+                guard let self else { return }
+                Task {
+                    self.observeSearchScopes()
+                    await self.refresh()
                 }
             }
-            .store(in: &cancellables)
+        }
     }
 
     /// Re-scan (called on every launcher open); overlapping reopens collapse into one trailing scan and `apps` is only re-published when the set changed, so an unchanged reopen does no UI work.

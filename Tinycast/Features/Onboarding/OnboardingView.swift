@@ -6,7 +6,7 @@ import SwiftUI
 struct OnboardingView: View {
     @State private var step = 0
     @StateObject private var model = OnboardingModel()
-    @ObservedObject private var settings = AppCore.shared.settings
+    @Bindable private var settings = AppCore.shared.settings
     private let hotKeys = AppCore.shared.hotKeys
 
     @State private var accessibilityTrusted = Permissions.isAccessibilityTrusted()

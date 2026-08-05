@@ -118,13 +118,12 @@ final class HyperKeyTap: ObservableObject, HealthCheckable {
     private var settings: AppSettings?
     private var tapPort: CFMachPort?
     private var runLoopSource: CFRunLoopSource?
-    private var cancellables: Set<AnyCancellable> = []
     private var sessionTokens: [NotificationToken] = []
     private var hidConnect: io_connect_t = IO_OBJECT_NULL
 
     weak var healthTicker: HealthTicker?
 
-    /// Mirror of `settings.hyperKey`, updated only by its publisher; the toggles (`Include Shift`, `Quick Press`) are read live from `settings` so the tap never acts on a stale copy.
+    /// Mirror of `settings.hyperKey`, updated only by its observer; the toggles (`Include Shift`, `Quick Press`) are read live from `settings` so the tap never acts on a stale copy.
     private var key: HyperKeyPhysicalKey = .none
 
     // Hold state machine.
@@ -141,10 +140,8 @@ final class HyperKeyTap: ObservableObject, HealthCheckable {
 
     func start(settings: AppSettings) {
         self.settings = settings
-        // @Published emits synchronously on the main actor (hence assumeIsolated), before the property is written, so the handler uses the payload.
-        settings.$hyperKey
-            .sink { [weak self] value in MainActor.assumeIsolated { self?.applyKey(value) } }
-            .store(in: &cancellables)
+        applyKey(settings.hyperKey)
+        observeKey()
 
         // Fast user switching: another session owns the keyboard, so drop half-held state and stop rewriting until this session is active again.
         let center = NSWorkspace.shared.notificationCenter
@@ -164,6 +161,21 @@ final class HyperKeyTap: ObservableObject, HealthCheckable {
                     MainActor.assumeIsolated { self?.sessionDidBecomeActive() }
                 }, center: center)
         ]
+    }
+
+    /// Fires synchronously on main before the write lands, so the task re-arms, then applies.
+    private func observeKey() {
+        withObservationTracking {
+            _ = settings?.hyperKey
+        } onChange: { [weak self] in
+            MainActor.assumeIsolated {
+                guard let self else { return }
+                Task {
+                    self.observeKey()
+                    self.applyKey(self.settings?.hyperKey ?? .none)
+                }
+            }
+        }
     }
 
     // MARK: - Hyper chord flags

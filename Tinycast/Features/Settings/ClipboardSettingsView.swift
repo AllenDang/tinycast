@@ -2,7 +2,7 @@ import SwiftUI
 import UniformTypeIdentifiers
 
 struct ClipboardSettingsView: View {
-    @ObservedObject private var settings = AppCore.shared.settings
+    @Bindable private var settings = AppCore.shared.settings
     @State private var confirmingClear = false
     @State private var showingAppPicker = false
 

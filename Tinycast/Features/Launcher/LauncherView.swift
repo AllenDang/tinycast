@@ -151,8 +151,6 @@ private struct AppRow: View {
     let running: Bool
     /// Observed so a hotkey set/cleared in Settings re-renders the row's keycaps immediately.
     @Environment(HotKeyManager.self) private var hotKeys
-    /// Observed for the same reason: the Hyper Key display settings (✦ collapse, Include Shift) change how `keycaps` renders.
-    @ObservedObject private var settings = AppCore.shared.settings
     @State private var hovered = false
 
     /// Selection wins over hover when a row is both; otherwise hover shows its fainter layer.

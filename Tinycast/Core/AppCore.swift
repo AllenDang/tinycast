@@ -141,7 +141,6 @@ final class AppCore: ObservableObject {
     /// Every confirmation, failure report and value prompt in the app; it also guards against a held hotkey stacking dialogs.
     private let dialogs = DialogController()
     private let healthTicker = HealthTicker()
-    private var cancellables = Set<AnyCancellable>()
 
     private init() {
         let launcherRanking = LauncherRankingStore()
@@ -216,57 +215,7 @@ final class AppCore: ObservableObject {
                 startSnippetKeywordListener()
             }
 
-            // @Published emits synchronously before the property is written (as in `AppIndex.start`), so every re-projection defers to a task that reads the settled value.
-            for publisher in [
-                settings.$windowManagementEnabled, settings.$windowManagementShowInLauncher
-            ] {
-                publisher.dropFirst()
-                    .sink { [weak self] _ in
-                        MainActor.assumeIsolated {
-                            guard let self else { return }
-                            Task { self.applyWindowCommandsPresence() }
-                        }
-                    }
-                    .store(in: &cancellables)
-            }
-            for publisher in [
-                settings.$customCommandsEnabled, settings.$customCommandsShowInLauncher
-            ] {
-                publisher.dropFirst()
-                    .sink { [weak self] _ in
-                        MainActor.assumeIsolated {
-                            guard let self else { return }
-                            Task { self.applyCustomCommandsPresence() }
-                        }
-                    }
-                    .store(in: &cancellables)
-            }
-            for publisher in [settings.$quicklinksEnabled, settings.$quicklinksShowInLauncher] {
-                publisher.dropFirst()
-                    .sink { [weak self] _ in
-                        MainActor.assumeIsolated {
-                            guard let self else { return }
-                            Task { self.applyQuicklinksPresence() }
-                        }
-                    }
-                    .store(in: &cancellables)
-            }
-            settings.$snippetsEnabled.dropFirst()
-                .sink { [weak self] _ in
-                    MainActor.assumeIsolated {
-                        guard let self else { return }
-                        Task { self.applySnippetsEnabled() }
-                    }
-                }
-                .store(in: &cancellables)
-            settings.$snippetsShowInLauncher.dropFirst()
-                .sink { [weak self] _ in
-                    MainActor.assumeIsolated {
-                        guard let self else { return }
-                        Task { self.applySnippetsLauncherPresence() }
-                    }
-                }
-                .store(in: &cancellables)
+            observeFeatureSwitches()
 
             // First launch has no palette hotkey bound and shows nothing but the menu-bar icon; guide the user once. Marker is written at show-time so it stays one-time even if they Cmd-Q mid-flow.
             if !OnboardingState.hasOnboarded {
@@ -285,6 +234,41 @@ final class AppCore: ObservableObject {
     }
 
     // MARK: - Feature switches
+
+    private func observeFeatureSwitches() {
+        track({
+            _ = $0.windowManagementEnabled
+            _ = $0.windowManagementShowInLauncher
+        }, reproject: { $0.applyWindowCommandsPresence() })
+        track({
+            _ = $0.customCommandsEnabled
+            _ = $0.customCommandsShowInLauncher
+        }, reproject: { $0.applyCustomCommandsPresence() })
+        track({
+            _ = $0.quicklinksEnabled
+            _ = $0.quicklinksShowInLauncher
+        }, reproject: { $0.applyQuicklinksPresence() })
+        track({ _ = $0.snippetsEnabled }, reproject: { $0.applySnippetsEnabled() })
+        track({ _ = $0.snippetsShowInLauncher }, reproject: { $0.applySnippetsLauncherPresence() })
+    }
+
+    /// Fires synchronously on main before the write lands, so the task re-arms and re-reads.
+    private func track(
+        _ reads: @escaping @Sendable @MainActor (AppSettings) -> Void,
+        reproject: @escaping @Sendable @MainActor (AppCore) -> Void
+    ) {
+        withObservationTracking {
+            reads(settings)
+        } onChange: { [weak self] in
+            MainActor.assumeIsolated {
+                guard let self else { return }
+                Task {
+                    self.track(reads, reproject: reproject)
+                    reproject(self)
+                }
+            }
+        }
+    }
 
     private func applyCustomCommandsPresence() {
         let visible = settings.customCommandsEnabled && settings.customCommandsShowInLauncher

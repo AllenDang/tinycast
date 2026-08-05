@@ -5,8 +5,6 @@ struct ShortcutRecorder: View {
     let action: HotKeyAction
 
     private let hotKeys = AppCore.shared.hotKeys
-    /// Observed so bound chips re-render when the Hyper Key display settings (✦ collapse, Include Shift) change how `keycaps` renders.
-    @ObservedObject private var settings = AppCore.shared.settings
     /// Observed so a bound double-tap surfaces its Accessibility warning the moment the grant changes.
     @ObservedObject private var doubleTapMonitor = AppCore.shared.hotKeys.doubleTapMonitor
     @State private var hovered = false
