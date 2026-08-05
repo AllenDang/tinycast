@@ -5,7 +5,7 @@ struct RootPaletteView: View {
     @EnvironmentObject private var vm: PaletteViewModel
     @EnvironmentObject private var appIndex: AppIndex
     @EnvironmentObject private var store: ClipboardStore
-    @EnvironmentObject private var favorites: FavoritesStore
+    @Environment(FavoritesStore.self) private var favorites
     @EnvironmentObject private var visibility: VisibilityStore
     @EnvironmentObject private var calcHistory: CalculatorHistoryStore
     /// Observed so the inline card re-evaluates the moment a fresh FX snapshot lands, or the user

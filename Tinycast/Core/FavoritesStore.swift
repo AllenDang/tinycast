@@ -2,11 +2,12 @@ import Foundation
 
 /// Persists favorite apps as an ordered list of keys (bundle id, or file path when none), pinned to the top of the launcher when the search is empty.
 @MainActor
-final class FavoritesStore: ObservableObject {
+@Observable
+final class FavoritesStore {
     private let defaults = UserDefaults.standard
     private let key = "favoriteApps"
 
-    @Published private(set) var keys: [String]
+    private(set) var keys: [String]
     /// AppIndex includes this in its result key, invalidating a list when the pinning changes.
     private(set) var revision = 0
 
