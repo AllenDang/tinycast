@@ -2,9 +2,10 @@ import AppKit
 
 /// Tracks running apps for the launcher's running indicator, updating live from NSWorkspace launch/terminate notifications.
 @MainActor
-final class RunningAppsMonitor: ObservableObject {
-    @Published private(set) var runningBundleIDs: Set<String> = []
-    private var observers: [NotificationToken] = []
+@Observable
+final class RunningAppsMonitor {
+    private(set) var runningBundleIDs: Set<String> = []
+    @ObservationIgnored private var observers: [NotificationToken] = []
 
     init() {
         refresh()

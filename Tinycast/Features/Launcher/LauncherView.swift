@@ -14,7 +14,7 @@ struct LauncherList: View {
     var onCalcActions: () -> Void = {}
     let onActivate: (AppEntry) -> Void
     let onActions: (AppEntry) -> Void
-    @EnvironmentObject private var runningApps: RunningAppsMonitor
+    @Environment(RunningAppsMonitor.self) private var runningApps
 
     private nonisolated static let calcRowID = "calc-card"
 

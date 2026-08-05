@@ -2,9 +2,10 @@ import Foundation
 
 /// Owns the parsed emoji/symbol catalog: category sections precomputed once at load, search memoized one query deep (the `AppIndex` pattern).
 @MainActor
-final class EmojiIndex: ObservableObject {
-    @Published private(set) var entries: [EmojiEntry] = []
-    @Published private(set) var categorySections: [(category: EmojiCategory, entries: [EmojiEntry])] = []
+@Observable
+final class EmojiIndex {
+    private(set) var entries: [EmojiEntry] = []
+    private(set) var categorySections: [(category: EmojiCategory, entries: [EmojiEntry])] = []
 
     /// `order` is the catalog index, the tie-break that keeps equal scores in catalog order.
     private struct ScoredEntry {
@@ -19,7 +20,7 @@ final class EmojiIndex: ObservableObject {
     }
 
     private var byGlyph: [String: EmojiEntry] = [:]
-    private var searchMemo = Memo<SearchKey, [EmojiEntry]>()
+    @ObservationIgnored private var searchMemo = Memo<SearchKey, [EmojiEntry]>()
     /// Bumped on each load, so the key above names the catalog it scored.
     private var revision = 0
 

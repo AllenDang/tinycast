@@ -8,7 +8,8 @@ import Foundation
 /// conversion in Settings. Every path that could reach the network or surface a rate re-checks
 /// `isEnabled` rather than trusting a caller.
 @MainActor
-final class CurrencyRateStore: ObservableObject {
+@Observable
+final class CurrencyRateStore {
     /// Frankfurter (`frankfurter.dev`) — open-source, no key, no account, no quota, rates blended from
     /// 84 central banks. Unfiltered: `CurrencyData.generated.swift` is generated from this same feed's
     /// currency list, so every quote it returns is one the calculator can answer for (~1.4 KB gzipped).
@@ -26,15 +27,15 @@ final class CurrencyRateStore: ObservableObject {
     /// Explicit user consent, persisted under the bundle-scoped defaults. Deliberately *not* part of
     /// `AppSettings`: `SettingsBackup` mirrors that type field-for-field, and an imported config —
     /// or a Raycast import — must never be able to silently grant network access.
-    @Published private(set) var isEnabled: Bool
+    private(set) var isEnabled: Bool
 
     /// The newest snapshot, or nil when none has landed — and always nil while consent is withheld.
-    @Published private(set) var rates: CurrencyRates?
+    private(set) var rates: CurrencyRates?
 
     private static let consentKey = "currencyRatesEnabled"
     private let defaults = UserDefaults.standard
     private let fileURL: URL
-    private var pump: Task<Void, Never>?
+    @ObservationIgnored private var pump: Task<Void, Never>?
 
     init() {
         // Absent reads as false, which is the only safe default for a network feature.

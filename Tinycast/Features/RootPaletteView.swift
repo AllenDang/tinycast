@@ -10,8 +10,8 @@ struct RootPaletteView: View {
     @Environment(CalculatorHistoryStore.self) private var calcHistory
     /// Observed so the inline card re-evaluates the moment a fresh FX snapshot lands, or the user
     /// turns currency conversion on or off.
-    @EnvironmentObject private var currencyRates: CurrencyRateStore
-    @EnvironmentObject private var emojiIndex: EmojiIndex
+    @Environment(CurrencyRateStore.self) private var currencyRates
+    @Environment(EmojiIndex.self) private var emojiIndex
     @Environment(FrequentEmojiStore.self) private var frequentEmoji
     @Environment(UninstallSession.self) private var uninstall
     @EnvironmentObject private var quicklinks: QuicklinkStore

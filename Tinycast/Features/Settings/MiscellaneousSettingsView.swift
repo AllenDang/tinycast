@@ -3,7 +3,7 @@ import SwiftUI
 /// The catch-all pane. Home to currency conversion — the one feature in Tinycast that reaches the
 /// network, which is why it ships off and needs an explicit yes before it can be switched on.
 struct MiscellaneousSettingsView: View {
-    @ObservedObject private var currencyRates = AppCore.shared.currencyRates
+    private let currencyRates = AppCore.shared.currencyRates
     @State private var askingConsent = false
     @State private var refreshing = false
     @State private var refreshFailed = false
