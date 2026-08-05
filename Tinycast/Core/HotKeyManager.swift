@@ -2,7 +2,8 @@ import Foundation
 
 /// Owns all global shortcut bindings: persistence, registration with the two engines (`HotKeyCenter` for combos, `DoubleTapMonitor` for double-tapped modifiers), conflict lookup, and dispatch.
 @MainActor
-final class HotKeyManager: ObservableObject {
+@Observable
+final class HotKeyManager {
     var onTogglePalette: (() -> Void)?
     var onToggleClipboard: (() -> Void)?
     var onToggleEmoji: (() -> Void)?
@@ -12,7 +13,7 @@ final class HotKeyManager: ObservableObject {
     var onOpenQuicklink: ((UUID) -> Void)?
 
     /// The recorder currently capturing keystrokes, or `nil`; keeping this as plain app state makes recorders glitch-free, and any active recorder pauses both engines so the shortcut being typed can't fire the binding it's replacing. Setting it also starts/stops `capture`.
-    @Published var recordingAction: HotKeyAction? {
+    var recordingAction: HotKeyAction? {
         didSet {
             guard recordingAction != oldValue else { return }
             let recording = recordingAction != nil
@@ -34,7 +35,7 @@ final class HotKeyManager: ObservableObject {
     private var doubleTaps: [DoubleTapModifier: HotKeyAction] = [:]
     /// Every binding, loaded once in `start()` and written through on change.
     private var bindings: [HotKeyAction: HotKeyBinding] = [:]
-    private var candidateActionsCache: [HotKeyAction]?
+    @ObservationIgnored private var candidateActionsCache: [HotKeyAction]?
     // Reused: the startup load decodes once per candidate action.
     private let decoder = JSONDecoder()
     private let encoder = JSONEncoder()
@@ -87,9 +88,8 @@ final class HotKeyManager: ObservableObject {
         return try? decoder.decode(HotKeyBinding.self, from: data)
     }
 
-    /// Persists (or clears, when `nil`) the binding, swaps the live registration, and publishes so the launcher and recorders re-render.
+    /// Persists or clears the binding and swaps live registration; the `bindings` mutation notifies.
     func setBinding(_ binding: HotKeyBinding?, for action: HotKeyAction) {
-        objectWillChange.send()
         let previous = bindings[action]
         if let binding,
             let data = try? encoder.encode(binding),

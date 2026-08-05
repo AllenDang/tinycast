@@ -95,7 +95,7 @@ struct QuicklinkList: View {
 private struct QuicklinkRow: View {
     let quicklink: Quicklink
     let selected: Bool
-    @EnvironmentObject private var hotKeys: HotKeyManager
+    @Environment(HotKeyManager.self) private var hotKeys
     @State private var hovered = false
 
     /// Selection wins over hover when a row is both; otherwise hover shows its fainter layer.

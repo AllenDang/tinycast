@@ -7,7 +7,7 @@ struct OnboardingView: View {
     @State private var step = 0
     @StateObject private var model = OnboardingModel()
     @ObservedObject private var settings = AppCore.shared.settings
-    @ObservedObject private var hotKeys = AppCore.shared.hotKeys
+    private let hotKeys = AppCore.shared.hotKeys
 
     @State private var accessibilityTrusted = Permissions.isAccessibilityTrusted()
     private let refreshTimer = Timer.publish(every: 1, on: .main, in: .common).autoconnect()

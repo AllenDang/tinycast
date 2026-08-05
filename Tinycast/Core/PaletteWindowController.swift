@@ -122,7 +122,7 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
             .environment(core.emojiIndex)
             .environment(core.frequentEmoji)
             .environment(core.runningApps)
-            .environmentObject(core.hotKeys)
+            .environment(core.hotKeys)
             .environment(core.uninstall)
             .environmentObject(core.quicklinks)
             .environment(core.quicklinkArguments)

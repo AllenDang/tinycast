@@ -4,7 +4,7 @@ import SwiftUI
 struct ShortcutRecorder: View {
     let action: HotKeyAction
 
-    @ObservedObject private var hotKeys: HotKeyManager = AppCore.shared.hotKeys
+    private let hotKeys = AppCore.shared.hotKeys
     /// Observed so bound chips re-render when the Hyper Key display settings (✦ collapse, Include Shift) change how `keycaps` renders.
     @ObservedObject private var settings = AppCore.shared.settings
     /// Observed so a bound double-tap surfaces its Accessibility warning the moment the grant changes.
