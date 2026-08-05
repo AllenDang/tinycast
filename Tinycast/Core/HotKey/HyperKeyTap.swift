@@ -84,7 +84,7 @@ private enum CapsLockRemap {
 
 /// The Hyper Key engine: a modifying `CGEventTap` turning one physical key (Caps Lock or a right-side modifier) into the ⌃⌥(⇧)⌘ chord system-wide; a separate layer from `HotKeyCenter` (Carbon can't intercept lone keys), with rewritten flags flowing into Carbon matching so existing hotkeys fire from Hyper+key unchanged.
 @MainActor
-final class HyperKeyTap: ObservableObject {
+final class HyperKeyTap: ObservableObject, HealthCheckable {
     enum Status: Equatable {
         case off
         case active
@@ -118,10 +118,11 @@ final class HyperKeyTap: ObservableObject {
     private var settings: AppSettings?
     private var tapPort: CFMachPort?
     private var runLoopSource: CFRunLoopSource?
-    private var healthTimer: Timer?
     private var cancellables: Set<AnyCancellable> = []
     private var sessionTokens: [NotificationToken] = []
     private var hidConnect: io_connect_t = IO_OBJECT_NULL
+
+    weak var healthTicker: HealthTicker?
 
     /// Mirror of `settings.hyperKey`, updated only by its publisher; the toggles (`Include Shift`, `Quick Press`) are read live from `settings` so the tap never acts on a stale copy.
     private var key: HyperKeyPhysicalKey = .none
@@ -318,10 +319,10 @@ final class HyperKeyTap: ObservableObject {
     private func syncTapPresence() {
         if key == .none {
             tearDownTap()
-            stopHealthTimer()
+            healthTicker?.unsubscribe(self)
             status = .off
         } else {
-            startHealthTimer()
+            healthTicker?.subscribe(self)
             installTapIfNeeded()
         }
     }
@@ -371,20 +372,8 @@ final class HyperKeyTap: ObservableObject {
         if let tapPort { CGEvent.tapEnable(tap: tapPort, enable: true) }
     }
 
-    private func startHealthTimer() {
-        guard healthTimer == nil else { return }
-        healthTimer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in
-            MainActor.assumeIsolated { self?.healthCheck() }
-        }
-    }
-
-    private func stopHealthTimer() {
-        healthTimer?.invalidate()
-        healthTimer = nil
-    }
-
     /// One-second watchdog while a key is configured: retries installation until Accessibility is granted, notices revocation, revives a system-disabled tap, and clears a stuck hold.
-    private func healthCheck() {
+    func healthCheck() {
         guard key != .none else { return }
         if tapPort == nil {
             installTapIfNeeded()

@@ -140,6 +140,7 @@ final class AppCore: ObservableObject {
     private let auxWindows = AuxWindowController()
     /// Every confirmation, failure report and value prompt in the app; it also guards against a held hotkey stacking dialogs.
     private let dialogs = DialogController()
+    private let healthTicker = HealthTicker()
     private var cancellables = Set<AnyCancellable>()
 
     private init() {
@@ -186,6 +187,10 @@ final class AppCore: ObservableObject {
             Task { await appIndex.refresh() }
             Task { await emojiIndex.load() }
             currencyRates.start()
+
+            hyperKeyTap.healthTicker = healthTicker
+            hotKeys.doubleTapMonitor.healthTicker = healthTicker
+            snippetListener.healthTicker = healthTicker
 
             hotKeys.onTogglePalette = { [weak self] in self?.togglePalette() }
             hotKeys.onToggleClipboard = { [weak self] in self?.toggleClipboard() }

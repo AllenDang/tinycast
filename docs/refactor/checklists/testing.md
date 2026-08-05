@@ -33,7 +33,7 @@ the harness in the left column is **mandatory**.
 | `raycast-test`           | `Core/Backup/RaycastFormat.swift`, `RaycastV1Decoder.swift`, `Gunzip.swift`, `Core/ClipboardStore.swift`                                        |
 | `emoji-test`             | `Core/Emoji/EmojiCatalog.swift`, `EmojiGridGeometry.swift`, `EmojiData.generated.swift`                                                         |
 | `custom-command-test`    | `Core/CustomCommand.swift`, `Core/ShellCommandRunner.swift`                                                                                     |
-| `snippets-test`          | `Core/NotificationToken.swift`, `Core/Snippets/*.swift`                                                                                         |
+| `snippets-test`          | `Core/NotificationToken.swift`, `Core/HealthTicker.swift`, `Core/Snippets/*.swift`                                                              |
 | `hotkey-test`            | `Core/HotKey/DoubleTapModifier.swift`, `DoubleTapDetector.swift`                                                                                |
 | `callout-test`           | `Core/Theme.swift`, `Core/CalloutPlacement.swift`                                                                                               |
 | `system-action-test`     | `Core/SystemAction.swift`                                                                                                                       |

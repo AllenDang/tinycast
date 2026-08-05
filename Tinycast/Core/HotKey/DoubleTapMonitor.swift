@@ -24,7 +24,7 @@ private func doubleTapEventTapCallback(
 
 /// Watches for a double-tapped lone modifier system-wide and reports the matching action. A third tap is unavoidable: Carbon can't register a modifier-only shortcut, `HyperKeyTap` only exists while a Hyper Key is configured, and the snippet listener must stay compilable by its own harness. This one is listen-only and installs *only* while something is bound to a double-tap.
 @MainActor
-final class DoubleTapMonitor: ObservableObject {
+final class DoubleTapMonitor: ObservableObject, HealthCheckable {
     /// True only while something is bound and the tap can't be created; the recorder surfaces it next to the binding.
     @Published private(set) var needsAccessibility = false
 
@@ -43,15 +43,15 @@ final class DoubleTapMonitor: ObservableObject {
     private var detector = DoubleTapDetector()
     private var tapPort: CFMachPort?
     private var runLoopSource: CFRunLoopSource?
-    private var healthTimer: Timer?
     private var sessionTokens: [NotificationToken] = []
     private var sessionActive = true
     private var loggedTapFailure = false
 
+    weak var healthTicker: HealthTicker?
+
     // The tap holds an unretained `self`, so it must not outlive it.
     isolated deinit {
         tearDownTap()
-        stopHealthTimer()
     }
 
     func start() {
@@ -133,11 +133,11 @@ final class DoubleTapMonitor: ObservableObject {
     private func syncTapPresence() {
         guard !bound.isEmpty, sessionActive else {
             tearDownTap()
-            stopHealthTimer()
+            healthTicker?.unsubscribe(self)
             needsAccessibility = false
             return
         }
-        startHealthTimer()
+        healthTicker?.subscribe(self)
         installTapIfNeeded()
     }
 
@@ -195,20 +195,8 @@ final class DoubleTapMonitor: ObservableObject {
         if let tapPort { CGEvent.tapEnable(tap: tapPort, enable: true) }
     }
 
-    private func startHealthTimer() {
-        guard healthTimer == nil else { return }
-        healthTimer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in
-            MainActor.assumeIsolated { self?.healthCheck() }
-        }
-    }
-
-    private func stopHealthTimer() {
-        healthTimer?.invalidate()
-        healthTimer = nil
-    }
-
     /// One-second watchdog while something is bound: retries installation until Accessibility is granted, notices revocation, and revives a system-disabled tap.
-    private func healthCheck() {
+    func healthCheck() {
         guard !bound.isEmpty, sessionActive else { return }
         if tapPort == nil {
             installTapIfNeeded()

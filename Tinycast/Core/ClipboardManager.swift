@@ -18,6 +18,7 @@ final class ClipboardManager {
     private let store: ClipboardStore
     private let settings: AppSettings
     private var timer: Timer?
+    private var sessionTokens: [NotificationToken] = []
     private var lastChangeCount = 0
 
     init(store: ClipboardStore, settings: AppSettings) {
@@ -31,12 +32,47 @@ final class ClipboardManager {
     }
 
     func start() {
+        installSessionObservers()
+        startPolling()
+    }
+
+    // Fast user switching: another session's clipboard isn't ours, so stop waking up for it.
+    private func installSessionObservers() {
+        guard sessionTokens.isEmpty else { return }
+        let center = NSWorkspace.shared.notificationCenter
+        sessionTokens = [
+            NotificationToken(
+                center.addObserver(
+                    forName: NSWorkspace.sessionDidResignActiveNotification, object: nil,
+                    queue: .main
+                ) { [weak self] _ in
+                    MainActor.assumeIsolated { self?.stopPolling() }
+                }, center: center),
+            NotificationToken(
+                center.addObserver(
+                    forName: NSWorkspace.sessionDidBecomeActiveNotification, object: nil,
+                    queue: .main
+                ) { [weak self] _ in
+                    MainActor.assumeIsolated { self?.startPolling() }
+                }, center: center)
+        ]
+    }
+
+    // Re-baselining first is what stops a clip made in another session reading as new on resume.
+    private func startPolling() {
+        guard timer == nil else { return }
         lastChangeCount = NSPasteboard.general.changeCount
         let timer = Timer(timeInterval: 0.5, repeats: true) { [weak self] _ in
             MainActor.assumeIsolated { self?.poll() }
         }
+        timer.tolerance = 0.1
         RunLoop.main.add(timer, forMode: .common)
         self.timer = timer
+    }
+
+    private func stopPolling() {
+        timer?.invalidate()
+        timer = nil
     }
 
     // Drains the pending change first: the user's real copy has to reach history before our temporary text overwrites the pasteboard.

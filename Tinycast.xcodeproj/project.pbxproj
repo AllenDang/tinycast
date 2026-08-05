@@ -140,6 +140,7 @@
 		D322804853973E1C19F2A408 /* AppIndex.swift in Sources */ = {isa = PBXBuildFile; fileRef = BA7CE23482F7DF563A268806 /* AppIndex.swift */; };
 		D3CA50C1CFABC31E6BC7B73C /* CalcPercent.swift in Sources */ = {isa = PBXBuildFile; fileRef = 88A65B4EC5AE7E22594BFC5E /* CalcPercent.swift */; };
 		D3D2ACD2D94588786C2185AE /* CalcCurrency.swift in Sources */ = {isa = PBXBuildFile; fileRef = 299122624B5E1BA2C5400478 /* CalcCurrency.swift */; };
+		D58522DE2928F8087815D6BE /* HealthTicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0D49F8681407A5B76393271C /* HealthTicker.swift */; };
 		D8704A9F0BC1A55B7BE4D717 /* DoubleTapModifier.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A4B045F847659544FA182D4 /* DoubleTapModifier.swift */; };
 		DA2EBB18F026BD055E0270CD /* AppLauncher.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A2EF9C70F8BC9571089D5EB /* AppLauncher.swift */; };
 		DA5BCA13045FF91B3FC8EB35 /* OnboardingState.swift in Sources */ = {isa = PBXBuildFile; fileRef = B8A9B4E6E477C30372C85F86 /* OnboardingState.swift */; };
@@ -177,6 +178,7 @@
 		0C36D92A5018B9A7B33775DE /* PermissionsSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PermissionsSettingsView.swift; sourceTree = "<group>"; };
 		0D045D032498C2294A99890E /* LaunchAtLogin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LaunchAtLogin.swift; sourceTree = "<group>"; };
 		0D16E927986D415F5386CDCF /* SystemAction.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SystemAction.swift; sourceTree = "<group>"; };
+		0D49F8681407A5B76393271C /* HealthTicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HealthTicker.swift; sourceTree = "<group>"; };
 		0F50886DC766B9923C3875A5 /* RootPaletteView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootPaletteView.swift; sourceTree = "<group>"; };
 		1A4B045F847659544FA182D4 /* DoubleTapModifier.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DoubleTapModifier.swift; sourceTree = "<group>"; };
 		1AC80C1AD8E37995B77272F3 /* AppPaths.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppPaths.swift; sourceTree = "<group>"; };
@@ -372,6 +374,7 @@
 				95C105FED5D77A2392FDA3F0 /* CustomCommand.swift */,
 				33A13DB27EE627AC08051165 /* EdgeDissolve.swift */,
 				9FB750D045194AE34D39D792 /* FavoritesStore.swift */,
+				0D49F8681407A5B76393271C /* HealthTicker.swift */,
 				D37B6D29E8E23C6136EBFB38 /* HotKeyManager.swift */,
 				99945F0952ADADBBEB9B8388 /* ImageThumbnail.swift */,
 				0D045D032498C2294A99890E /* LaunchAtLogin.swift */,
@@ -846,6 +849,7 @@
 				AD2141EBF98A246BDA3BAB8E /* Gunzip.swift in Sources */,
 				CC97C121823B1DC61886BAFC /* HUDPanel.swift in Sources */,
 				E768AC4C8A6D6A1BA6218279 /* HUDPresenter.swift in Sources */,
+				D58522DE2928F8087815D6BE /* HealthTicker.swift in Sources */,
 				5B0EFBA180AAFFBC08CC395A /* HotKeyBinding.swift in Sources */,
 				DEC660F280699E43AA028E8A /* HotKeyCenter.swift in Sources */,
 				903E82F78D3FCEF3A1AF3752 /* HotKeyManager.swift in Sources */,

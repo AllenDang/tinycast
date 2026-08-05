@@ -111,12 +111,13 @@ private final class SystemSnippetKeywordTapController: SnippetKeywordTapControll
 }
 
 @MainActor
-final class SnippetKeywordListener: ObservableObject {
+final class SnippetKeywordListener: ObservableObject, HealthCheckable {
     typealias Status = SnippetKeywordListenerStatus
 
     @Published private(set) var status: Status = .off
 
-    private var healthTimer: Timer?
+    weak var healthTicker: HealthTicker?
+
     private var observers: [NotificationToken] = []
     private var policy = SnippetKeywordPolicy()
     private var onMatch: ((StoredSnippet.ID, String, Int, NSRunningApplication?) -> Void)?
@@ -156,13 +157,13 @@ final class SnippetKeywordListener: ObservableObject {
     func start(onMatch: @escaping (StoredSnippet.ID, String, Int, NSRunningApplication?) -> Void) {
         self.onMatch = onMatch
         installObserversIfNeeded()
-        startHealthTimerIfNeeded()
+        healthTicker?.subscribe(self)
         syncTapPresence()
     }
 
     func stop() {
         onMatch = nil
-        stopHealthTimer()
+        healthTicker?.unsubscribe(self)
         observers.removeAll()
         policy.reset()
         tapController.tearDown()
@@ -216,20 +217,6 @@ final class SnippetKeywordListener: ObservableObject {
                 },
                 center: center)
         ]
-    }
-
-    private func startHealthTimerIfNeeded() {
-        guard healthTimer == nil else { return }
-        let timer = Timer(timeInterval: 1, repeats: true) { [weak self] _ in
-            MainActor.assumeIsolated { self?.healthCheck() }
-        }
-        RunLoop.main.add(timer, forMode: .common)
-        healthTimer = timer
-    }
-
-    private func stopHealthTimer() {
-        healthTimer?.invalidate()
-        healthTimer = nil
     }
 
     private func syncTapPresence() {
