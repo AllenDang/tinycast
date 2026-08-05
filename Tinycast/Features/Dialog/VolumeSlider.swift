@@ -2,7 +2,7 @@ import SwiftUI
 
 /// Tinycast's own slider, because `NSSlider` would drop an Aqua control onto a surface whose whole vocabulary is white-alpha over vibrancy.
 struct VolumeSlider: View {
-    @ObservedObject var state: VolumeState
+    let state: VolumeState
 
     var body: some View {
         HStack(spacing: Theme.Spacing.lg) {

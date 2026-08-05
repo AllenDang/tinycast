@@ -13,9 +13,9 @@ struct RootPaletteView: View {
     @EnvironmentObject private var currencyRates: CurrencyRateStore
     @EnvironmentObject private var emojiIndex: EmojiIndex
     @EnvironmentObject private var frequentEmoji: FrequentEmojiStore
-    @EnvironmentObject private var uninstall: UninstallSession
+    @Environment(UninstallSession.self) private var uninstall
     @EnvironmentObject private var quicklinks: QuicklinkStore
-    @EnvironmentObject private var quicklinkArguments: QuicklinkArgumentSession
+    @Environment(QuicklinkArgumentSession.self) private var quicklinkArguments
     /// Observed so a skin tone changed in Settings re-renders the grid glyphs immediately.
     @ObservedObject private var settings = AppCore.shared.settings
     @FocusState private var searchFocused: Bool

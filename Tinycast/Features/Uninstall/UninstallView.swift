@@ -10,7 +10,7 @@ struct UninstallList: View {
     let onSelect: (UninstallCandidate) -> Void
     let onToggle: (UninstallCandidate) -> Void
     let onActions: (UninstallCandidate) -> Void
-    @EnvironmentObject private var session: UninstallSession
+    @Environment(UninstallSession.self) private var session
 
     private var firstRowSelected: Bool {
         selectedID != nil && selectedID == results.first?.id

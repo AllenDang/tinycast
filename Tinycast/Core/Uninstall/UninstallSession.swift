@@ -2,7 +2,8 @@ import Foundation
 
 /// One scan, its plan, and what the user checked. The checked-set invariant lives in `UninstallSelection`; this owns the lifecycle.
 @MainActor
-final class UninstallSession: ObservableObject {
+@Observable
+final class UninstallSession {
     enum State: Equatable {
         case idle
         case scanning
@@ -10,13 +11,13 @@ final class UninstallSession: ObservableObject {
         case failed(String)
     }
 
-    @Published private(set) var state: State = .idle
-    @Published private(set) var selection: UninstallSelection?
-    @Published private(set) var isTrashing = false
+    private(set) var state: State = .idle
+    private(set) var selection: UninstallSelection?
+    private(set) var isTrashing = false
     /// Kept for the confirmation copy and the post-uninstall cleanup.
     private(set) var app: AppEntry?
 
-    private var scanTask: Task<Void, Never>?
+    @ObservationIgnored private var scanTask: Task<Void, Never>?
 
     var plan: UninstallPlan? {
         if case .ready(let plan) = state { return plan }

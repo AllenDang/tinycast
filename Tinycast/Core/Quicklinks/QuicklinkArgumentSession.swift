@@ -7,7 +7,8 @@ import Foundation
 /// The expansion context is captured once, before the first prompt, so `{clipboard}`, `{selection}`
 /// and `{date}` can't drift while the form is open.
 @MainActor
-final class QuicklinkArgumentSession: ObservableObject {
+@Observable
+final class QuicklinkArgumentSession {
     struct Request {
         let quicklink: Quicklink
         let context: SnippetTemplateEngine.ExpansionContext
@@ -17,7 +18,7 @@ final class QuicklinkArgumentSession: ObservableObject {
         var index: Int
     }
 
-    @Published private(set) var request: Request?
+    private(set) var request: Request?
 
     var isActive: Bool { request != nil }
     var quicklinkName: String? { request?.quicklink.name }

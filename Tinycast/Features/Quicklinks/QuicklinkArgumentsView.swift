@@ -13,7 +13,7 @@ struct QuicklinkArgumentsView: View {
     let onSelect: (Int) -> Void
     let onActivate: () -> Void
 
-    @EnvironmentObject private var session: QuicklinkArgumentSession
+    @Environment(QuicklinkArgumentSession.self) private var session
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {

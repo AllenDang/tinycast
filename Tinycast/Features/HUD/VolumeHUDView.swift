@@ -3,7 +3,7 @@ import SwiftUI
 /// The volume box: speaker glyph, bar, number. Takes the palette's surface recipe rather than glass —
 /// it has content to read, not a control to press — so it reads as a sibling of the dialogs.
 struct VolumeHUDView: View {
-    @ObservedObject var state: VolumeState
+    let state: VolumeState
 
     var body: some View {
         VStack(spacing: Theme.Spacing.lg) {

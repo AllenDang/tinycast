@@ -13,7 +13,7 @@ struct ShortcutRecorderAnchorKey: PreferenceKey {
 struct ShortcutRecorderPopover: View {
     let placement: CalloutPlacement
 
-    @ObservedObject private var capture = AppCore.shared.hotKeys.capture
+    private let capture = AppCore.shared.hotKeys.capture
 
     private struct State {
         let caps: [String]

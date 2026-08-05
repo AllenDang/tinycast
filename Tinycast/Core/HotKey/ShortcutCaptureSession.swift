@@ -3,23 +3,24 @@ import Carbon.HIToolbox
 
 /// Local event monitors for the one active recording. `HotKeyManager.recordingAction` starts and stops it, so one session serves the app and the callout can read it from outside the row.
 @MainActor
-final class ShortcutCaptureSession: ObservableObject {
+@Observable
+final class ShortcutCaptureSession {
     /// A rejected binding and whoever already holds it.
     struct Conflict: Equatable {
         let binding: HotKeyBinding
         let owner: String
     }
 
-    @Published private(set) var heldModifiers: NSEvent.ModifierFlags = []
-    @Published private(set) var conflict: Conflict?
+    private(set) var heldModifiers: NSEvent.ModifierFlags = []
+    private(set) var conflict: Conflict?
 
     private static let conflictDwell: Duration = .seconds(1.5)
 
-    private var monitors: [Any] = []
-    private var resignObserver: NSObjectProtocol?
-    private var conflictReset: Task<Void, Never>?
+    @ObservationIgnored private var monitors: [Any] = []
+    @ObservationIgnored private var resignObserver: NSObjectProtocol?
+    @ObservationIgnored private var conflictReset: Task<Void, Never>?
     /// The same recognizer the global monitor uses, driven here by local monitors — recording a double-tap therefore needs no event tap and no permission.
-    private var detector = DoubleTapDetector()
+    @ObservationIgnored private var detector = DoubleTapDetector()
 
     func start(action: HotKeyAction, hotKeys: HotKeyManager) {
         stop()
