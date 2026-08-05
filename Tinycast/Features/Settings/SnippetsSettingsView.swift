@@ -4,7 +4,7 @@ struct SnippetsSettingsView: View {
     @Environment(AppCore.self) private var core
     @Environment(SnippetsStore.self) private var snippetsStore
     @Bindable private var settings = AppCore.shared.settings
-    @ObservedObject private var keywordListener = AppCore.shared.snippetListener
+    private let keywordListener = AppCore.shared.snippetListener
 
     @State private var editor: EditorTarget?
     @State private var pendingDeletion: StoredSnippet?

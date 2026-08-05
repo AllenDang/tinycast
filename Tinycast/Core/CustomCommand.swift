@@ -1,4 +1,3 @@
-import Combine
 import Foundation
 
 struct CustomCommand: Codable, Hashable, Identifiable, Sendable {
@@ -52,12 +51,13 @@ enum CustomCommandValidationError: LocalizedError {
 }
 
 @MainActor
-final class CustomCommandStore: ObservableObject {
+@Observable
+final class CustomCommandStore {
     private static let defaultsKey = "customCommands"
 
     private let defaults: UserDefaults
-    @Published private(set) var commands: [CustomCommand]
-    var onChange: (([CustomCommand]) -> Void)?
+    private(set) var commands: [CustomCommand]
+    @ObservationIgnored var onChange: (([CustomCommand]) -> Void)?
 
     init(defaults: UserDefaults = .standard) {
         self.defaults = defaults

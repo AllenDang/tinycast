@@ -24,12 +24,13 @@ private func doubleTapEventTapCallback(
 
 /// Watches for a double-tapped lone modifier system-wide and reports the matching action. A third tap is unavoidable: Carbon can't register a modifier-only shortcut, `HyperKeyTap` only exists while a Hyper Key is configured, and the snippet listener must stay compilable by its own harness. This one is listen-only and installs *only* while something is bound to a double-tap.
 @MainActor
-final class DoubleTapMonitor: ObservableObject, HealthCheckable {
+@Observable
+final class DoubleTapMonitor: HealthCheckable {
     /// True only while something is bound and the tap can't be created; the recorder surfaces it next to the binding.
-    @Published private(set) var needsAccessibility = false
+    private(set) var needsAccessibility = false
 
     /// Fired on the second *release* of a bound modifier, so it is already up by the time the action runs.
-    var onDoubleTap: ((DoubleTapModifier) -> Void)?
+    @ObservationIgnored var onDoubleTap: ((DoubleTapModifier) -> Void)?
 
     /// Set while a recorder is capturing, so editing a binding can't trigger it (mirrors `HotKeyCenter.isPaused`).
     var isPaused = false {
@@ -40,14 +41,15 @@ final class DoubleTapMonitor: ObservableObject, HealthCheckable {
     }
 
     private var bound: Set<DoubleTapModifier> = []
-    private var detector = DoubleTapDetector()
-    private var tapPort: CFMachPort?
-    private var runLoopSource: CFRunLoopSource?
-    private var sessionTokens: [NotificationToken] = []
+    /// Advanced by the tap callback on every modifier transition; released by teardown.
+    @ObservationIgnored private var detector = DoubleTapDetector()
+    @ObservationIgnored private var tapPort: CFMachPort?
+    @ObservationIgnored private var runLoopSource: CFRunLoopSource?
+    @ObservationIgnored private var sessionTokens: [NotificationToken] = []
     private var sessionActive = true
     private var loggedTapFailure = false
 
-    weak var healthTicker: HealthTicker?
+    @ObservationIgnored weak var healthTicker: HealthTicker?
 
     // The tap holds an unretained `self`, so it must not outlive it.
     isolated deinit {

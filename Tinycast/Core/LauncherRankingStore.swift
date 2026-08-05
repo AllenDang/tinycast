@@ -10,7 +10,8 @@ struct LauncherRankingRecord: Codable, Hashable, Sendable {
 
 /// Learns which launcher results the user chooses for each query and persists the bounded, on-device-only frecency data under `~/Library/Caches/<bundle-id>/`.
 @MainActor
-final class LauncherRankingStore: ObservableObject {
+@Observable
+final class LauncherRankingStore {
     private static let cap = 1_000
     /// Stays below half the 10k gaps between FuzzyMatch's relevance tiers, so learned usage can reorder similarly-matching results without ever beating a stronger match kind.
     private static let maximumBoost = 4_500
@@ -18,11 +19,12 @@ final class LauncherRankingStore: ObservableObject {
     private let fileURL: URL
     private let now: () -> Date
 
-    @Published private(set) var records: [LauncherRankingRecord]
+    private(set) var records: [LauncherRankingRecord]
     /// AppIndex includes this in its one-entry cache key, invalidating a result after a visit/reset.
     private(set) var revision = 0
 
-    private var lookup: [String: [String: LauncherRankingRecord]]?
+    /// `boosts(query:)` builds this from a launcher render; tracked, the write lands mid-body.
+    @ObservationIgnored private var lookup: [String: [String: LauncherRankingRecord]]?
 
     init(fileURL: URL? = nil, now: @escaping () -> Date = Date.init) {
         self.fileURL = fileURL ?? Self.defaultFileURL()

@@ -36,9 +36,10 @@ enum SnippetArgumentsPrompt {
 
 /// Shared between the form and the caller, so `runModal()` can hand back what was typed.
 @MainActor
-private final class ArgumentValues: ObservableObject {
+@Observable
+private final class ArgumentValues {
     let arguments: [SnippetTemplateEngine.MissingArgument]
-    @Published var entries: [String: String]
+    var entries: [String: String]
 
     init(arguments: [SnippetTemplateEngine.MissingArgument]) {
         self.arguments = arguments
@@ -58,7 +59,7 @@ private final class ArgumentValues: ObservableObject {
 }
 
 private struct SnippetArgumentsForm: View {
-    @ObservedObject var values: ArgumentValues
+    let values: ArgumentValues
     @FocusState private var focusedArgument: String?
 
     var body: some View {

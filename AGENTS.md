@@ -92,7 +92,7 @@ Never break these without an explicit task to do so.
   same deal for `Tools/ranking-test.swift` — Foundation only, with the clock injected via `now` and
   the store path via `fileURL`, as is `Core/SearchScopes.swift` for `Tools/scopes-test.swift`.
   `Core/CustomCommand.swift` and `Core/ShellCommandRunner.swift` must likewise stay free of AppKit /
-  SwiftUI (Foundation plus Combine for `ObservableObject` and Darwin for `mkstemp`) so
+  SwiftUI (Foundation plus Darwin for `mkstemp`) so
   `Tools/custom-command-test.swift` can compile them standalone — which is why the custom-command
   confirmation gate lives in `AppCore` and not in the runner. All of `Core/Snippets/` compiles into
   `Tools/snippets-test.swift` (the harness globs the directory), so the model, Markdown serializer,

@@ -2,8 +2,8 @@ import SwiftUI
 
 struct GeneralSettingsView: View {
     @Bindable private var settings = AppCore.shared.settings
-    @ObservedObject private var hyperTap = AppCore.shared.hyperKeyTap
-    @ObservedObject private var launcherRanking = AppCore.shared.launcherRanking
+    private let hyperTap = AppCore.shared.hyperKeyTap
+    private let launcherRanking = AppCore.shared.launcherRanking
     // Same UserDefaults key the `App` binds its `MenuBarExtra(isInserted:)` to — toggling here updates the menu-bar icon live, with no shared observable between them.
     @AppStorage(SettingsKey.showInMenuBar) private var showInMenuBar = true
     @State private var confirmingRankingReset = false

@@ -1,6 +1,5 @@
 import AppKit
 import Carbon.HIToolbox
-import Combine
 @preconcurrency import IOKit.hidsystem
 
 // Snapshot the imported mutable C global `mach_task_self_` (process-constant) so actor code never touches the raw global under strict concurrency.
@@ -84,7 +83,8 @@ private enum CapsLockRemap {
 
 /// The Hyper Key engine: a modifying `CGEventTap` turning one physical key (Caps Lock or a right-side modifier) into the ⌃⌥(⇧)⌘ chord system-wide; a separate layer from `HotKeyCenter` (Carbon can't intercept lone keys), with rewritten flags flowing into Carbon matching so existing hotkeys fire from Hyper+key unchanged.
 @MainActor
-final class HyperKeyTap: ObservableObject, HealthCheckable {
+@Observable
+final class HyperKeyTap: HealthCheckable {
     enum Status: Equatable {
         case off
         case active
@@ -113,23 +113,24 @@ final class HyperKeyTap: ObservableObject, HealthCheckable {
         static let rightControl: UInt64 = 0x0000_2000
     }
 
-    @Published private(set) var status: Status = .off
+    private(set) var status: Status = .off
 
-    private var settings: AppSettings?
-    private var tapPort: CFMachPort?
-    private var runLoopSource: CFRunLoopSource?
-    private var sessionTokens: [NotificationToken] = []
-    private var hidConnect: io_connect_t = IO_OBJECT_NULL
+    @ObservationIgnored private var settings: AppSettings?
+    // Raw CF handles the tap callback and teardown reach; never a view dependency.
+    @ObservationIgnored private var tapPort: CFMachPort?
+    @ObservationIgnored private var runLoopSource: CFRunLoopSource?
+    @ObservationIgnored private var sessionTokens: [NotificationToken] = []
+    @ObservationIgnored private var hidConnect: io_connect_t = IO_OBJECT_NULL
 
-    weak var healthTicker: HealthTicker?
+    @ObservationIgnored weak var healthTicker: HealthTicker?
 
     /// Mirror of `settings.hyperKey`, updated only by its observer; the toggles (`Include Shift`, `Quick Press`) are read live from `settings` so the tap never acts on a stale copy.
-    private var key: HyperKeyPhysicalKey = .none
+    @ObservationIgnored private var key: HyperKeyPhysicalKey = .none
 
-    // Hold state machine.
-    private var hyperActive = false
-    private var hyperDownAt: ContinuousClock.Instant?
-    private var otherKeyPressed = false
+    // Hold state machine, written from the tap callback on every keystroke.
+    @ObservationIgnored private var hyperActive = false
+    @ObservationIgnored private var hyperDownAt: ContinuousClock.Instant?
+    @ObservationIgnored private var otherKeyPressed = false
     private let clock = ContinuousClock()
     private static let quickPressWindow: Duration = .milliseconds(250)
 

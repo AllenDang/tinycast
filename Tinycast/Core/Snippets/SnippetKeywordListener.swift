@@ -1,6 +1,5 @@
 import AppKit
 import Carbon.HIToolbox
-import Combine
 
 private func snippetKeywordCallback(
     proxy: CGEventTapProxy, type: CGEventType, event: CGEvent,
@@ -111,15 +110,18 @@ private final class SystemSnippetKeywordTapController: SnippetKeywordTapControll
 }
 
 @MainActor
-final class SnippetKeywordListener: ObservableObject, HealthCheckable {
+@Observable
+final class SnippetKeywordListener: HealthCheckable {
     typealias Status = SnippetKeywordListenerStatus
 
-    @Published private(set) var status: Status = .off
+    private(set) var status: Status = .off
 
-    weak var healthTicker: HealthTicker?
+    @ObservationIgnored weak var healthTicker: HealthTicker?
 
-    private var observers: [NotificationToken] = []
-    private var policy = SnippetKeywordPolicy()
+    @ObservationIgnored private var observers: [NotificationToken] = []
+    /// The keystroke buffer: the tap callback mutates it per event, so it stays untracked.
+    @ObservationIgnored private var policy = SnippetKeywordPolicy()
+    @ObservationIgnored
     private var onMatch: ((StoredSnippet.ID, String, Int, NSRunningApplication?) -> Void)?
     private var sessionActive = true
     private var loggedTapFailure = false
