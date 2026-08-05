@@ -3,8 +3,8 @@ import SwiftUI
 struct RootPaletteView: View {
     @EnvironmentObject private var core: AppCore
     @EnvironmentObject private var vm: PaletteViewModel
-    @EnvironmentObject private var appIndex: AppIndex
-    @EnvironmentObject private var store: ClipboardStore
+    @Environment(AppIndex.self) private var appIndex
+    @Environment(ClipboardStore.self) private var store
     @Environment(FavoritesStore.self) private var favorites
     @Environment(VisibilityStore.self) private var visibility
     @Environment(CalculatorHistoryStore.self) private var calcHistory
@@ -14,7 +14,7 @@ struct RootPaletteView: View {
     @Environment(EmojiIndex.self) private var emojiIndex
     @Environment(FrequentEmojiStore.self) private var frequentEmoji
     @Environment(UninstallSession.self) private var uninstall
-    @EnvironmentObject private var quicklinks: QuicklinkStore
+    @Environment(QuicklinkStore.self) private var quicklinks
     @Environment(QuicklinkArgumentSession.self) private var quicklinkArguments
     private let settings = AppCore.shared.settings
     @FocusState private var searchFocused: Bool
@@ -221,7 +221,8 @@ struct RootPaletteView: View {
         let links = vm.mode == .quicklinks ? quicklinkResults : []
         let argumentOptions = vm.mode == .quicklinkArguments ? argumentOptions : []
         // Newest stored clip + the reorder token: the pair changes only when the store mutates, never when a query filters the list.
-        let clipFollow = ClipFollowKey(id: store.items.first?.id, token: vm.followToken)
+        let clipFollow = ClipFollowKey(
+            id: vm.mode == .clipboard ? store.items.first?.id : nil, token: vm.followToken)
         // Every count/selection below derives from this one calc/offset pair — the flat selection index must always match the visible row order, calc card included.
         let calc = calcResult
         let offset = calc == nil ? 0 : 1

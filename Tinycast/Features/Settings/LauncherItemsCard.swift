@@ -7,7 +7,7 @@ struct LauncherItemsCard: View {
     let header: String
     let searchPrompt: String
 
-    @EnvironmentObject private var appIndex: AppIndex
+    @Environment(AppIndex.self) private var appIndex
     @Environment(VisibilityStore.self) private var visibility
     @State private var query = ""
 

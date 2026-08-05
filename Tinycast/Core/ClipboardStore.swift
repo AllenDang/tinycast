@@ -90,9 +90,10 @@ enum ClipboardRetention: Int, CaseIterable, Identifiable, Sendable {
 
 /// SQLite-backed clipboard history (rows + trigram FTS5 index in `clipboard.sqlite3`, image blobs on disk), degrading to session-only in-memory history if the database can't be opened.
 @MainActor
-final class ClipboardStore: ObservableObject {
+@Observable
+final class ClipboardStore {
     /// Newest-first, pins included in place — `search` is the one place that lifts them to the head. Every pinned row is resident however old it is (`load` fetches them all; neither `trimWindow` nor `prune` drops one), which is what lets `search` match the pinned block in memory.
-    @Published private(set) var items: [ClipboardItem] = [] {
+    private(set) var items: [ClipboardItem] = [] {
         didSet {
             searchCache = nil
             orderedCache = nil
@@ -101,9 +102,9 @@ final class ClipboardStore: ObservableObject {
     var maxAge: TimeInterval = ClipboardRetention.threeMonths.maxAge
 
     /// One-entry memo so repeated renders (e.g. arrow-key nav) for the same query reuse the FTS result instead of re-querying SQLite every frame; invalidated whenever `items` changes.
-    private var searchCache: (query: String, result: [ClipboardItem])?
+    @ObservationIgnored private var searchCache: (query: String, result: [ClipboardItem])?
     /// Same memo for the empty query — every render reads the full display order, so the pinned/unpinned split runs once per mutation.
-    private var orderedCache: [ClipboardItem]?
+    @ObservationIgnored private var orderedCache: [ClipboardItem]?
 
     private static let memoryWindow = 1000
 
@@ -131,15 +132,15 @@ final class ClipboardStore: ObservableObject {
 
     private let imagesDir: URL
     private let dbURL: URL
-    private var db: OpaquePointer?
-    private var insertStmt: OpaquePointer?
-    private var loadStmt: OpaquePointer?
-    private var windowFloorStmt: OpaquePointer?
-    private var searchStmt: OpaquePointer?
-    private var deleteByIDStmt: OpaquePointer?
-    private var pinStmt: OpaquePointer?
-    private var staleImagesStmt: OpaquePointer?
-    private var deleteStaleStmt: OpaquePointer?
+    @ObservationIgnored private var db: OpaquePointer?
+    @ObservationIgnored private var insertStmt: OpaquePointer?
+    @ObservationIgnored private var loadStmt: OpaquePointer?
+    @ObservationIgnored private var windowFloorStmt: OpaquePointer?
+    @ObservationIgnored private var searchStmt: OpaquePointer?
+    @ObservationIgnored private var deleteByIDStmt: OpaquePointer?
+    @ObservationIgnored private var pinStmt: OpaquePointer?
+    @ObservationIgnored private var staleImagesStmt: OpaquePointer?
+    @ObservationIgnored private var deleteStaleStmt: OpaquePointer?
 
     /// `directory` defaults to the per-channel cache; `Tools/clipboard-test.swift` passes a throwaway one so a harness run can never reach a real history.
     init(directory: URL? = nil) {

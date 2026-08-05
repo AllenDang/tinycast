@@ -1,9 +1,9 @@
-import Combine
 import Darwin
 import Foundation
 
 @MainActor
-final class SnippetsStore: ObservableObject {
+@Observable
+final class SnippetsStore {
     enum State: Sendable, Equatable {
         case idle
         case loading
@@ -11,19 +11,19 @@ final class SnippetsStore: ObservableObject {
         case failed(String)
     }
 
-    @Published private(set) var snippets: [StoredSnippet] = []
-    @Published private(set) var state: State = .idle
-    @Published private(set) var issues: [SnippetRepository.Issue] = []
-    @Published private(set) var operationError: String?
+    private(set) var snippets: [StoredSnippet] = []
+    private(set) var state: State = .idle
+    private(set) var issues: [SnippetRepository.Issue] = []
+    private(set) var operationError: String?
 
     let snippetsDirectory: URL
     var onSnapshot: ((SnippetRepository.Snapshot) -> Void)?
 
     private let repository: SnippetRepository
-    private var directoryWatcher: DispatchSourceFileSystemObject?
-    private var fileWatchers: [String: DispatchSourceFileSystemObject] = [:]
-    private var reloadTask: Task<Void, Never>?
-    private var watcherRetryTask: Task<Void, Never>?
+    @ObservationIgnored private var directoryWatcher: DispatchSourceFileSystemObject?
+    @ObservationIgnored private var fileWatchers: [String: DispatchSourceFileSystemObject] = [:]
+    @ObservationIgnored private var reloadTask: Task<Void, Never>?
+    @ObservationIgnored private var watcherRetryTask: Task<Void, Never>?
     private var generation = 0
     private var watcherGeneration = 0
     private var isStarted = false

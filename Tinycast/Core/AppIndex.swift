@@ -1,5 +1,4 @@
 import AppKit
-import Combine
 
 struct AppEntry: Identifiable, Hashable, Sendable {
     enum Kind: String, Sendable {
@@ -293,8 +292,9 @@ enum IconCache {
 }
 
 @MainActor
-final class AppIndex: ObservableObject {
-    @Published private(set) var apps: [AppEntry] = []
+@Observable
+final class AppIndex {
+    private(set) var apps: [AppEntry] = []
 
     private var snippetEntries: [AppEntry] = []
 
@@ -313,8 +313,8 @@ final class AppIndex: ObservableObject {
     }
 
     /// Repeated renders for the same query reuse the ranking instead of re-matching every frame.
-    private var matchMemo = Memo<MatchKey, [AppEntry]>()
-    private var resultsMemo = Memo<ResultsKey, [AppEntry]>()
+    @ObservationIgnored private var matchMemo = Memo<MatchKey, [AppEntry]>()
+    @ObservationIgnored private var resultsMemo = Memo<ResultsKey, [AppEntry]>()
     /// Bumped whenever `apps` changes, so both memos above name the entry set they were built from.
     private var entriesRevision = 0
 

@@ -13,7 +13,7 @@ struct QuicklinkEditorSheet: View {
     let quicklink: Quicklink?
 
     @Environment(\.dismiss) private var dismiss
-    @EnvironmentObject private var appIndex: AppIndex
+    @Environment(AppIndex.self) private var appIndex
     @State private var name: String
     @State private var link: String
     @State private var iconSymbol: String?

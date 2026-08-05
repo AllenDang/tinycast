@@ -382,11 +382,11 @@ final class AppCore: ObservableObject {
         ) {
             SettingsRootView(initialTab: tab)
                 .environmentObject(self)
-                .environmentObject(self.appIndex)
+                .environment(self.appIndex)
                 .environment(self.visibility)
                 .environmentObject(self.customCommands)
-                .environmentObject(self.snippetsStore)
-                .environmentObject(self.quicklinks)
+                .environment(self.snippetsStore)
+                .environment(self.quicklinks)
         }
         if !isNew {
             NotificationCenter.default.post(name: .tinycastSelectSettingsTab, object: tab)

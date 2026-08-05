@@ -11,7 +11,7 @@ struct AppPickerPopover: View {
     /// Nil means the caller's `clearTitle` row was tapped.
     let onSelect: (String?) -> Void
 
-    @EnvironmentObject private var appIndex: AppIndex
+    @Environment(AppIndex.self) private var appIndex
     @State private var query = ""
 
     private var candidates: [AppEntry] {

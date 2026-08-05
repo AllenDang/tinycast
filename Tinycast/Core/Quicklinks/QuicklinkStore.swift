@@ -10,12 +10,13 @@ private let SQLITE_TRANSIENT = unsafeBitCast(-1, to: sqlite3_destructor_type.sel
 /// things: it lives in Application Support rather than Caches, and a database that won't open is
 /// never deleted — the store goes read-only and says so instead of silently starting empty.
 @MainActor
-final class QuicklinkStore: ObservableObject {
+@Observable
+final class QuicklinkStore {
     /// Display order is `Quicklink.precedes`: pinned first by pin time, then the rest by name.
-    @Published private(set) var quicklinks: [Quicklink] = []
+    private(set) var quicklinks: [Quicklink] = []
     /// False when the database could not be opened; every mutation then refuses rather than
     /// pretending to save.
-    @Published private(set) var isAvailable = false
+    private(set) var isAvailable = false
     var onChange: (([Quicklink]) -> Void)?
 
     private static let schema = """
@@ -32,10 +33,10 @@ final class QuicklinkStore: ObservableObject {
         """
 
     private let dbURL: URL
-    private var db: OpaquePointer?
-    private var upsertStmt: OpaquePointer?
-    private var loadStmt: OpaquePointer?
-    private var deleteStmt: OpaquePointer?
+    @ObservationIgnored private var db: OpaquePointer?
+    @ObservationIgnored private var upsertStmt: OpaquePointer?
+    @ObservationIgnored private var loadStmt: OpaquePointer?
+    @ObservationIgnored private var deleteStmt: OpaquePointer?
 
     /// `directory` defaults to the per-channel Application Support folder; the harness passes a
     /// throwaway one so a run can never reach a real library.

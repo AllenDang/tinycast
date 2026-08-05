@@ -107,7 +107,7 @@ private struct DisabledAppRow: View {
     let bundleID: String
     let onRemove: () -> Void
 
-    @EnvironmentObject private var appIndex: AppIndex
+    @Environment(AppIndex.self) private var appIndex
 
     var body: some View {
         let (name, icon) = AppPresentation.resolve(bundleID: bundleID, in: appIndex)

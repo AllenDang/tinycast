@@ -9,7 +9,7 @@ struct ClipboardList: View {
     let onSelect: (ClipboardItem) -> Void
     let onActivate: () -> Void
     let onActions: (ClipboardItem) -> Void
-    @EnvironmentObject private var store: ClipboardStore
+    @Environment(ClipboardStore.self) private var store
 
     private enum Row: Identifiable {
         case header(String)
@@ -298,7 +298,7 @@ struct ClipboardPreview: View {
     private static let previewMaxPixel: CGFloat = 900
 
     let item: ClipboardItem?
-    @EnvironmentObject private var store: ClipboardStore
+    @Environment(ClipboardStore.self) private var store
 
     var body: some View {
         if let item {
