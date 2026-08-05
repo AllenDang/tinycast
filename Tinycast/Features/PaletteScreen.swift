@@ -7,7 +7,9 @@ import SwiftUI
     var rows: [Row] { get }
     var primaryActionTitle: String { get }
 
-    func actions(for row: Row) -> PopoverMenuContent?
-    func activate(_ row: Row)
+    func actions(at selection: Int) -> PopoverMenuContent?
+    func activate(at selection: Int)
+    /// ⌘↵. False when the selection has no secondary action, leaving the key unhandled.
+    func secondary(at selection: Int) -> Bool
     @ViewBuilder func body(selection: Int, scroll: ScrollIntent) -> AnyView
 }

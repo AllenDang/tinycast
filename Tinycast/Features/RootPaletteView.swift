@@ -47,27 +47,25 @@ struct RootPaletteView: View {
     }
     private var clipResults: [ClipboardItem] { store.search(vm.query) }
     private var histResults: [CalcHistoryEntry] { calcHistory.search(vm.query) }
-    /// The search field filters files by name or location on this screen.
-    private var uninstallResults: [UninstallCandidate] {
-        let query = vm.query.trimmingCharacters(in: .whitespaces)
-        guard !query.isEmpty else { return uninstall.candidates }
-        return uninstall.candidates.filter {
-            $0.name.localizedCaseInsensitiveContains(query)
-                || $0.locationLabel.localizedCaseInsensitiveContains(query)
-        }
-    }
     private var quicklinkResults: [Quicklink] {
         let query = vm.query.trimmingCharacters(in: .whitespaces)
         guard !query.isEmpty else { return quicklinks.quicklinks }
         return quicklinks.quicklinks.filter { $0.name.localizedCaseInsensitiveContains(query) }
     }
-    /// An argument taking `options=` renders them as rows, filtered by the field like every other
-    /// list; a free-text one has none, so the screen is a form with nothing to index and the flat
-    /// selection stays at zero.
-    private var argumentOptions: [String] {
-        let query = vm.query.trimmingCharacters(in: .whitespaces)
-        guard !query.isEmpty else { return quicklinkArguments.options }
-        return quicklinkArguments.options.filter { $0.localizedCaseInsensitiveContains(query) }
+
+    /// The migrated modes' screen; nil while a mode is still one of the switch arms below.
+    private var screen: (any PaletteScreen)? {
+        switch vm.mode {
+        case .uninstall:
+            return UninstallScreen(
+                session: uninstall, core: core, vm: vm, openActions: openActions)
+        case .quicklinkArguments:
+            return QuicklinkArgumentsScreen(
+                session: quicklinkArguments, core: core, vm: vm,
+                scrollToTop: { scroll = ScrollIntent(kind: .top) })
+        default:
+            return nil
+        }
     }
 
     private var emojiSections: [EmojiGridSection] {
@@ -84,14 +82,14 @@ struct RootPaletteView: View {
     private var calcCount: Int { calcResult == nil ? 0 : 1 }
 
     private var resultCount: Int {
+        if let screen { return screen.rows.count }
         switch vm.mode {
         case .launcher: return appResults.count + calcCount
         case .clipboard: return clipResults.count
         case .calculatorHistory: return histResults.count + calcCount
         case .emoji: return emojiResults.count
-        case .uninstall: return uninstallResults.count
         case .quicklinks: return quicklinkResults.count
-        case .quicklinkArguments: return argumentOptions.count
+        default: return 0
         }
     }
     /// Selection clamped into the current results — the single source of truth for highlight, preview and activation so the list and preview can never disagree.
@@ -126,15 +124,13 @@ struct RootPaletteView: View {
     private var selectedEmojiEntry: EmojiEntry? {
         emojiResults.indices.contains(selection) ? emojiResults[selection] : nil
     }
-    private var selectedUninstallCandidate: UninstallCandidate? {
-        uninstallResults.indices.contains(selection) ? uninstallResults[selection] : nil
-    }
     private var selectedQuicklink: Quicklink? {
         quicklinkResults.indices.contains(selection) ? quicklinkResults[selection] : nil
     }
 
     /// The bottom-right Actions menu content for the current mode's selection, or nil when the selection has no actions.
     private var actionsContent: PopoverMenuContent? {
+        if let screen { return screen.actions(at: selection) }
         switch vm.mode {
         case .launcher:
             if let calc = calcActionableResult {
@@ -174,19 +170,12 @@ struct RootPaletteView: View {
                     entry: emoji, core: core, target: vm.pasteTarget)
             }
             return nil
-        case .uninstall:
-            if let candidate = selectedUninstallCandidate {
-                return UninstallActionsMenu.content(
-                    candidate: candidate, session: uninstall, core: core)
-            }
-            return nil
         case .quicklinks:
             if let quicklink = selectedQuicklink {
                 return QuicklinkActionsMenu.content(quicklink: quicklink, core: core)
             }
             return nil
-        case .quicklinkArguments:
-            // The argument form has one action — submit — and it is already ↵.
+        default:
             return nil
         }
     }
@@ -217,9 +206,8 @@ struct RootPaletteView: View {
         let hist = vm.mode == .calculatorHistory ? histResults : []
         let emojiSections = vm.mode == .emoji ? emojiSections : []
         let emojis = emojiSections.flatMap(\.entries)
-        let uninstallRows = vm.mode == .uninstall ? uninstallResults : []
         let links = vm.mode == .quicklinks ? quicklinkResults : []
-        let argumentOptions = vm.mode == .quicklinkArguments ? argumentOptions : []
+        let screenRows = screen?.rows.count ?? 0
         // Newest stored clip + the reorder token: the pair changes only when the store mutates, never when a query filters the list.
         let clipFollow = ClipFollowKey(
             id: vm.mode == .clipboard ? store.items.first?.id : nil, token: vm.followToken)
@@ -228,8 +216,8 @@ struct RootPaletteView: View {
         let offset = calc == nil ? 0 : 1
         // Only the active mode is non-empty.
         let count =
-            apps.count + offset + clips.count + hist.count + emojis.count + uninstallRows.count
-            + links.count + argumentOptions.count
+            apps.count + offset + clips.count + hist.count + emojis.count + links.count
+            + screenRows
         let sel = count == 0 ? 0 : min(max(vm.selection, 0), count - 1)
         let calcSelected = calc != nil && sel == 0
         // An error card is selectable but has no action: it must not drive the Copy Answer pill, ⌘K menu, or Enter.
@@ -252,8 +240,7 @@ struct RootPaletteView: View {
             } else {
                 content(
                     apps: apps, clips: clips, hist: hist, emojiSections: emojiSections,
-                    uninstallRows: uninstallRows, links: links, argumentOptions: argumentOptions,
-                    calc: calc, selection: sel,
+                    links: links, calc: calc, selection: sel,
                     favoriteCount: favoriteCount, showSections: showSections
                 )
             }
@@ -410,6 +397,10 @@ struct RootPaletteView: View {
                 return .handled
             }
             guard command || option else { return .ignored }
+            if let screen {
+                guard command, screen.secondary(at: selection) else { return .ignored }
+                return .handled
+            }
             switch vm.mode {
             case .emoji:
                 guard emojiResults.indices.contains(selection) else { return .ignored }
@@ -426,21 +417,17 @@ struct RootPaletteView: View {
                 let index = selection - calcCount
                 guard command, histResults.indices.contains(index) else { return .ignored }
                 core.copyHistoryExpression(histResults[index])
-            case .uninstall:
-                guard command, let candidate = selectedUninstallCandidate, !candidate.isLocked
-                else { return .ignored }
-                uninstall.toggle(candidate.id)
             case .quicklinks:
                 guard command, let quicklink = selectedQuicklink,
                     quicklink.openWithBundleID != nil
                 else { return .ignored }
                 core.openQuicklink(id: quicklink.id, forcingDefaultApp: true)
-            case .quicklinkArguments:
-                return .ignored
             case .launcher:
                 guard command, let app = selectedAppEntry, app.canRevealInFinder
                 else { return .ignored }
                 core.showInFinder(app)
+            default:
+                return .ignored
             }
             return .handled
         }
@@ -480,7 +467,7 @@ struct RootPaletteView: View {
             case .quicklinks:
                 guard let quicklink = selectedQuicklink else { return .ignored }
                 Task { await core.deleteQuicklink(id: quicklink.id) }
-            case .launcher, .emoji, .uninstall, .quicklinkArguments:
+            default:
                 return .ignored
             }
             return .handled
@@ -592,8 +579,23 @@ struct RootPaletteView: View {
     @ViewBuilder
     private func content(
         apps: [AppEntry], clips: [ClipboardItem], hist: [CalcHistoryEntry],
-        emojiSections: [EmojiGridSection], uninstallRows: [UninstallCandidate],
-        links: [Quicklink], argumentOptions: [String], calc: CalcResult?,
+        emojiSections: [EmojiGridSection], links: [Quicklink], calc: CalcResult?,
+        selection: Int, favoriteCount: Int, showSections: Bool
+    ) -> some View {
+        if let screen {
+            screen.body(selection: selection, scroll: scroll)
+        } else {
+            modeContent(
+                apps: apps, clips: clips, hist: hist, emojiSections: emojiSections, links: links,
+                calc: calc, selection: selection, favoriteCount: favoriteCount,
+                showSections: showSections)
+        }
+    }
+
+    @ViewBuilder
+    private func modeContent(
+        apps: [AppEntry], clips: [ClipboardItem], hist: [CalcHistoryEntry],
+        emojiSections: [EmojiGridSection], links: [Quicklink], calc: CalcResult?,
         selection: Int, favoriteCount: Int, showSections: Bool
     ) -> some View {
         switch vm.mode {
@@ -703,38 +705,6 @@ struct RootPaletteView: View {
                     }
                 )
             }
-        case .uninstall:
-            switch uninstall.state {
-            case .idle, .scanning:
-                EmptyResults(text: "Looking for leftover files…")
-            case .failed(let message):
-                EmptyResults(text: message)
-            case .ready:
-                if uninstallRows.isEmpty {
-                    EmptyResults(
-                        text: isQueryEmpty ? "Nothing left to remove" : "No matching files")
-                } else {
-                    UninstallList(
-                        results: uninstallRows,
-                        selectedID: uninstallRows.indices.contains(selection)
-                            ? uninstallRows[selection].id : nil,
-                        summary: uninstallSummary,
-                        scroll: scroll,
-                        onSelect: { candidate in
-                            if let index = uninstallRows.firstIndex(of: candidate) {
-                                vm.selection = index
-                            }
-                        },
-                        onToggle: { uninstall.toggle($0.id) },
-                        onActions: { candidate in
-                            if let index = uninstallRows.firstIndex(of: candidate) {
-                                vm.selection = index
-                            }
-                            openActions()
-                        }
-                    )
-                }
-            }
         case .quicklinks:
             if links.isEmpty {
                 EmptyResults(
@@ -755,22 +725,9 @@ struct RootPaletteView: View {
                     }
                 )
             }
-        case .quicklinkArguments:
-            QuicklinkArgumentsView(
-                options: argumentOptions,
-                selection: selection,
-                scroll: scroll,
-                onSelect: { vm.selection = $0 },
-                onActivate: activateSelection
-            )
+        default:
+            EmptyView()
         }
-    }
-
-    /// Stands in for the section headers the other lists use.
-    private var uninstallSummary: String {
-        let total = uninstall.plan?.removableIDs.count ?? 0
-        let size = MeasuredSize(bytes: uninstall.selectedBytes).formatted
-        return "\(uninstall.selectedCount) of \(total) files selected · \(size)"
     }
 
     /// The Uninstall screen's primary action is destructive, so its pill isn't white.
@@ -825,18 +782,15 @@ struct RootPaletteView: View {
 
     /// Pill label for the current selection, derived from the selection already resolved in `body` so it never re-runs the (unmemoized) `appResults` filter/sort.
     private func actionPillLabel(selectedApp: AppEntry?, calcActionable: Bool) -> String {
+        if let screen { return screen.primaryActionTitle }
         switch vm.mode {
         case .clipboard, .emoji:
             return vm.pasteTarget?.pasteTitle ?? "Paste"
         case .calculatorHistory:
             return "Copy Answer"
-        case .uninstall:
-            return "Uninstall Application"
         case .quicklinks:
             return "Open Quicklink"
-        case .quicklinkArguments:
-            return quicklinkArguments.isLastArgument ? "Open Quicklink" : "Next"
-        case .launcher:
+        default:
             if calcActionable { return "Copy Answer" }
             switch selectedApp?.kind {
             case .systemSettings: return "Open System Setting"
@@ -937,6 +891,10 @@ struct RootPaletteView: View {
     private func activateSelection() {
         // Nothing is visibly selected in the collapsed compact bar; launch only via ⌘1–⌘5 or by typing.
         guard !isCollapsed else { return }
+        if let screen {
+            screen.activate(at: selection)
+            return
+        }
         switch vm.mode {
         case .launcher:
             if let calcResult, selection == 0 {
@@ -962,28 +920,11 @@ struct RootPaletteView: View {
         case .emoji:
             guard emojiResults.indices.contains(selection) else { return }
             core.pasteEmoji(emojiResults[selection])
-        case .uninstall:
-            core.performUninstall()
         case .quicklinks:
             guard quicklinkResults.indices.contains(selection) else { return }
             core.openQuicklink(id: quicklinkResults[selection].id)
-        case .quicklinkArguments:
-            // An options argument submits the highlighted choice; a free-text one submits the field.
-            let options = argumentOptions
-            let value: String
-            if quicklinkArguments.options.isEmpty {
-                value = vm.query
-            } else {
-                guard options.indices.contains(selection) else { return }
-                value = options[selection]
-            }
-            core.submitQuicklinkArgument(value)
-            // More arguments to go: clear the field for the next one and reset the choice list.
-            if quicklinkArguments.isActive {
-                vm.query = ""
-                vm.selection = 0
-                scroll = ScrollIntent(kind: .top)
-            }
+        default:
+            break
         }
     }
 }

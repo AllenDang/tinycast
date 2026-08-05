@@ -146,6 +146,34 @@ struct PaletteRowIndexTests {
         expect(sections.index(section: 0, offset: 2), nil, "an offset past a section's rows is nothing")
         expect(sections.index(section: 0, offset: -1), nil, "a negative offset is nothing")
 
+        // The uninstall screen: one flat section, no calculator card, a summary header taking no index.
+        let uninstall = PaletteRowIndex(sectionCounts: [4])
+        expect(uninstall.count == 4, "the uninstall screen indexes its candidates alone")
+        expect(uninstall.row(at: 0), .element(section: 0, offset: 0), "the first candidate leads")
+        expect(
+            uninstall.row(at: 3), .element(section: 0, offset: 3),
+            "the summary header consumes no index")
+        expect(uninstall.row(at: 4), nil, "one past the last candidate resolves to nothing")
+        expectRoundTrip(uninstall, "uninstall shape")
+
+        // Filtering down to a single candidate keeps the highlight on it rather than off the end.
+        let uninstallFiltered = PaletteRowIndex(sectionCounts: [1])
+        expect(uninstallFiltered.clamped(3) == 0, "a filter that leaves one row pulls selection to it")
+
+        // An options-bearing argument: its choices are the rows, exactly like any other list.
+        let argumentOptions = PaletteRowIndex(sectionCounts: [3])
+        expect(argumentOptions.count == 3, "the choice list is the argument form's only section")
+        expect(
+            argumentOptions.row(at: 2), .element(section: 0, offset: 2), "the last choice is selectable")
+        expectRoundTrip(argumentOptions, "argument options shape")
+
+        // A free-text argument renders no rows at all, and selection must still hold at zero.
+        let argumentFreeText = PaletteRowIndex(sectionCounts: [0])
+        expect(argumentFreeText.count == 0, "a free-text argument has nothing to index")
+        expect(argumentFreeText.row(at: 0), nil, "a free-text argument resolves no index")
+        expect(argumentFreeText.clamped(0) == 0, "selection stays at zero with no choices")
+        expect(argumentFreeText.clamped(5) == 0, "a stale selection clamps back to zero")
+
         // Exhaustive: over a spread of shapes, every flat index maps 1:1 onto visible row order.
         for hasCalculator in [false, true] {
             for a in 0...3 {
