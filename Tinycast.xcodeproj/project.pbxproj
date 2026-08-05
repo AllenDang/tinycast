@@ -31,6 +31,7 @@
 		21736CC104E158BC194B1094 /* WindowMover.swift in Sources */ = {isa = PBXBuildFile; fileRef = A8859C0E99A2125D85B1233C /* WindowMover.swift */; };
 		22488569DA337BCE033552F1 /* CursorScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8214A6789CF8E3B5E16BB4C2 /* CursorScreen.swift */; };
 		22622CB1D2F679687D5C2B03 /* SearchRelevance.swift in Sources */ = {isa = PBXBuildFile; fileRef = D9E9B0F16CFCA5E4091178AF /* SearchRelevance.swift */; };
+		24609952F152E614596A1790 /* EscapeComboProbe.swift in Sources */ = {isa = PBXBuildFile; fileRef = 06A458FAE18FB0C8C3DF6185 /* EscapeComboProbe.swift */; };
 		24842144273FF92228540DBE /* FrequentEmojiStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A228BEF62103605DE7A8F38 /* FrequentEmojiStore.swift */; };
 		291F17D35D98BB5700640AA7 /* QuicklinkListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D30F22CD63D23FC1808878DD /* QuicklinkListView.swift */; };
 		2D620B55ED68ECDF75E7155E /* UninstallRunner.swift in Sources */ = {isa = PBXBuildFile; fileRef = CEE113DF7C07BC74AD73BC4C /* UninstallRunner.swift */; };
@@ -179,6 +180,7 @@
 		031271DE1EEF68A443713D32 /* QuicklinkArgumentSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuicklinkArgumentSession.swift; sourceTree = "<group>"; };
 		041AB49DDB9CA53148BB8A46 /* EmojiSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmojiSettingsView.swift; sourceTree = "<group>"; };
 		05970D61D4E595D0658D0D94 /* Snippet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Snippet.swift; sourceTree = "<group>"; };
+		06A458FAE18FB0C8C3DF6185 /* EscapeComboProbe.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EscapeComboProbe.swift; sourceTree = "<group>"; };
 		0818D48887156CA562EF20B8 /* VolumeLevel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VolumeLevel.swift; sourceTree = "<group>"; };
 		09093BF10EA97BDCA45A241F /* CalcFormatter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalcFormatter.swift; sourceTree = "<group>"; };
 		0C36D92A5018B9A7B33775DE /* PermissionsSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PermissionsSettingsView.swift; sourceTree = "<group>"; };
@@ -648,6 +650,7 @@
 				7E24E9328F01F2EE12120C38 /* DoubleTapDetector.swift */,
 				1A4B045F847659544FA182D4 /* DoubleTapModifier.swift */,
 				A75F40AED77119558D5FB4E4 /* DoubleTapMonitor.swift */,
+				06A458FAE18FB0C8C3DF6185 /* EscapeComboProbe.swift */,
 				BBB5C3FDF5037F730E23E53D /* HotKeyBinding.swift */,
 				1DB0D6E17E2B2D6F2CB47E0D /* HotKeyCenter.swift */,
 				C6DC5A4706854493D23FD18A /* HyperKey.swift */,
@@ -862,6 +865,7 @@
 				854C19458C8A0AE0BD757600 /* EmojiIndex.swift in Sources */,
 				C32EA4B1F422398F96D01338 /* EmojiScreen.swift in Sources */,
 				8611F52FF00B8C43EC46F902 /* EmojiSettingsView.swift in Sources */,
+				24609952F152E614596A1790 /* EscapeComboProbe.swift in Sources */,
 				A41C0DCB2DEBCCA46F6C4B10 /* FavoritesStore.swift in Sources */,
 				24842144273FF92228540DBE /* FrequentEmojiStore.swift in Sources */,
 				1D0C2F452B3801503B70EA9E /* GeneralSettingsView.swift in Sources */,

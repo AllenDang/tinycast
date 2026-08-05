@@ -21,10 +21,13 @@ final class ShortcutCaptureSession {
     @ObservationIgnored private var conflictReset: Task<Void, Never>?
     /// The same recognizer the global monitor uses, driven here by local monitors — recording a double-tap therefore needs no event tap and no permission.
     @ObservationIgnored private var detector = DoubleTapDetector()
+    /// Catches a modified ⎋ the WindowServer never delivers as a normal keyDown (e.g. ⌘⎋) — see `EscapeComboProbe`.
+    @ObservationIgnored private var escapeProbe = EscapeComboProbe()
 
     func start(action: HotKeyAction, hotKeys: HotKeyManager) {
         stop()
         heldModifiers = NSEvent.modifierFlags.intersection([.command, .option, .control, .shift])
+        updateEscapeProbe(flags: heldModifiers, action: action, hotKeys: hotKeys)
 
         // The handlers run on the main thread but AppKit predates actor annotations, hence assumeIsolated; only Sendable event pieces (key code, flags, timestamp) cross in.
         if let monitor = NSEvent.addLocalMonitorForEvents(
@@ -55,6 +58,7 @@ final class ShortcutCaptureSession {
                 MainActor.assumeIsolated {
                     guard let self else { return }
                     self.heldModifiers = flags
+                    self.updateEscapeProbe(flags: flags, action: action, hotKeys: hotKeys)
                     guard let hotKeys else { return }
                     self.handleModifiers(
                         flags, hasOtherModifiers: hasOthers, at: timestamp, action: action,
@@ -95,6 +99,20 @@ final class ShortcutCaptureSession {
         conflict = nil
         heldModifiers = []
         detector.reset()
+        escapeProbe.clear()
+    }
+
+    /// Keeps the Carbon probe registered for exactly what's held, so a modified ⎋ the WindowServer would otherwise swallow (see `EscapeComboProbe`) still commits.
+    private func updateEscapeProbe(
+        flags: NSEvent.ModifierFlags, action: HotKeyAction, hotKeys: HotKeyManager?
+    ) {
+        escapeProbe.update(carbonModifiers: KeyShortcut.carbonModifiers(from: flags)) {
+            [weak self, weak hotKeys] in
+            guard let self, let hotKeys else { return }
+            // Mirrors the top of `handleKeyDown`: this counts as other input for any pending double-tap.
+            _ = self.detector.handle(.otherInput, at: ProcessInfo.processInfo.systemUptime)
+            self.commitCombo(keyCode: kVK_Escape, flags: flags, action: action, hotKeys: hotKeys)
+        }
     }
 
     private func handleKeyDown(
@@ -116,7 +134,13 @@ final class ShortcutCaptureSession {
             hotKeys.recordingAction = nil
             return
         }
-        // Not a bindable combo (e.g. a bare letter): swallow it and keep recording.
+        commitCombo(keyCode: keyCode, flags: flags, action: action, hotKeys: hotKeys)
+    }
+
+    /// Builds and commits a `.combo`, or no-ops if the key/modifier pair isn't bindable (e.g. a bare letter, or a modifier set too weak to be "commanding") — shared by a normal keyDown and the escape probe's fire.
+    private func commitCombo(
+        keyCode: Int, flags: NSEvent.ModifierFlags, action: HotKeyAction, hotKeys: HotKeyManager
+    ) {
         guard let shortcut = KeyShortcut(keyCode: keyCode, modifierFlags: flags) else { return }
         commit(.combo(shortcut), action: action, hotKeys: hotKeys)
     }
@@ -149,6 +173,12 @@ final class ShortcutCaptureSession {
             flashConflict(Conflict(binding: binding, owner: owner))
             return
         }
+        // Release the probe's own Carbon registration first: `HotKeyCenter` reactivates every real
+        // binding, including this one, the moment `recordingAction` goes back to `nil` below, and
+        // Carbon refuses a second registration of the exact same chord even under a different id
+        // (confirmed: `RegisterEventHotKey` returns `-9878`/eventHotKeyExistsErr) — left registered,
+        // the probe would silently steal ⌘⎋ from the binding it just captured.
+        escapeProbe.clear()
         hotKeys.setBinding(binding, for: action)
         hotKeys.recordingAction = nil
     }

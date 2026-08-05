@@ -6,6 +6,8 @@
 - `HotKeyBinding` — what an action is actually bound to: a `.combo(KeyShortcut)` or a
   `.doubleTap(DoubleTapModifier)`.
 - `HotKeyCenter` — the Carbon `RegisterEventHotKey` layer, pausable.
+- `EscapeComboProbe` — a second, narrower Carbon registration the recorder uses to catch a modified ⎋
+  (see below).
 - `DoubleTapModifier` / `DoubleTapDetector` / `DoubleTapMonitor` — the double-tap stack.
 
 `HotKeyManager` owns them all: persistence, conflict lookup, and dispatch. Every action reads and
@@ -89,3 +91,27 @@ Setting `recordingAction` is what starts and stops the capture, so there is exac
 callout above the field render the live state from outside the row that opened it. The field itself
 only ever shows the binding; the prompt, the live preview and the conflict message all live in the
 callout. See [ui.md](ui.md#the-shortcut-recorder-callout).
+
+### The ⎋-with-a-modifier swallow
+
+The WindowServer swallows a modified ⎋ (⌘⎋, ⌥⎋, …) before it ever becomes a normal key event — the
+same swallow ⌘⇥ and ⌘Space get, confirmed empirically: neither `NSEvent.addLocalMonitorForEvents` nor
+`addGlobalMonitorForEvents` ever see a keyDown for it, while a bare ⎋ or any other modified key
+delivers normally. `ShortcutCaptureSession`'s NSEvent monitors are therefore blind to it — recording
+⌘⎋ would otherwise just sit at "Listening…" forever.
+
+`EscapeComboProbe` works around it: Carbon's hotkey table sits below that swallow (`RegisterEventHotKey`
+both accepts and fires a modified ⎋, verified the same way), so the capture session keeps a probe
+registered for exactly ⎋ + whatever modifiers `heldModifiers` currently reports, re-registering on every
+`flagsChanged`. A fire routes through the same `KeyShortcut` validation and `commit` as a normal keyDown,
+so a swallowed combo can still lose a conflict check or fail the "commanding modifier" rule like any
+other. This is the same Carbon mechanism `HotKeyCenter` already uses for real bindings, so it costs the
+recorder no new event tap and no permission prompt — a bare ⎋ still cancels through the ordinary keyDown
+path, since that one is never swallowed.
+
+One hazard the probe itself creates: it must release its own registration *before* the real one takes
+over the same chord. `commit` unregisters the probe right before `setBinding`/`recordingAction = nil`,
+which is what makes `HotKeyCenter` reactivate every entry including the one just captured — Carbon
+refuses a second `RegisterEventHotKey` for the identical keycode+modifiers even under a different id
+(`eventHotKeyExistsErr`, verified directly), so a probe left registered a moment too long would make
+the binding save successfully (UserDefaults, the recorder's keycaps) while silently never firing.
