@@ -8,7 +8,7 @@ struct LauncherItemsCard: View {
     let searchPrompt: String
 
     @EnvironmentObject private var appIndex: AppIndex
-    @EnvironmentObject private var visibility: VisibilityStore
+    @Environment(VisibilityStore.self) private var visibility
     @State private var query = ""
 
     private var entries: [AppEntry] {
@@ -66,7 +66,7 @@ struct LauncherItemsCard: View {
 
 private struct LauncherItemRow: View {
     let entry: AppEntry
-    @EnvironmentObject private var visibility: VisibilityStore
+    @Environment(VisibilityStore.self) private var visibility
     // Hover lives on the row itself so a mouse sweep repaints only the rows entering/leaving.
     @State private var hovered = false
 

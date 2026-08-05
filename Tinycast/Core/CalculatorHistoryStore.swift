@@ -10,12 +10,13 @@ struct CalcHistoryEntry: Identifiable, Codable, Hashable, Sendable {
 
 /// Persists recent calculations as a capped JSON file under `~/Library/Caches/<bundle-id>/`, alongside `ClipboardStore`'s data so `brew uninstall --zap` removes it too.
 @MainActor
-final class CalculatorHistoryStore: ObservableObject {
+@Observable
+final class CalculatorHistoryStore {
     private static let cap = 200
 
     private let fileURL: URL
 
-    @Published private(set) var entries: [CalcHistoryEntry]  // newest first
+    private(set) var entries: [CalcHistoryEntry]  // newest first
 
     private struct SearchKey: Equatable {
         let query: String
@@ -23,7 +24,7 @@ final class CalculatorHistoryStore: ObservableObject {
     }
 
     /// Repeated renders (arrow-key nav) reuse the filter instead of re-scanning every entry.
-    private var searchMemo = Memo<SearchKey, [CalcHistoryEntry]>()
+    @ObservationIgnored private var searchMemo = Memo<SearchKey, [CalcHistoryEntry]>()
     /// Bumped on every persisted mutation, so the key above names the entries it filtered.
     private var revision = 0
 

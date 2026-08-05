@@ -95,7 +95,7 @@ private struct WindowCommandGroupHeader: View {
 /// `ShortcutsSettingsView`'s row so both lists behave identically.
 private struct WindowCommandSettingsRow: View {
     let command: WindowCommand
-    @EnvironmentObject private var visibility: VisibilityStore
+    @Environment(VisibilityStore.self) private var visibility
     // Hover lives on the row so a mouse sweep repaints only the rows entering and leaving.
     @State private var hovered = false
 

@@ -2,13 +2,14 @@ import Foundation
 
 /// Persists which launcher items and categories the user has hidden (only exclusions are stored); hiding affects the launcher list only, leaving favorites and hotkey bindings intact.
 @MainActor
-final class VisibilityStore: ObservableObject {
+@Observable
+final class VisibilityStore {
     private let defaults = UserDefaults.standard
     private let itemsKey = "hiddenLauncherItems"
     private let kindsKey = "hiddenLauncherKinds"
 
-    @Published private(set) var hiddenItemKeys: Set<String>
-    @Published private(set) var hiddenKinds: Set<String>
+    private(set) var hiddenItemKeys: Set<String>
+    private(set) var hiddenKinds: Set<String>
     /// AppIndex includes this in its result key, invalidating a list when the visible set moves.
     private(set) var revision = 0
 

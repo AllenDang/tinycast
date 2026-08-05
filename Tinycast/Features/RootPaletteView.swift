@@ -6,13 +6,13 @@ struct RootPaletteView: View {
     @EnvironmentObject private var appIndex: AppIndex
     @EnvironmentObject private var store: ClipboardStore
     @Environment(FavoritesStore.self) private var favorites
-    @EnvironmentObject private var visibility: VisibilityStore
-    @EnvironmentObject private var calcHistory: CalculatorHistoryStore
+    @Environment(VisibilityStore.self) private var visibility
+    @Environment(CalculatorHistoryStore.self) private var calcHistory
     /// Observed so the inline card re-evaluates the moment a fresh FX snapshot lands, or the user
     /// turns currency conversion on or off.
     @EnvironmentObject private var currencyRates: CurrencyRateStore
     @EnvironmentObject private var emojiIndex: EmojiIndex
-    @EnvironmentObject private var frequentEmoji: FrequentEmojiStore
+    @Environment(FrequentEmojiStore.self) private var frequentEmoji
     @Environment(UninstallSession.self) private var uninstall
     @EnvironmentObject private var quicklinks: QuicklinkStore
     @Environment(QuicklinkArgumentSession.self) private var quicklinkArguments

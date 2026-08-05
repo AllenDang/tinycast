@@ -399,7 +399,7 @@ final class AppCore: ObservableObject {
             SettingsRootView(initialTab: tab)
                 .environmentObject(self)
                 .environmentObject(self.appIndex)
-                .environmentObject(self.visibility)
+                .environment(self.visibility)
                 .environmentObject(self.customCommands)
                 .environmentObject(self.snippetsStore)
                 .environmentObject(self.quicklinks)

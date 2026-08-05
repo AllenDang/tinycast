@@ -9,15 +9,16 @@ struct FrequentEmoji: Codable, Hashable, Sendable {
 
 /// Persists emoji usage counts as a capped JSON file under `~/Library/Caches/<bundle-id>/`, feeding the grid's "Frequently Used" section.
 @MainActor
-final class FrequentEmojiStore: ObservableObject {
+@Observable
+final class FrequentEmojiStore {
     private static let cap = 300
 
     private let fileURL: URL
 
-    @Published private(set) var records: [FrequentEmoji]
+    private(set) var records: [FrequentEmoji]
 
     /// The empty-query grid re-reads `top()` every render, so this sorts once per tally.
-    private var sortedMemo = Memo<Int, [String]>()
+    @ObservationIgnored private var sortedMemo = Memo<Int, [String]>()
     private var revision = 0
 
     init() {
