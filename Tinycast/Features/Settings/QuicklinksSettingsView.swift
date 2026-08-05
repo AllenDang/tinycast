@@ -3,7 +3,7 @@ import SwiftUI
 /// The quicklink library plus the behaviour that applies to all of them.
 struct QuicklinksSettingsView: View {
     @Environment(QuicklinkStore.self) private var store
-    @ObservedObject private var core = AppCore.shared
+    @Bindable private var core = AppCore.shared
     @Bindable private var settings = AppCore.shared.settings
     @State private var query = ""
     @State private var pendingDeletion: Quicklink?

@@ -431,12 +431,10 @@ final class AppIndex {
         withObservationTracking {
             _ = settings?.searchScopes
         } onChange: { [weak self] in
-            MainActor.assumeIsolated {
+            Task { @MainActor in
                 guard let self else { return }
-                Task {
-                    self.observeSearchScopes()
-                    await self.refresh()
-                }
+                self.observeSearchScopes()
+                await self.refresh()
             }
         }
     }

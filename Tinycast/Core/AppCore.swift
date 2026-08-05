@@ -1,5 +1,4 @@
 import AppKit
-import Combine
 import SwiftUI
 
 enum PaletteMode: String, CaseIterable, Identifiable {
@@ -66,26 +65,27 @@ struct PasteTarget: Equatable {
 
 /// View-model shared between the panel's SwiftUI tree and the coordinator.
 @MainActor
-final class PaletteViewModel: ObservableObject {
-    @Published var mode: PaletteMode = .launcher
-    @Published var query: String = ""
-    @Published var selection: Int = 0
+@Observable
+final class PaletteViewModel {
+    var mode: PaletteMode = .launcher
+    var query: String = ""
+    var selection: Int = 0
     /// Changes every time the palette is shown so the search field can re-focus.
-    @Published var focusToken = UUID()
+    var focusToken = UUID()
     /// Changes only when `prepare` resets the palette, so the lists snap their scroll to the top even when query/mode were already at their defaults (`focusToken` can't serve: it bumps on every reopen, which must preserve a within-timeout scroll).
-    @Published var resetToken = UUID()
+    var resetToken = UUID()
     /// Changes when an action reorders the list under the selection (pinning a clip lifts it into the Pinned section), so the list scrolls the highlight back into view.
-    @Published var followToken = UUID()
+    var followToken = UUID()
     /// Set by the compact bar's "…" overflow to expand into the full launcher without a query; cleared on every `prepare`.
-    @Published var forceExpanded = false
+    var forceExpanded = false
     /// The app a paste would land in, mirrored from `PaletteWindowController.previousApp` on every show. Deliberately *not* cleared by `prepare` — pop-to-root resets the screen, not the paste target.
-    @Published var pasteTarget: PasteTarget?
-    /// Gates the mouse-hover highlight: true only while the pointer is physically moving (armed on `.mouseMoved`, disarmed on any `.keyDown` in `PalettePanel.sendEvent`). Plain, not `@Published` — read at hover time, never drives a re-render.
-    var hoverHighlightArmed = false
-    /// True while a footer popover menu (⌘K Actions or the app menu) is open, so `PalettePanel.sendEvent` swallows text-editing keystrokes the field editor would otherwise consume — the query must stay frozen while a menu owns the keyboard (matches Raycast). Plain, not `@Published` — read at event time, mirrored from the view's menu state.
-    var menuOpen = false { didSet { onMenuOpenChanged?(menuOpen) } }
+    var pasteTarget: PasteTarget?
+    /// Gates the mouse-hover highlight: true only while the pointer is physically moving (armed on `.mouseMoved`, disarmed on any `.keyDown` in `PalettePanel.sendEvent`). Untracked — read at hover time, never drives a re-render.
+    @ObservationIgnored var hoverHighlightArmed = false
+    /// True while a footer popover menu (⌘K Actions or the app menu) is open, so `PalettePanel.sendEvent` swallows text-editing keystrokes the field editor would otherwise consume — the query must stay frozen while a menu owns the keyboard (matches Raycast). Untracked — read at event time, mirrored from the view's menu state.
+    @ObservationIgnored var menuOpen = false { didSet { onMenuOpenChanged?(menuOpen) } }
     /// Fired when `menuOpen` flips so `PalettePanel` can hide/show the search field's caret while it keeps first-responder status (no focus swap, so the placeholder never reflows).
-    var onMenuOpenChanged: ((Bool) -> Void)?
+    @ObservationIgnored var onMenuOpenChanged: ((Bool) -> Void)?
 
     func prepare(mode: PaletteMode) {
         self.mode = mode
@@ -101,7 +101,8 @@ final class PaletteViewModel: ObservableObject {
 
 /// Single owner of every long-lived manager. Wired up once from the app delegate.
 @MainActor
-final class AppCore: ObservableObject {
+@Observable
+final class AppCore {
     static let shared = AppCore()
 
     let launcherRanking: LauncherRankingStore
@@ -130,12 +131,12 @@ final class AppCore: ObservableObject {
     let quicklinkArguments = QuicklinkArgumentSession()
 
     /// Set when a quicklink editor should open as the Settings window appears; the pane consumes it.
-    @Published var pendingQuicklinkEdit: QuicklinkEditRequest?
+    var pendingQuicklinkEdit: QuicklinkEditRequest?
     /// Carries the menu's default-app override across the quicklink argument prompt.
     private var pendingQuicklinkForcesDefaultApp = false
 
-    private lazy var windowController = PaletteWindowController(core: self)
-    private lazy var messageHUD = MessageHUDController(settings: settings)
+    @ObservationIgnored private lazy var windowController = PaletteWindowController(core: self)
+    @ObservationIgnored private lazy var messageHUD = MessageHUDController(settings: settings)
     private let volumeHUD = VolumeHUDController()
     private let auxWindows = AuxWindowController()
     /// Every confirmation, failure report and value prompt in the app; it also guards against a held hotkey stacking dialogs.
@@ -260,12 +261,10 @@ final class AppCore: ObservableObject {
         withObservationTracking {
             reads(settings)
         } onChange: { [weak self] in
-            MainActor.assumeIsolated {
+            Task { @MainActor in
                 guard let self else { return }
-                Task {
-                    self.track(reads, reproject: reproject)
-                    reproject(self)
-                }
+                self.track(reads, reproject: reproject)
+                reproject(self)
             }
         }
     }
@@ -381,7 +380,7 @@ final class AppCore: ObservableObject {
             seamlessTitleBar: true
         ) {
             SettingsRootView(initialTab: tab)
-                .environmentObject(self)
+                .environment(self)
                 .environment(self.appIndex)
                 .environment(self.visibility)
                 .environmentObject(self.customCommands)

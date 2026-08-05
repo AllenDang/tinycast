@@ -111,8 +111,8 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
     private func ensurePanel() -> PalettePanel {
         if let panel { return panel }
         let root = RootPaletteView()
-            .environmentObject(core)
-            .environmentObject(core.palette)
+            .environment(core)
+            .environment(core.palette)
             .environment(core.appIndex)
             .environment(core.clipboardStore)
             .environment(core.favorites)

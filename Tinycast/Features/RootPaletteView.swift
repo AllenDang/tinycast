@@ -1,8 +1,8 @@
 import SwiftUI
 
 struct RootPaletteView: View {
-    @EnvironmentObject private var core: AppCore
-    @EnvironmentObject private var vm: PaletteViewModel
+    @Environment(AppCore.self) private var core
+    @Environment(PaletteViewModel.self) private var vm
     @Environment(AppIndex.self) private var appIndex
     @Environment(ClipboardStore.self) private var store
     @Environment(FavoritesStore.self) private var favorites
@@ -568,7 +568,8 @@ struct RootPaletteView: View {
     ///
     /// A background rather than an overlay, so the caret still draws over it.
     private var searchField: some View {
-        TextField("", text: $vm.query)
+        @Bindable var vm = vm
+        return TextField("", text: $vm.query)
             .textFieldStyle(.plain)
             .font(Theme.Typography.searchField)
             .tint(.white)

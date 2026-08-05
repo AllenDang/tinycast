@@ -168,12 +168,10 @@ final class HyperKeyTap: ObservableObject, HealthCheckable {
         withObservationTracking {
             _ = settings?.hyperKey
         } onChange: { [weak self] in
-            MainActor.assumeIsolated {
+            Task { @MainActor in
                 guard let self else { return }
-                Task {
-                    self.observeKey()
-                    self.applyKey(self.settings?.hyperKey ?? .none)
-                }
+                self.observeKey()
+                self.applyKey(self.settings?.hyperKey ?? .none)
             }
         }
     }
