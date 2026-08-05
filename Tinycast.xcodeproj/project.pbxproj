@@ -36,6 +36,7 @@
 		2D620B55ED68ECDF75E7155E /* UninstallRunner.swift in Sources */ = {isa = PBXBuildFile; fileRef = CEE113DF7C07BC74AD73BC4C /* UninstallRunner.swift */; };
 		32697AB3853D043A12888B96 /* Permissions.swift in Sources */ = {isa = PBXBuildFile; fileRef = F31E3ACB6D2C26ECA485C3DB /* Permissions.swift */; };
 		333BCB9C66380985400CD1E2 /* CustomCommandEditorSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = B14822405E8DA9531AFCD496 /* CustomCommandEditorSheet.swift */; };
+		33A7A33396550C5884393B55 /* QuicklinkListScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = C5ECF08D7F48B44CD162703E /* QuicklinkListScreen.swift */; };
 		344D89B83B57C1DD1E7C0BFC /* EmojiCatalog.swift in Sources */ = {isa = PBXBuildFile; fileRef = 641A8B9F099ED1521F14D81E /* EmojiCatalog.swift */; };
 		34994B57DE0709CF5DCFC40C /* QuicklinkDestination.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3D0E4F643A5094EA0F1D46F3 /* QuicklinkDestination.swift */; };
 		34CD5C2F15B1011434182CA7 /* SearchScopesCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 98AD515E679D78C6F2A37E03 /* SearchScopesCard.swift */; };
@@ -127,6 +128,7 @@
 		BAA957558EB8FB2D26B13D4B /* UninstallScanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = FD131E932E1B53D39CF30C13 /* UninstallScanner.swift */; };
 		BE9EE0864C315080A4E4780F /* AppPickerPopover.swift in Sources */ = {isa = PBXBuildFile; fileRef = E874F8DFCBE0ACDD59C8664B /* AppPickerPopover.swift */; };
 		C0642512B709EF0517ABF4CB /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9C37CCD024267EB21876C7E9 /* AppDelegate.swift */; };
+		C32EA4B1F422398F96D01338 /* EmojiScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 46D365D33D2FE08378D999D8 /* EmojiScreen.swift */; };
 		C35864533DFB42DE63080ACB /* WindowManagementSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6E7DD73DC688DBFAFC4B04AC /* WindowManagementSettingsView.swift */; };
 		C359131F793C6C6BD756B901 /* SystemSettingsSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1DE4D8B82F1D4AFB025FB24 /* SystemSettingsSettingsView.swift */; };
 		C3C45B2E5F0D05CD6E27D34C /* RaycastSnippetImport.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5D3E4F8A2BCECFF0E11441BE /* RaycastSnippetImport.swift */; };
@@ -215,6 +217,7 @@
 		423CFE8AB90484D0309F24C0 /* CalcParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalcParser.swift; sourceTree = "<group>"; };
 		45D4BA6E1BD8EB1F96A8927F /* Tinycast.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Tinycast.entitlements; sourceTree = "<group>"; };
 		46C3E740AA883770481A6A8C /* SnippetsStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SnippetsStore.swift; sourceTree = "<group>"; };
+		46D365D33D2FE08378D999D8 /* EmojiScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmojiScreen.swift; sourceTree = "<group>"; };
 		4802942FF89B327A76432A9B /* AboutView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AboutView.swift; sourceTree = "<group>"; };
 		4954C8003947BB16ED48E326 /* UninstallPlan.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UninstallPlan.swift; sourceTree = "<group>"; };
 		4B432D84D8F9C10521342199 /* RunningApps.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RunningApps.swift; sourceTree = "<group>"; };
@@ -306,6 +309,7 @@
 		C1DE4D8B82F1D4AFB025FB24 /* SystemSettingsSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SystemSettingsSettingsView.swift; sourceTree = "<group>"; };
 		C24AD5CFE167900DF8B2705C /* CalloutShape.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalloutShape.swift; sourceTree = "<group>"; };
 		C45190564C9D9F1722E83943 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		C5ECF08D7F48B44CD162703E /* QuicklinkListScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuicklinkListScreen.swift; sourceTree = "<group>"; };
 		C64C87569634E26E1BE99A91 /* CalculatorCardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalculatorCardView.swift; sourceTree = "<group>"; };
 		C6DC5A4706854493D23FD18A /* HyperKey.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HyperKey.swift; sourceTree = "<group>"; };
 		C722D73D270A3A6CED4023F7 /* SettingsPaneScanner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsPaneScanner.swift; sourceTree = "<group>"; };
@@ -439,6 +443,7 @@
 			isa = PBXGroup;
 			children = (
 				BB94F0767AE0A5855FB22BF6 /* EmojiGridView.swift */,
+				46D365D33D2FE08378D999D8 /* EmojiScreen.swift */,
 			);
 			path = Emoji;
 			sourceTree = "<group>";
@@ -519,6 +524,7 @@
 			children = (
 				E2B3E54FBEB045D6A9866832 /* QuicklinkArgumentsScreen.swift */,
 				6EA607D74B37C51BABA2B33A /* QuicklinkArgumentsView.swift */,
+				C5ECF08D7F48B44CD162703E /* QuicklinkListScreen.swift */,
 				D30F22CD63D23FC1808878DD /* QuicklinkListView.swift */,
 			);
 			path = Quicklinks;
@@ -854,6 +860,7 @@
 				C8F4555ECA895F63A34A327C /* EmojiGridGeometry.swift in Sources */,
 				E952B659AEB905A3B233F78B /* EmojiGridView.swift in Sources */,
 				854C19458C8A0AE0BD757600 /* EmojiIndex.swift in Sources */,
+				C32EA4B1F422398F96D01338 /* EmojiScreen.swift in Sources */,
 				8611F52FF00B8C43EC46F902 /* EmojiSettingsView.swift in Sources */,
 				A41C0DCB2DEBCCA46F6C4B10 /* FavoritesStore.swift in Sources */,
 				24842144273FF92228540DBE /* FrequentEmojiStore.swift in Sources */,
@@ -898,6 +905,7 @@
 				34994B57DE0709CF5DCFC40C /* QuicklinkDestination.swift in Sources */,
 				63E24116B4CCC95F4FA295E3 /* QuicklinkEditorSheet.swift in Sources */,
 				1A899FE562A7344918CE1B44 /* QuicklinkLauncher.swift in Sources */,
+				33A7A33396550C5884393B55 /* QuicklinkListScreen.swift in Sources */,
 				291F17D35D98BB5700640AA7 /* QuicklinkListView.swift in Sources */,
 				6C824F5B5099D36E73CF7E4C /* QuicklinkStore.swift in Sources */,
 				EE12A8ECCC5F92553B24CD0F /* QuicklinksSettingsView.swift in Sources */,

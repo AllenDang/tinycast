@@ -122,7 +122,7 @@ swiftc -swift-version 6 Tinycast/Core/Quicklinks/Quicklink.swift \
     Tinycast/Core/Quicklinks/QuicklinkStore.swift Tinycast/Core/Quicklinks/QuicklinkArchive.swift \
     Tools/quicklink-test.swift -o /tmp/quicklink-test && /tmp/quicklink-test  # quicklink destinations + store
 swiftc -swift-version 6 Tinycast/Features/PaletteRowIndex.swift \
-    Tools/palette-selection-test.swift \
+    Tinycast/Core/Emoji/EmojiGridGeometry.swift Tools/palette-selection-test.swift \
     -o /tmp/palette-selection-test && /tmp/palette-selection-test  # palette flat-selection row order
 ```
 

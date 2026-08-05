@@ -23,6 +23,71 @@ struct PaletteRowIndexTests {
         expect(actual == expected, "\(message) — got \(String(describing: actual)), want \(String(describing: expected))")
     }
 
+    /// Where a flat index lands in the rendered grid: its visual row, and its column of that row.
+    static func cell(_ flat: Int, counts: [Int], columns: Int) -> (row: Int, column: Int) {
+        var row = 0
+        var start = 0
+        for count in counts {
+            if flat < start + count {
+                let local = flat - start
+                return (row + local / columns, local % columns)
+            }
+            row += (count + columns - 1) / columns
+            start += count
+        }
+        return (row, 0)
+    }
+
+    /// How many cells a visual row holds — the last row of a section is usually a partial one.
+    static func rowLength(_ row: Int, counts: [Int], columns: Int) -> Int {
+        var first = 0
+        for count in counts {
+            let rows = (count + columns - 1) / columns
+            if row < first + rows { return min(count - (row - first) * columns, columns) }
+            first += rows
+        }
+        return 0
+    }
+
+    /// The emoji screen's contract: a grid move walks one visual row of the same flat row order.
+    static func expectGrid(_ counts: [Int], columns: Int, _ label: String) {
+        let grid = EmojiGridGeometry(counts: counts, columns: columns)
+        let index = PaletteRowIndex(sectionCounts: counts)
+        let lastRow = counts.reduce(0) { $0 + ($1 + columns - 1) / columns } - 1
+        for flat in 0..<index.count {
+            let here = cell(flat, counts: counts, columns: columns)
+            let down = grid.down(from: flat)
+            let up = grid.up(from: flat)
+            expect(index.row(at: down) != nil, "\(label): down from \(flat) stays on a row")
+            expect(index.row(at: up) != nil, "\(label): up from \(flat) stays on a row")
+            expect(down >= flat, "\(label): down from \(flat) never moves backwards")
+            expect(up <= flat, "\(label): up from \(flat) never moves forwards")
+            let below = cell(down, counts: counts, columns: columns)
+            let above = cell(up, counts: counts, columns: columns)
+            // The column is kept, except onto a shorter row, which clamps to its last cell.
+            let lastBelow = rowLength(here.row + 1, counts: counts, columns: columns) - 1
+            let lastAbove = rowLength(here.row - 1, counts: counts, columns: columns) - 1
+            expect(
+                down == flat || below.column == min(here.column, lastBelow),
+                "\(label): down from \(flat) keeps its column, clamping onto a shorter row")
+            expect(
+                up == flat || above.column == min(here.column, lastAbove),
+                "\(label): up from \(flat) keeps its column, clamping onto a shorter row")
+            expect(
+                down == flat ? here.row == lastRow : below.row == here.row + 1,
+                "\(label): down from \(flat) moves exactly one visual row, or stops at the last")
+            expect(
+                up == flat ? here.row == 0 : above.row == here.row - 1,
+                "\(label): up from \(flat) moves exactly one visual row, or stops at the first")
+            // ←/→ are a plain step through the same flat order, clamped at both ends.
+            expect(
+                index.clamped(flat + 1) == min(flat + 1, index.count - 1),
+                "\(label): → steps one cell from \(flat)")
+            expect(
+                index.clamped(flat - 1) == max(flat - 1, 0), "\(label): ← steps one cell from \(flat)")
+        }
+    }
+
     /// Every index resolves, and resolving then inverting returns the index it started from.
     static func expectRoundTrip(_ index: PaletteRowIndex, _ label: String) {
         for flat in 0..<index.count {
@@ -173,6 +238,36 @@ struct PaletteRowIndexTests {
         expect(argumentFreeText.row(at: 0), nil, "a free-text argument resolves no index")
         expect(argumentFreeText.clamped(0) == 0, "selection stays at zero with no choices")
         expect(argumentFreeText.clamped(5) == 0, "a stale selection clamps back to zero")
+
+        // The emoji grid: sections of 8, 20 and 5 cells over 8 columns, as the picker renders them.
+        let emoji = PaletteRowIndex(sectionCounts: [8, 20, 5])
+        expect(emoji.count == 33, "the grid indexes every cell of every section")
+        expect(
+            emoji.row(at: 8), .element(section: 1, offset: 0),
+            "the flat index crosses into the next section's first cell")
+        expectRoundTrip(emoji, "emoji grid shape")
+        let emojiGrid = EmojiGridGeometry(counts: [8, 20, 5], columns: 8)
+        expect(
+            emojiGrid.down(from: 3), 8 + 3,
+            "down from the last row of a section lands in the same column of the next")
+        expect(
+            emojiGrid.up(from: 8 + 3), 3,
+            "up from a section's first row lands in the same column of the previous")
+        expect(emojiGrid.down(from: 8 + 16 + 3), 28 + 3, "the third section is entered by column")
+        expect(emojiGrid.up(from: 28 + 3), 8 + 16 + 3, "and left again by the same column")
+        // `EmojiGrid.sections` skips an empty category, so no shape here carries an empty section.
+        expectGrid([8, 20, 5], columns: 8, "emoji grid")
+        expectGrid([33], columns: 8, "emoji search results")
+        expectGrid([1], columns: 8, "a single emoji result")
+
+        // Exhaustive: every grid shape moves by one visual row and stays inside the flat order.
+        for a in 1...9 {
+            for b in 1...9 {
+                for c in 1...9 {
+                    expectGrid([a, b, c], columns: 8, "grid [\(a),\(b),\(c)]")
+                }
+            }
+        }
 
         // Exhaustive: over a spread of shapes, every flat index maps 1:1 onto visible row order.
         for hasCalculator in [false, true] {

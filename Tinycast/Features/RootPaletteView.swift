@@ -47,11 +47,6 @@ struct RootPaletteView: View {
     }
     private var clipResults: [ClipboardItem] { store.search(vm.query) }
     private var histResults: [CalcHistoryEntry] { calcHistory.search(vm.query) }
-    private var quicklinkResults: [Quicklink] {
-        let query = vm.query.trimmingCharacters(in: .whitespaces)
-        guard !query.isEmpty else { return quicklinks.quicklinks }
-        return quicklinks.quicklinks.filter { $0.name.localizedCaseInsensitiveContains(query) }
-    }
 
     /// The migrated modes' screen; nil while a mode is still one of the switch arms below.
     private var screen: (any PaletteScreen)? {
@@ -63,16 +58,17 @@ struct RootPaletteView: View {
             return QuicklinkArgumentsScreen(
                 session: quicklinkArguments, core: core, vm: vm,
                 scrollToTop: { scroll = ScrollIntent(kind: .top) })
+        case .quicklinks:
+            return QuicklinkListScreen(
+                store: quicklinks, core: core, vm: vm, openActions: openActions)
+        case .emoji:
+            return EmojiScreen(
+                index: emojiIndex, frequent: frequentEmoji, core: core, vm: vm,
+                tone: settings.emojiSkinTone, openActions: openActions)
         default:
             return nil
         }
     }
-
-    private var emojiSections: [EmojiGridSection] {
-        EmojiGrid.sections(query: vm.query, index: emojiIndex, frequent: frequentEmoji)
-    }
-    /// Flat grid order across sections — what `vm.selection` indexes in emoji mode.
-    private var emojiResults: [EmojiEntry] { emojiSections.flatMap(\.entries) }
 
     /// Inline calculator answer for the current query, live in both the launcher and Calculator History search; when present it occupies flat selection index 0 so rows shift by `calcCount`.
     private var calcResult: CalcResult? {
@@ -87,8 +83,6 @@ struct RootPaletteView: View {
         case .launcher: return appResults.count + calcCount
         case .clipboard: return clipResults.count
         case .calculatorHistory: return histResults.count + calcCount
-        case .emoji: return emojiResults.count
-        case .quicklinks: return quicklinkResults.count
         default: return 0
         }
     }
@@ -120,12 +114,6 @@ struct RootPaletteView: View {
     private var selectedHistEntry: CalcHistoryEntry? {
         let index = selection - calcCount
         return histResults.indices.contains(index) ? histResults[index] : nil
-    }
-    private var selectedEmojiEntry: EmojiEntry? {
-        emojiResults.indices.contains(selection) ? emojiResults[selection] : nil
-    }
-    private var selectedQuicklink: Quicklink? {
-        quicklinkResults.indices.contains(selection) ? quicklinkResults[selection] : nil
     }
 
     /// The bottom-right Actions menu content for the current mode's selection, or nil when the selection has no actions.
@@ -164,17 +152,6 @@ struct RootPaletteView: View {
                     entry: hist, core: core, calcHistory: calcHistory)
             }
             return nil
-        case .emoji:
-            if let emoji = selectedEmojiEntry {
-                return EmojiActionsMenu.content(
-                    entry: emoji, core: core, target: vm.pasteTarget)
-            }
-            return nil
-        case .quicklinks:
-            if let quicklink = selectedQuicklink {
-                return QuicklinkActionsMenu.content(quicklink: quicklink, core: core)
-            }
-            return nil
         default:
             return nil
         }
@@ -204,9 +181,6 @@ struct RootPaletteView: View {
         let apps = vm.mode == .launcher ? appResults : []
         let clips = vm.mode == .clipboard ? clipResults : []
         let hist = vm.mode == .calculatorHistory ? histResults : []
-        let emojiSections = vm.mode == .emoji ? emojiSections : []
-        let emojis = emojiSections.flatMap(\.entries)
-        let links = vm.mode == .quicklinks ? quicklinkResults : []
         let screenRows = screen?.rows.count ?? 0
         // Newest stored clip + the reorder token: the pair changes only when the store mutates, never when a query filters the list.
         let clipFollow = ClipFollowKey(
@@ -215,9 +189,7 @@ struct RootPaletteView: View {
         let calc = calcResult
         let offset = calc == nil ? 0 : 1
         // Only the active mode is non-empty.
-        let count =
-            apps.count + offset + clips.count + hist.count + emojis.count + links.count
-            + screenRows
+        let count = apps.count + offset + clips.count + hist.count + screenRows
         let sel = count == 0 ? 0 : min(max(vm.selection, 0), count - 1)
         let calcSelected = calc != nil && sel == 0
         // An error card is selectable but has no action: it must not drive the Copy Answer pill, ⌘K menu, or Enter.
@@ -239,8 +211,7 @@ struct RootPaletteView: View {
                 Color.clear
             } else {
                 content(
-                    apps: apps, clips: clips, hist: hist, emojiSections: emojiSections,
-                    links: links, calc: calc, selection: sel,
+                    apps: apps, clips: clips, hist: hist, calc: calc, selection: sel,
                     favoriteCount: favoriteCount, showSections: showSections
                 )
             }
@@ -363,7 +334,7 @@ struct RootPaletteView: View {
                 moveMenu(1)
                 return .handled
             }
-            if vm.mode == .emoji { moveEmojiRow(1) } else { move(1) }
+            moveVertically(1)
             return .handled
         }
         .onKeyPress(.upArrow) {
@@ -372,21 +343,17 @@ struct RootPaletteView: View {
                 moveMenu(-1)
                 return .handled
             }
-            if vm.mode == .emoji { moveEmojiRow(-1) } else { move(-1) }
+            moveVertically(-1)
             return .handled
         }
         // Horizontal arrows step the emoji grid; everywhere else they stay with the field editor's caret. An open menu swallows them so the list behind never moves.
         .onKeyPress(.leftArrow) {
             if menuOpen { return .handled }
-            guard vm.mode == .emoji else { return .ignored }
-            move(-1)
-            return .handled
+            return moveHorizontally(-1) ? .handled : .ignored
         }
         .onKeyPress(.rightArrow) {
             if menuOpen { return .handled }
-            guard vm.mode == .emoji else { return .ignored }
-            move(1)
-            return .handled
+            return moveHorizontally(1) ? .handled : .ignored
         }
         // With a menu open, plain ↵ activates its highlighted row. A modified ↵ always runs the selection's own action regardless of menu state: ⌘↵ the advertised secondary action, ⌥↵ paste-in-place; plain ↵ (no menu) falls through to the field's onSubmit.
         .onKeyPress(keys: [.return], phases: .down) { press in
@@ -398,17 +365,11 @@ struct RootPaletteView: View {
             }
             guard command || option else { return .ignored }
             if let screen {
-                guard command, screen.secondary(at: selection) else { return .ignored }
-                return .handled
+                if command { return screen.secondary(at: selection) ? .handled : .ignored }
+                guard let emoji = screen as? EmojiScreen else { return .ignored }
+                return emoji.pasteKeepingWindowOpen(at: selection) ? .handled : .ignored
             }
             switch vm.mode {
-            case .emoji:
-                guard emojiResults.indices.contains(selection) else { return .ignored }
-                if command {
-                    core.copyEmoji(emojiResults[selection])
-                } else {
-                    core.pasteEmojiKeepingWindowOpen(emojiResults[selection])
-                }
             case .clipboard:
                 guard command, clipResults.indices.contains(selection) else { return .ignored }
                 core.copyToClipboard(clipResults[selection])
@@ -417,11 +378,6 @@ struct RootPaletteView: View {
                 let index = selection - calcCount
                 guard command, histResults.indices.contains(index) else { return .ignored }
                 core.copyHistoryExpression(histResults[index])
-            case .quicklinks:
-                guard command, let quicklink = selectedQuicklink,
-                    quicklink.openWithBundleID != nil
-                else { return .ignored }
-                core.openQuicklink(id: quicklink.id, forcingDefaultApp: true)
             case .launcher:
                 guard command, let app = selectedAppEntry, app.canRevealInFinder
                 else { return .ignored }
@@ -459,14 +415,14 @@ struct RootPaletteView: View {
         .onKeyPress(keys: [.delete, .deleteForward], phases: .down) { press in
             if menuOpen { return .handled }
             guard press.modifiers.contains(.command) else { return .ignored }
+            if let quicklinks = screen as? QuicklinkListScreen {
+                return quicklinks.delete(at: selection) ? .handled : .ignored
+            }
             switch vm.mode {
             case .clipboard:
                 deleteSelectedClip()
             case .calculatorHistory:
                 deleteSelectedHistoryEntry()
-            case .quicklinks:
-                guard let quicklink = selectedQuicklink else { return .ignored }
-                Task { await core.deleteQuicklink(id: quicklink.id) }
             default:
                 return .ignored
             }
@@ -479,9 +435,8 @@ struct RootPaletteView: View {
                 core.togglePinnedClip(clipResults[selection])
                 return .handled
             }
-            if vm.mode == .quicklinks, let quicklink = selectedQuicklink {
-                core.toggleQuicklinkPinned(id: quicklink.id)
-                return .handled
+            if let quicklinks = screen as? QuicklinkListScreen {
+                return quicklinks.pin(at: selection) ? .handled : .ignored
             }
             return .ignored
         }
@@ -578,24 +533,21 @@ struct RootPaletteView: View {
 
     @ViewBuilder
     private func content(
-        apps: [AppEntry], clips: [ClipboardItem], hist: [CalcHistoryEntry],
-        emojiSections: [EmojiGridSection], links: [Quicklink], calc: CalcResult?,
+        apps: [AppEntry], clips: [ClipboardItem], hist: [CalcHistoryEntry], calc: CalcResult?,
         selection: Int, favoriteCount: Int, showSections: Bool
     ) -> some View {
         if let screen {
             screen.body(selection: selection, scroll: scroll)
         } else {
             modeContent(
-                apps: apps, clips: clips, hist: hist, emojiSections: emojiSections, links: links,
-                calc: calc, selection: selection, favoriteCount: favoriteCount,
-                showSections: showSections)
+                apps: apps, clips: clips, hist: hist, calc: calc, selection: selection,
+                favoriteCount: favoriteCount, showSections: showSections)
         }
     }
 
     @ViewBuilder
     private func modeContent(
-        apps: [AppEntry], clips: [ClipboardItem], hist: [CalcHistoryEntry],
-        emojiSections: [EmojiGridSection], links: [Quicklink], calc: CalcResult?,
+        apps: [AppEntry], clips: [ClipboardItem], hist: [CalcHistoryEntry], calc: CalcResult?,
         selection: Int, favoriteCount: Int, showSections: Bool
     ) -> some View {
         switch vm.mode {
@@ -686,45 +638,6 @@ struct RootPaletteView: View {
                     }
                 )
             }
-        case .emoji:
-            if !emojiIndex.isLoaded {
-                EmptyResults(text: "Loading emoji…")
-            } else if emojiSections.isEmpty {
-                EmptyResults(text: "No emoji found")
-            } else {
-                EmojiGridView(
-                    sections: emojiSections,
-                    selection: selection,
-                    tone: settings.emojiSkinTone,
-                    scroll: scroll,
-                    onSelect: { vm.selection = $0 },
-                    onActivate: activateSelection,
-                    onActions: { flat in
-                        vm.selection = flat
-                        openActions()
-                    }
-                )
-            }
-        case .quicklinks:
-            if links.isEmpty {
-                EmptyResults(
-                    text: quicklinks.quicklinks.isEmpty
-                        ? "No quicklinks yet" : "No matching quicklinks")
-            } else {
-                QuicklinkList(
-                    results: links,
-                    selectedID: links.indices.contains(selection) ? links[selection].id : nil,
-                    scroll: scroll,
-                    onSelect: { link in
-                        if let index = links.firstIndex(of: link) { vm.selection = index }
-                    },
-                    onActivate: activateSelection,
-                    onActions: { link in
-                        if let index = links.firstIndex(of: link) { vm.selection = index }
-                        openActions()
-                    }
-                )
-            }
         default:
             EmptyView()
         }
@@ -784,12 +697,10 @@ struct RootPaletteView: View {
     private func actionPillLabel(selectedApp: AppEntry?, calcActionable: Bool) -> String {
         if let screen { return screen.primaryActionTitle }
         switch vm.mode {
-        case .clipboard, .emoji:
+        case .clipboard:
             return vm.pasteTarget?.pasteTitle ?? "Paste"
         case .calculatorHistory:
             return "Copy Answer"
-        case .quicklinks:
-            return "Open Quicklink"
         default:
             if calcActionable { return "Copy Answer" }
             switch selectedApp?.kind {
@@ -856,6 +767,26 @@ struct RootPaletteView: View {
         scroll = ScrollIntent(kind: .follow)
     }
 
+    /// ↑/↓: the screen's own move (the emoji grid's, so far), else a linear step through the rows.
+    private func moveVertically(_ delta: Int) {
+        guard let next = screen?.move(delta, axis: .vertical, from: selection) else {
+            move(delta)
+            return
+        }
+        vm.selection = next
+        scroll = ScrollIntent(kind: .follow)
+    }
+
+    /// ←/→: consumed only by a screen that navigates horizontally; otherwise the caret keeps them.
+    private func moveHorizontally(_ delta: Int) -> Bool {
+        guard let next = screen?.move(delta, axis: .horizontal, from: selection) else {
+            return false
+        }
+        vm.selection = next
+        scroll = ScrollIntent(kind: .follow)
+        return true
+    }
+
     /// Move the open menu's highlight, clamped at the ends (no wrap — consistent with `move`).
     private func moveMenu(_ delta: Int) {
         guard let count = menuContent?.items.count, count > 0 else { return }
@@ -867,15 +798,6 @@ struct RootPaletteView: View {
         guard let items = menuContent?.items, items.indices.contains(index) else { return }
         items[index].action()
         closeMenus()
-    }
-
-    /// Vertical grid move: one visual row within a section, spilling into the neighbor while keeping the column.
-    private func moveEmojiRow(_ delta: Int) {
-        let geometry = EmojiGridGeometry(
-            counts: emojiSections.map(\.entries.count), columns: EmojiGrid.columns)
-        guard resultCount > 0 else { return }
-        vm.selection = delta > 0 ? geometry.down(from: selection) : geometry.up(from: selection)
-        scroll = ScrollIntent(kind: .follow)
     }
 
     /// Tab flips launcher↔clipboard; Calculator History (entered via its command) exits back to the launcher rather than joining the cycle.
@@ -917,12 +839,6 @@ struct RootPaletteView: View {
             let index = selection - calcCount
             guard histResults.indices.contains(index) else { return }
             core.copyHistoryEntry(histResults[index])
-        case .emoji:
-            guard emojiResults.indices.contains(selection) else { return }
-            core.pasteEmoji(emojiResults[selection])
-        case .quicklinks:
-            guard quicklinkResults.indices.contains(selection) else { return }
-            core.openQuicklink(id: quicklinkResults[selection].id)
         default:
             break
         }

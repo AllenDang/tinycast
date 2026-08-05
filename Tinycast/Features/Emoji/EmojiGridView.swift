@@ -235,32 +235,3 @@ private struct EmojiCell: View {
             )
     }
 }
-
-/// Actions menu content for an emoji/symbol cell, shown bottom-right on right-click, mirroring `ClipboardActionsMenu`.
-@MainActor
-enum EmojiActionsMenu {
-    static func content(entry: EmojiEntry, core: AppCore, target: PasteTarget?)
-        -> PopoverMenuContent {
-        PopoverMenuContent(
-            header: entry.displayName,
-            items: [
-                PopoverMenuItem(
-                    title: target?.pasteTitle ?? "Paste",
-                    icon: .paste(target, fallback: "doc.on.clipboard"), shortcut: "↵"
-                ) {
-                    core.pasteEmoji(entry)
-                },
-                PopoverMenuItem(
-                    title: "Copy to Clipboard", systemImage: "doc.on.doc", shortcut: "⌘↵"
-                ) {
-                    core.copyEmoji(entry)
-                },
-                PopoverMenuItem(
-                    title: "Paste & Keep Window Open", icon: .paste(target, fallback: "macwindow")
-                ) {
-                    core.pasteEmojiKeepingWindowOpen(entry)
-                }
-            ]
-        )
-    }
-}
