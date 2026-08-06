@@ -25,6 +25,13 @@ final class PalettePanel: NSPanel {
     private func setSearchCaretHidden(_ hidden: Bool) {
         guard let editor = firstResponder as? NSTextView else { return }
         editor.insertionPointColor = hidden ? .clear : .white
+        // A frozen field has nothing left to select against — collapse any range (carried over from
+        // whatever keystroke or click last set it, e.g. the ↵ that fired the AI request) to a bare
+        // caret at the end, so it never sits there highlighted while input does nothing.
+        if hidden {
+            let end = (editor.string as NSString).length
+            editor.setSelectedRange(NSRange(location: end, length: 0))
+        }
         // Force an immediate redraw so the caret vanishes/returns on the menu toggle instead of waiting out the blink timer.
         editor.updateInsertionPointStateAndRestartTimer(!hidden)
     }

@@ -119,6 +119,10 @@ Input is frozen instead:
 - The caret is hidden by clearing SwiftUI's **own** live field editor's `insertionPointColor`. SwiftUI
   force-casts its field editor to a private subclass, so vending a custom one crashes — only the
   existing one can be tuned.
+- The same call collapses whatever selection range the editor was last left with — carried over from
+  the click or ↵ that opened the menu or fired the AI request — to a bare caret at the end of the
+  text. A frozen field has nothing left to select against; without this it would sit there with the
+  whole query highlighted for as long as the freeze lasts.
 
 ## Focus restoration (load-bearing)
 
