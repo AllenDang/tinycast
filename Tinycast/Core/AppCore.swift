@@ -81,6 +81,13 @@ final class PaletteViewModel {
     /// Fired when `menuOpen` flips so `PalettePanel` can hide/show the search field's caret while it keeps first-responder status (no focus swap, so the placeholder never reflows).
     @ObservationIgnored var onMenuOpenChanged: ((Bool) -> Void)?
 
+    /// True while the field editor holds an uncommitted IME candidate (Pinyin, Cangjie, romaji…).
+    /// `query` never sees marked text — SwiftUI's own `TextField` binding doesn't update until a
+    /// candidate commits — so anything gated on `query.isEmpty` needs this alongside it if "there's
+    /// visible content in the field" is what it actually means. Mirrored from `PalettePanel.sendEvent`,
+    /// which is the one place that can read the live field editor's `hasMarkedText()` after every keystroke.
+    var isComposing = false
+
     func prepare(mode: PaletteMode) {
         self.mode = mode
         query = ""
@@ -88,6 +95,7 @@ final class PaletteViewModel {
         forceExpanded = false
         hoverHighlightArmed = false
         menuOpen = false
+        isComposing = false
         focusToken = UUID()
         resetToken = UUID()
     }

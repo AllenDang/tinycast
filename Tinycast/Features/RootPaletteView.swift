@@ -545,7 +545,7 @@ struct RootPaletteView: View {
             .focused($searchFocused)
             .onSubmit(activateSelection)
             .background(alignment: .leading) {
-                if vm.query.isEmpty {
+                if vm.query.isEmpty && !vm.isComposing {
                     Text(searchPrompt)
                         .font(Theme.Typography.searchField)
                         .foregroundStyle(Theme.Colors.textTertiary)

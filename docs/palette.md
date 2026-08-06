@@ -73,6 +73,28 @@ explicit `accessibilityLabel` because the prompt used to supply it.
 
 This is the same class of bug as the freeze below — both come from the cell/field-editor swap.
 
+### An IME candidate is visible before `query` ever sees it
+
+SwiftUI's `TextField` binding does not update while an IME candidate is only *marked* — typing Pinyin
+shows the romanization and, once a candidate is chosen, the character — so `vm.query` stays empty for
+the entire composing gesture and only changes on commit. A placeholder gated on `query.isEmpty` alone
+would sit on top of the marked text the whole time the user is composing, and only vanish once they'd
+already picked a candidate.
+
+`PalettePanel.sendEvent` is the fix: it already sees every keyDown before dispatch and again lets it
+through to `super.sendEvent`, which is what drives `NSTextInputContext` and therefore the field
+editor's marked text for that keystroke. Reading `(firstResponder as? NSTextView)?.hasMarkedText()`
+right after that call catches the update synchronously and mirrors it into `PaletteViewModel.isComposing`
+— a tracked property, unlike `menuOpen`, since this one has to drive a re-render. The placeholder checks
+`query.isEmpty && !isComposing`; a bare backspace's "empty query navigates back a screen" check gets the
+same guard in the other direction, since backspace while composing must delete from the marked text
+instead. Nothing else keyed off `query.isEmpty` (search filtering, the compact↔expanded swap) needed the
+same fix — waiting for a commit before either fires is correct there, the way Spotlight does.
+
+`NSText.didChangeNotification` looked like the obvious hook and isn't one: it does not fire for
+`setMarkedText` at all, only for a committed `insertText` (checked directly against `NSTextView`,
+not inferred) — which is exactly why the SwiftUI binding it presumably backs stays silent too.
+
 ## Menu-open input freeze
 
 While a footer popover menu (⌘K Actions / app menu) is open the search field reads as inert but

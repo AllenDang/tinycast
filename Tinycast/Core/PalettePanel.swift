@@ -42,9 +42,15 @@ final class PalettePanel: NSPanel {
             !Self.menuNavKeys.contains(Int(event.keyCode)) {
             return
         }
+        // Backspace while an IME candidate is still marked (uncommitted) must delete from the marked
+        // text like any other keystroke, not be treated as a bare backspace in an empty query —
+        // `query` never sees marked text at all, so its emptiness check can't tell "truly empty" apart
+        // from "composing" on its own.
+        let wasComposing = (firstResponder as? NSTextView)?.hasMarkedText() ?? false
         if event.type == .keyDown,
             Int(event.keyCode) == kVK_Delete,
             event.modifierFlags.isDisjoint(with: [.command, .option, .control, .shift]),
+            !wasComposing,
             onBareBackspace?() == true {
             return
         }
@@ -56,6 +62,13 @@ final class PalettePanel: NSPanel {
             return
         }
         super.sendEvent(event)
+        // SwiftUI's `query` binding doesn't update while an IME candidate is only marked, so anything
+        // gated on `query.isEmpty` — the placeholder, in particular — needs this mirrored separately.
+        // Read after dispatch, since `interpretKeyEvents` inside `super.sendEvent` is what just called
+        // `setMarkedText` on the field editor for this keystroke.
+        if event.type == .keyDown {
+            paletteViewModel?.isComposing = (firstResponder as? NSTextView)?.hasMarkedText() ?? false
+        }
     }
     init<Content: View>(rootView: Content) {
         super.init(
