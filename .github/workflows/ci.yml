@@ -84,3 +84,5 @@ jobs:
             Tinycast/Core/Quicklinks/QuicklinkStore.swift \
             Tinycast/Core/Quicklinks/QuicklinkArchive.swift Tools/quicklink-test.swift \
             -o /tmp/quicklink-test && /tmp/quicklink-test
+          swiftc -swift-version 6 Tinycast/Core/AI/AICommand.swift Tools/ai-command-test.swift \
+            -o /tmp/ai-command-test && /tmp/ai-command-test

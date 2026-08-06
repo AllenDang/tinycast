@@ -8,7 +8,7 @@ extension Notification.Name {
 enum SettingsTab: Int, CaseIterable, Identifiable {
     // Declaration order is sidebar order: general, then one pane per launcher category, then the rest.
     case general, applications, systemSettings, systemActions, commands, quicklinks, snippets,
-        windowManagement, clipboard, emoji, permissions, backup, miscellaneous, about
+        aiCommands, windowManagement, clipboard, emoji, permissions, backup, miscellaneous, about
     var id: Int { rawValue }
 
     var title: String {
@@ -20,6 +20,7 @@ enum SettingsTab: Int, CaseIterable, Identifiable {
         case .commands: return "Commands"
         case .quicklinks: return "Quicklinks"
         case .snippets: return "Snippets"
+        case .aiCommands: return "AI Commands"
         case .windowManagement: return "Window Management"
         case .clipboard: return "Clipboard"
         case .emoji: return "Emoji & Symbols"
@@ -39,6 +40,7 @@ enum SettingsTab: Int, CaseIterable, Identifiable {
         case .commands: return "terminal"
         case .quicklinks: return "link"
         case .snippets: return "curlybraces"
+        case .aiCommands: return AICommand.sfSymbol
         case .windowManagement: return "macwindow"
         case .clipboard: return "doc.on.clipboard"
         case .emoji: return "face.smiling"
@@ -59,6 +61,7 @@ enum SettingsTab: Int, CaseIterable, Identifiable {
         case .commands: return .green
         case .quicklinks: return .cyan
         case .snippets: return .green
+        case .aiCommands: return .mint
         case .windowManagement: return .blue
         case .clipboard: return .orange
         case .emoji: return .yellow
@@ -91,6 +94,7 @@ struct SettingsRootView: View {
                 case .commands: CommandsSettingsView()
                 case .quicklinks: QuicklinksSettingsView()
                 case .snippets: SnippetsSettingsView()
+                case .aiCommands: AICommandsSettingsView()
                 case .windowManagement: WindowManagementSettingsView()
                 case .clipboard: ClipboardSettingsView()
                 case .emoji: EmojiSettingsView()

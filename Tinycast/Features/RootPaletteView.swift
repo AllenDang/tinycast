@@ -16,6 +16,9 @@ struct RootPaletteView: View {
     @Environment(UninstallSession.self) private var uninstall
     @Environment(QuicklinkStore.self) private var quicklinks
     @Environment(QuicklinkArgumentSession.self) private var quicklinkArguments
+    @Environment(AICommandStore.self) private var aiCommands
+    @Environment(AIProviderStore.self) private var aiProvider
+    @Environment(AICommandSession.self) private var aiCommandSession
     private let settings = AppCore.shared.settings
     @FocusState private var searchFocused: Bool
     @State private var showActions = false
@@ -61,6 +64,8 @@ struct RootPaletteView: View {
         case .quicklinks:
             return QuicklinkListScreen(
                 store: quicklinks, core: core, vm: vm, openActions: openActions)
+        case .aiCommand:
+            return AICommandScreen(session: aiCommandSession, core: core)
         case .emoji:
             return EmojiScreen(
                 index: emojiIndex, frequent: frequentEmoji, core: core, vm: vm,
@@ -75,7 +80,14 @@ struct RootPaletteView: View {
         vm.mode == .launcher || vm.mode == .calculatorHistory
             ? CalcMemo.evaluate(vm.query, currency: currencyRates.source) : nil
     }
-    private var calcCount: Int { calcResult == nil ? 0 : 1 }
+    /// The AI command intent card: launcher-only, mutually exclusive with the calc card (calc wins if
+    /// somehow both parse), and re-checks consent right here — with the provider off this must read as
+    /// though the feature doesn't exist, the same way `.off` currency produces no card at all.
+    private var aiCommandMatch: AICommandMatch? {
+        guard vm.mode == .launcher, calcResult == nil, aiProvider.isConfigured else { return nil }
+        return AICommand.firstMatch(in: aiCommands.commands, query: vm.query)
+    }
+    private var calcCount: Int { (calcResult == nil && aiCommandMatch == nil) ? 0 : 1 }
 
     private var resultCount: Int {
         if let screen { return screen.rows.count }
@@ -187,11 +199,13 @@ struct RootPaletteView: View {
             id: vm.mode == .clipboard ? store.items.first?.id : nil, token: vm.followToken)
         // Every count/selection below derives from this one calc/offset pair — the flat selection index must always match the visible row order, calc card included.
         let calc = calcResult
-        let offset = calc == nil ? 0 : 1
+        let ai = aiCommandMatch
+        let offset = calcCount
         // Only the active mode is non-empty.
         let count = apps.count + offset + clips.count + hist.count + screenRows
         let sel = count == 0 ? 0 : min(max(vm.selection, 0), count - 1)
         let calcSelected = calc != nil && sel == 0
+        let aiSelected = ai != nil && sel == 0
         // An error card is selectable but has no action: it must not drive the Copy Answer pill, ⌘K menu, or Enter.
         let calcActionable = calcSelected && calc?.isActionable == true
         let showSections = vm.mode == .launcher && isQueryEmpty
@@ -199,7 +213,9 @@ struct RootPaletteView: View {
             showSections ? apps.prefix(while: { favorites.isFavorite($0) }).count : 0
         let selectedApp = apps.indices.contains(sel - offset) ? apps[sel - offset] : nil
         // Derive the footer label from the already-resolved selection so `bottomBar` doesn't re-run `appResults` (its filter/sort aren't memoized). The primary/Actions group is hidden when there's nothing to act on: no results in any mode, or an error calc card (selectable but action-less).
-        let pillLabel = actionPillLabel(selectedApp: selectedApp, calcActionable: calcActionable)
+        let pillLabel = actionPillLabel(
+            selectedApp: selectedApp, calcActionable: calcActionable,
+            aiCommand: aiSelected ? ai?.command : nil)
         // The argument form has no rows to count when its argument takes free text, but ↵ still
         // does something — and the pill is the only thing that says what.
         let showActionGroup =
@@ -211,7 +227,7 @@ struct RootPaletteView: View {
                 Color.clear
             } else {
                 content(
-                    apps: apps, clips: clips, hist: hist, calc: calc, selection: sel,
+                    apps: apps, clips: clips, hist: hist, calc: calc, ai: ai, selection: sel,
                     favoriteCount: favoriteCount, showSections: showSections
                 )
             }
@@ -274,6 +290,9 @@ struct RootPaletteView: View {
             if vm.mode != .uninstall { uninstall.cancel() }
             // Same for a half-filled argument form: leaving the screen abandons the pending open.
             if vm.mode != .quicklinkArguments { core.cancelQuicklinkArguments() }
+            // Same for a pending or finished AI request: leaving the screen drops it and cancels
+            // whatever hasn't returned yet.
+            if vm.mode != .aiCommand { core.cancelAICommand() }
         }
         // Pop-to-root: `prepare` clears query/selection, but if both were already at their defaults the handlers above never fire — this intent guarantees the scroll itself snaps back to the origin.
         .onChange(of: vm.resetToken) {
@@ -390,6 +409,14 @@ struct RootPaletteView: View {
         .onKeyPress(.escape) {
             if showActions || showAppMenu {
                 closeMenus()
+                return .handled
+            }
+            // Distinct from every other sub-screen's Esc (which just hides the palette, preserving
+            // state for Pop to Root Search): this one must actually cancel the in-flight request, not
+            // just hide its window, so pop-to-root can never resurrect a request the user backed out of.
+            if vm.mode == .aiCommand {
+                core.cancelAICommand()
+                vm.prepare(mode: .launcher)
                 return .handled
             }
             core.hidePalette()
@@ -534,13 +561,13 @@ struct RootPaletteView: View {
     @ViewBuilder
     private func content(
         apps: [AppEntry], clips: [ClipboardItem], hist: [CalcHistoryEntry], calc: CalcResult?,
-        selection: Int, favoriteCount: Int, showSections: Bool
+        ai: AICommandMatch?, selection: Int, favoriteCount: Int, showSections: Bool
     ) -> some View {
         if let screen {
             screen.body(selection: selection, scroll: scroll)
         } else {
             modeContent(
-                apps: apps, clips: clips, hist: hist, calc: calc, selection: selection,
+                apps: apps, clips: clips, hist: hist, calc: calc, ai: ai, selection: selection,
                 favoriteCount: favoriteCount, showSections: showSections)
         }
     }
@@ -548,17 +575,18 @@ struct RootPaletteView: View {
     @ViewBuilder
     private func modeContent(
         apps: [AppEntry], clips: [ClipboardItem], hist: [CalcHistoryEntry], calc: CalcResult?,
-        selection: Int, favoriteCount: Int, showSections: Bool
+        ai: AICommandMatch?, selection: Int, favoriteCount: Int, showSections: Bool
     ) -> some View {
         switch vm.mode {
         case .launcher:
-            let offset = calc == nil ? 0 : 1
+            let offset = (calc == nil && ai == nil) ? 0 : 1
             let calcSelected = calc != nil && selection == 0
+            let aiSelected = ai != nil && selection == 0
             let appIndex = selection - offset
             let selectedID = apps.indices.contains(appIndex) ? apps[appIndex].id : nil
             LauncherList(
                 results: apps,
-                selectedID: calcSelected ? nil : selectedID,
+                selectedID: (calcSelected || aiSelected) ? nil : selectedID,
                 favoriteCount: favoriteCount,
                 showSections: showSections,
                 scroll: scroll,
@@ -572,6 +600,12 @@ struct RootPaletteView: View {
                     guard let calc, case .value = calc.payload else { return }
                     vm.selection = 0
                     openActions()
+                },
+                aiIntent: ai,
+                aiIntentSelected: aiSelected,
+                onActivateAI: {
+                    vm.selection = 0
+                    activateSelection()
                 },
                 onActivate: { core.launch($0, searchQuery: vm.query) },
                 onActions: { app in
@@ -694,8 +728,11 @@ struct RootPaletteView: View {
     }
 
     /// Pill label for the current selection, derived from the selection already resolved in `body` so it never re-runs the (unmemoized) `appResults` filter/sort.
-    private func actionPillLabel(selectedApp: AppEntry?, calcActionable: Bool) -> String {
+    private func actionPillLabel(
+        selectedApp: AppEntry?, calcActionable: Bool, aiCommand: AICommand?
+    ) -> String {
         if let screen { return screen.primaryActionTitle }
+        if let aiCommand { return "Run \(aiCommand.name)" }
         switch vm.mode {
         case .clipboard:
             return vm.pasteTarget?.pasteTitle ?? "Paste"
@@ -822,6 +859,10 @@ struct RootPaletteView: View {
             if let calcResult, selection == 0 {
                 // Error cards no-op — copyCalculatorResult only acts on value payloads.
                 core.copyCalculatorResult(calcResult)
+                return
+            }
+            if let aiCommandMatch, selection == 0 {
+                core.beginAICommand(aiCommandMatch)
                 return
             }
             let index = selection - calcCount

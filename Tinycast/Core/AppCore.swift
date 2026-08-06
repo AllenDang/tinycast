@@ -11,6 +11,9 @@ enum PaletteMode: String, CaseIterable, Identifiable {
     /// Collects a quicklink's `{argument}` values before it opens; the pending request lives on
     /// `AppCore.quicklinkArguments`, the way `.uninstall`'s target lives on `UninstallSession`.
     case quicklinkArguments
+    /// The loading/answer screen for a committed `AICommandCard`; the pending request lives on
+    /// `AppCore.aiCommandSession`.
+    case aiCommand
 
     var id: String { rawValue }
     var systemImage: String {
@@ -21,6 +24,7 @@ enum PaletteMode: String, CaseIterable, Identifiable {
         case .emoji: return "face.smiling"
         case .uninstall: return "trash"
         case .quicklinks, .quicklinkArguments: return Quicklink.sfSymbol
+        case .aiCommand: return AICommand.sfSymbol
         }
     }
     var placeholder: String {
@@ -33,6 +37,7 @@ enum PaletteMode: String, CaseIterable, Identifiable {
         case .quicklinks: return "Search quicklinks…"
         // Replaced by the pending argument's name; only reached if the session vanished mid-render.
         case .quicklinkArguments: return "Enter a value…"
+        case .aiCommand: return "Press ↵ to copy the result…"
         }
     }
 }
@@ -97,6 +102,9 @@ final class AppCore {
     let launcherRanking: LauncherRankingStore
     let appIndex: AppIndex
     let customCommands = CustomCommandStore()
+    let aiCommands = AICommandStore()
+    let aiProvider = AIProviderStore()
+    let aiCommandSession = AICommandSession()
     let quicklinks = QuicklinkStore()
     let clipboardStore = ClipboardStore()
     let clipboardManager: ClipboardManager
@@ -373,6 +381,8 @@ final class AppCore {
                 .environment(self.appIndex)
                 .environment(self.visibility)
                 .environment(self.customCommands)
+                .environment(self.aiCommands)
+                .environment(self.aiProvider)
                 .environment(self.snippetsStore)
                 .environment(self.quicklinks)
         }
@@ -919,6 +929,49 @@ final class AppCore {
                 recovery: suggestsShellEnvironment ? "Open Settings…" : nil)
         else { return }
         showSettings(tab: .commands)
+    }
+
+    // MARK: - AI commands
+
+    /// Consent's only "turn it on" entry point, called from the Settings toggle. Turning it off never
+    /// needs a dialog — the pane calls `aiProvider.setEnabled(false)` directly — so this only ever asks
+    /// for the yes.
+    func confirmEnablingAIProvider() async -> Bool {
+        await confirm(
+            title: "Turn on AI commands?",
+            message:
+                "Text typed after a command’s keyword is sent to the endpoint you configure below, "
+                + "using the API key you provide there. Nothing is sent until you set an endpoint "
+                + "and use a command.",
+            symbol: AICommand.sfSymbol, confirmTitle: "Enable", tone: .neutral, confirmRole: .standard)
+    }
+
+    /// The one funnel from the launcher card's Enter/click: starts the request and switches the
+    /// palette into `.aiCommand` to show it. Re-checks consent and configuration itself — the card is
+    /// already gated the same way, but a card left over from before the user flipped the switch off
+    /// mid-keystroke must not still be able to fire.
+    func beginAICommand(_ match: AICommandMatch) {
+        guard aiProvider.isConfigured, let baseURL = aiProvider.baseURL else { return }
+        let model = aiProvider.model.trimmingCharacters(in: .whitespaces)
+        aiCommandSession.begin(
+            command: match.command, input: match.input, baseURL: baseURL, model: model,
+            apiKey: aiProvider.apiKey, isEnabled: { [weak self] in self?.aiProvider.isEnabled ?? false })
+        palette.mode = .aiCommand
+    }
+
+    /// Esc, Tab, the back chevron, or any other way of leaving the screen — drops the pending request
+    /// and, if it hasn't returned yet, cancels it.
+    func cancelAICommand() {
+        aiCommandSession.cancel()
+    }
+
+    /// Enter on the finished answer: copy it, drop the session, exit — the same shape
+    /// `copyCalculatorResult` uses for its own inline answer.
+    func finishAICommand(copying text: String) {
+        aiCommandSession.cancel()
+        palette.mode = .launcher
+        hidePalette(restoreFocus: false)
+        Paster.copyPlainText(text)
     }
 
     /// Quits the app behind an entry; a no-op (palette stays put) when it isn't running.

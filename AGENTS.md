@@ -55,7 +55,7 @@ Full detail: [`docs/architecture.md`](docs/architecture.md).
   accessory apps).
 - **Subsystems:** [palette](docs/palette.md) · [launcher & fuzzy match](docs/launcher.md) ·
   [calculator](docs/calculator.md) · [clipboard](docs/clipboard.md) · [emoji](docs/emoji.md) ·
-  [snippets](docs/snippets.md) · [quicklinks](docs/quicklinks.md) ·
+  [snippets](docs/snippets.md) · [quicklinks](docs/quicklinks.md) · [AI commands](docs/ai-commands.md) ·
   [window management](docs/window-management.md) ·
   [hotkeys](docs/hotkeys.md) · [uninstall](docs/uninstall.md) ·
   [Raycast import](docs/raycast-import.md) · [UI & design system](docs/ui.md).
@@ -171,6 +171,16 @@ Never break these without an explicit task to do so.
   **cacheless** `URLSession` (`.ephemeral`, `urlCache = nil`), never `URLSession.shared` — a cacheable
   response would leave a second copy in the on-disk `URLCache` that opting out doesn't delete.
   `CurrencyRateStore` is the reference implementation — follow it rather than inventing a second shape.
+- **AI Commands mirror that shape for a one-shot request instead of a poll.** `AIProviderStore` ships
+  off and keeps its `isEnabled` flag off `AppSettings` for the same backup-safety reason, but there is
+  no refresh loop to start or stop — only the one request Enter fires — so consent is instead
+  re-checked by the launcher card's own keyword recognizer, by `AppCore.beginAICommand` right before
+  the request goes out, and by `AICommandSession`'s task on both sides of its `await`. `AIChatClient`
+  fetches on the same cacheless `.ephemeral` session. The API key is the first secret Tinycast has ever
+  persisted, so it goes through `Core/AI/AIKeychain.swift` (`Security.framework`, service scoped to
+  `Bundle.main.bundleIdentifier` like every other channel-isolated store) instead of `UserDefaults` or
+  a settings file; the base URL and model aren't secrets and stay in plain `UserDefaults` beside the
+  consent flag. See [ai-commands.md](docs/ai-commands.md).
 - **Snippets are channel-isolated and path-identified.** Persist them under
   `~/Library/Application Support/<bundle-id>/Snippets/`; `StoredSnippet.ID` is the standardized source
   path, and external rename is delete + create. The feature ships off and its enable switch doubles as

@@ -9,6 +9,10 @@ enum SnippetTemplateEngine {
         let calendar: Calendar
         let locale: Locale
         let timeZone: TimeZone
+        /// The text typed after an AI command's keyword — `{input}`. Empty for every other caller
+        /// (snippets, quicklinks); added for AI commands rather than repurposing `{selection}` (a
+        /// captured *app* selection, not typed text) or `{argument}` (always prompts when missing).
+        let input: String
         /// Injected so `{uuid}` is reproducible under test.
         let makeUUID: @Sendable () -> String
 
@@ -19,7 +23,8 @@ enum SnippetTemplateEngine {
         func replacingSelection(with selection: String) -> Self {
             Self(
                 clipboardHistory: clipboardHistory, selection: selection, now: now,
-                calendar: calendar, locale: locale, timeZone: timeZone, makeUUID: makeUUID)
+                calendar: calendar, locale: locale, timeZone: timeZone, input: input,
+                makeUUID: makeUUID)
         }
 
         init(
@@ -29,6 +34,7 @@ enum SnippetTemplateEngine {
             calendar: Calendar,
             locale: Locale,
             timeZone: TimeZone,
+            input: String = "",
             makeUUID: @escaping @Sendable () -> String = { UUID().uuidString }
         ) {
             var calendar = calendar
@@ -39,6 +45,7 @@ enum SnippetTemplateEngine {
             self.calendar = calendar
             self.locale = locale
             self.timeZone = timeZone
+            self.input = input
             self.makeUUID = makeUUID
         }
 
@@ -182,6 +189,7 @@ enum SnippetTemplateEngine {
         case literal(String)
         case clipboard(offset: Int, modifiers: [Modifier])
         case selection(modifiers: [Modifier])
+        case input(modifiers: [Modifier])
         case dateTime(DateTimeToken, modifiers: [Modifier])
         case uuid(modifiers: [Modifier])
         case argument(ArgumentToken, source: String, modifiers: [Modifier])
@@ -248,6 +256,8 @@ enum SnippetTemplateEngine {
                 result.append(apply(modifiers, to: value, encoding: encoding))
             case .selection(let modifiers):
                 result.append(apply(modifiers, to: context.selection, encoding: encoding))
+            case .input(let modifiers):
+                result.append(apply(modifiers, to: context.input, encoding: encoding))
             case .dateTime(let token, let modifiers):
                 result.append(
                     apply(modifiers, to: format(token, context: context), encoding: encoding))
@@ -401,6 +411,10 @@ enum SnippetTemplateEngine {
         case "selection", "selectedtext":
             guard token.parameters.isEmpty else { return nil }
             return .selection(modifiers: modifiers)
+        // The text typed after an AI command's keyword; see `ExpansionContext.input`.
+        case "input":
+            guard token.parameters.isEmpty else { return nil }
+            return .input(modifiers: modifiers)
         case "uuid":
             guard token.parameters.isEmpty else { return nil }
             return .uuid(modifiers: modifiers)

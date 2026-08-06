@@ -130,6 +130,8 @@ swiftc -swift-version 6 Tinycast/Core/Quicklinks/Quicklink.swift \
 swiftc -swift-version 6 Tinycast/Features/PaletteRowIndex.swift \
     Tinycast/Core/Emoji/EmojiGridGeometry.swift Tools/palette-selection-test.swift \
     -o /tmp/palette-selection-test && /tmp/palette-selection-test  # palette flat-selection row order
+swiftc -swift-version 6 Tinycast/Core/AI/AICommand.swift Tools/ai-command-test.swift \
+    -o /tmp/ai-command-test && /tmp/ai-command-test               # AI command store + keyword recognizer
 ```
 
 `Tools/fuzz-test.swift` compiles the real `Tinycast/Core/SearchRelevance.swift`, which is why that
@@ -185,6 +187,13 @@ to the visible row order, which is why that file must stay Foundation-only even 
 contract the palette guarantees: the calculator card occupies index 0 when present, section headers
 consume no index, empty sections are stepped over, `row(at:)` and `index(section:offset:)` invert each
 other across a sweep of section shapes, and a clamped selection always resolves to a row.
+
+The AI-command harness compiles the real `AICommand` model and `AICommandStore` (CRUD, trimming,
+keyword-uniqueness validation) plus `AICommand.firstMatch`, the raw-query-string recognizer that
+decides whether a query is `<keyword> <text>` — the same layer `CalcEngine.evaluate` parses at,
+rather than a search over already-ranked rows. It touches neither the network nor the Keychain:
+`AIProviderStore`, `AIChatClient` and `AICommandSession` aren't pure and are covered by the app build
+instead. The full contract is in [ai-commands.md](ai-commands.md).
 
 ## Formatting
 

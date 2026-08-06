@@ -12,36 +12,54 @@ struct LauncherList: View {
     var calcSelected = false
     var onActivateCalc: () -> Void = {}
     var onCalcActions: () -> Void = {}
+    /// The AI command intent card; mutually exclusive with `calc` (the caller never sets both), and
+    /// occupies the same flat selection index 0 slot when present.
+    var aiIntent: AICommandMatch?
+    var aiIntentSelected = false
+    var onActivateAI: () -> Void = {}
     let onActivate: (AppEntry) -> Void
     let onActions: (AppEntry) -> Void
     @Environment(RunningAppsMonitor.self) private var runningApps
 
     private nonisolated static let calcRowID = "calc-card"
+    private nonisolated static let aiRowID = "ai-command-card"
 
     private enum Row: Identifiable {
         case header(String)
         case calc(CalcResult)
+        case aiCommand(AICommandMatch)
         case app(AppEntry)
         var id: String {
             switch self {
             case .header(let title): return "header-" + title
             case .calc: return LauncherList.calcRowID
+            case .aiCommand: return LauncherList.aiRowID
             case .app(let app): return app.id
             }
         }
     }
 
     /// Scroll target for the current selection.
-    private var selectedRowID: String? { calcSelected ? Self.calcRowID : selectedID }
+    private var selectedRowID: String? {
+        if calcSelected { return Self.calcRowID }
+        if aiIntentSelected { return Self.aiRowID }
+        return selectedID
+    }
 
-    /// Whether the selection sits on flat index 0 — the calc card when present, else the first result.
+    /// Whether the selection sits on flat index 0 — the calc card or AI command card when present, else the first result.
     private var firstRowSelected: Bool {
-        calc != nil ? calcSelected : selectedID != nil && selectedID == results.first?.id
+        if calc != nil { return calcSelected }
+        if aiIntent != nil { return aiIntentSelected }
+        return selectedID != nil && selectedID == results.first?.id
     }
 
     private var rows: [Row] {
         var calcRows: [Row] = []
-        if let calc { calcRows = [.header("Calculator"), .calc(calc)] }
+        if let calc {
+            calcRows = [.header("Calculator"), .calc(calc)]
+        } else if let aiIntent {
+            calcRows = [.header(aiIntent.command.name), .aiCommand(aiIntent)]
+        }
         guard showSections else {
             guard !results.isEmpty else { return calcRows }
             return calcRows + [.header("Results")] + results.map(Row.app)
@@ -74,7 +92,7 @@ struct LauncherList: View {
     var body: some View {
         let rows = rows
         return Group {
-            if results.isEmpty && calc == nil {
+            if results.isEmpty && calc == nil && aiIntent == nil {
                 EmptyResults(text: "No apps found")
             } else {
                 ScrollViewReader { proxy in
@@ -89,6 +107,11 @@ struct LauncherList: View {
                                         .contentShape(Rectangle())
                                         .onTapGesture(perform: onActivateCalc)
                                         .onRightClick(perform: onCalcActions)
+                                        .padding(.bottom, Theme.Spacing.xs)
+                                case .aiCommand(let match):
+                                    AICommandCard(match: match, selected: aiIntentSelected)
+                                        .contentShape(Rectangle())
+                                        .onTapGesture(perform: onActivateAI)
                                         .padding(.bottom, Theme.Spacing.xs)
                                 case .app(let app):
                                     AppRow(
