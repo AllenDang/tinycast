@@ -111,6 +111,10 @@ struct RootPaletteView: View {
     private var selection: Int { resultCount == 0 ? 0 : min(max(vm.selection, 0), resultCount - 1) }
 
     private var menuOpen: Bool { showActions || showAppMenu }
+    /// Whether the search field should read as inert without losing focus: a footer menu owns the
+    /// keyboard, or `.aiCommand`'s request already fired against the query it matched, so further
+    /// edits would do nothing (see docs/palette.md's "Search field input freeze").
+    private var searchFieldFrozen: Bool { menuOpen || vm.mode == .aiCommand }
 
     // MARK: - Popover menu content
     //
@@ -306,6 +310,9 @@ struct RootPaletteView: View {
             // Same for a pending or finished AI request: leaving the screen drops it and cancels
             // whatever hasn't returned yet.
             if vm.mode != .aiCommand { core.cancelAICommand() }
+            // Entering `.aiCommand` freezes the field (see `searchFieldFrozen`); leaving it any way
+            // above unfreezes it.
+            vm.searchFieldFrozen = searchFieldFrozen
         }
         // Pop-to-root: `prepare` clears query/selection, but if both were already at their defaults the handlers above never fire — this intent guarantees the scroll itself snaps back to the origin.
         .onChange(of: vm.resetToken) {
@@ -317,14 +324,14 @@ struct RootPaletteView: View {
                 showAppMenu = false
                 menuSelection = 0
             }
-            vm.menuOpen = menuOpen
+            vm.searchFieldFrozen = searchFieldFrozen
         }
         .onChange(of: showAppMenu) {
             if showAppMenu {
                 showActions = false
                 menuSelection = 0
             }
-            vm.menuOpen = menuOpen
+            vm.searchFieldFrozen = searchFieldFrozen
         }
         // Follow a row the store moved: a fresh capture (or promote-on-paste) lands at the head of its section, and pinning lifts a row into the Pinned section. With a query typed the highlight stays put; `AppCore` has already placed it for pin/paste.
         .onChange(of: clipFollow) { old, new in

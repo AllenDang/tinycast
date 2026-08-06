@@ -127,6 +127,12 @@ flips `PaletteViewModel.mode` to `.aiCommand`. `AICommandScreen` (`Features/AI/A
 is a `PaletteScreen` like `UninstallScreen` and `QuicklinkArgumentsScreen` — reached only this way,
 never entered directly, never in the Tab cycle.
 
+The search field itself freezes for the same duration: `AICommandSession.begin` already captured the
+query that matched the command as its `input` before the request went out, so the field stays
+focused and showing that text (never resigning first responder), but further edits do nothing — the
+request already ran on the input it captured. This reuses the same mechanism the footer's popover
+menus freeze the field with; see [palette.md](palette.md#search-field-input-freeze).
+
 `AICommandSession.state` is the whole state machine:
 
 - **`.loading`** — the request is in flight. `rows` is empty, so the footer's "Copy Result" pill and

@@ -95,17 +95,27 @@ same fix — waiting for a commit before either fires is correct there, the way 
 `setMarkedText` at all, only for a committed `insertText` (checked directly against `NSTextView`,
 not inferred) — which is exactly why the SwiftUI binding it presumably backs stays silent too.
 
-## Menu-open input freeze
+## Search field input freeze
 
-While a footer popover menu (⌘K Actions / app menu) is open the search field reads as inert but
-**never resigns first responder** — resigning makes the `NSTextField` swap between its field-editor
-and cell rendering, shifting the text / placeholder a point or two, so focus stays put. Input is
-frozen instead:
+Two situations leave the search field mounted and focused with nothing useful for typing to do, and
+both read as inert without **ever resigning first responder** — resigning makes the `NSTextField`
+swap between its field-editor and cell rendering, shifting the text / placeholder a point or two, so
+focus stays put:
 
-- `RootPaletteView` mirrors the open state into `PaletteViewModel.menuOpen`, whose `didSet` fires
-  `onMenuOpenChanged`.
-- `PalettePanel.sendEvent` then swallows text-editing keystrokes while `menuOpen` (letting ⌘/⌥ chords
-  and menu-nav keys through to SwiftUI `onKeyPress`).
+- A footer popover menu (⌘K Actions / app menu) is open — the field is a search field, but the menu
+  owns the keyboard.
+- The palette is showing `.aiCommand` — `AICommandSession.begin` already captured the query that
+  matched the command as its `input` before the request went out, so editing the field afterwards
+  (loading or answered) would change what's on screen without changing what the request already ran
+  on (see [ai-commands.md](ai-commands.md#the-screen-loading--answer-never-mid-keystroke)).
+
+Input is frozen instead:
+
+- `RootPaletteView` mirrors `showActions || showAppMenu || vm.mode == .aiCommand` into
+  `PaletteViewModel.searchFieldFrozen`, whose `didSet` fires `onSearchFieldFrozenChanged`.
+- `PalettePanel.sendEvent` then swallows text-editing keystrokes while `searchFieldFrozen` (letting
+  ⌘/⌥ chords and menu-nav keys — also needed by `.aiCommand`'s own ↵/Esc — through to SwiftUI
+  `onKeyPress`).
 - The caret is hidden by clearing SwiftUI's **own** live field editor's `insertionPointColor`. SwiftUI
   force-casts its field editor to a private subclass, so vending a custom one crashes — only the
   existing one can be tuned.

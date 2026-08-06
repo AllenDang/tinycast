@@ -76,10 +76,10 @@ final class PaletteViewModel {
     var pasteTarget: PasteTarget?
     /// Gates the mouse-hover highlight: true only while the pointer is physically moving (armed on `.mouseMoved`, disarmed on any `.keyDown` in `PalettePanel.sendEvent`). Untracked — read at hover time, never drives a re-render.
     @ObservationIgnored var hoverHighlightArmed = false
-    /// True while a footer popover menu (⌘K Actions or the app menu) is open, so `PalettePanel.sendEvent` swallows text-editing keystrokes the field editor would otherwise consume — the query must stay frozen while a menu owns the keyboard (matches Raycast). Untracked — read at event time, mirrored from the view's menu state.
-    @ObservationIgnored var menuOpen = false { didSet { onMenuOpenChanged?(menuOpen) } }
-    /// Fired when `menuOpen` flips so `PalettePanel` can hide/show the search field's caret while it keeps first-responder status (no focus swap, so the placeholder never reflows).
-    @ObservationIgnored var onMenuOpenChanged: ((Bool) -> Void)?
+    /// True whenever the search field should read as inert without losing focus: a footer popover menu (⌘K Actions or the app menu) is open, or the palette is showing `.aiCommand` — that screen's request already fired with the query it matched against, so further edits would do nothing. `PalettePanel.sendEvent` swallows text-editing keystrokes the field editor would otherwise consume while this is true (matches Raycast). Untracked — read at event time, mirrored from the view's own state.
+    @ObservationIgnored var searchFieldFrozen = false { didSet { onSearchFieldFrozenChanged?(searchFieldFrozen) } }
+    /// Fired when `searchFieldFrozen` flips so `PalettePanel` can hide/show the search field's caret while it keeps first-responder status (no focus swap, so the placeholder never reflows).
+    @ObservationIgnored var onSearchFieldFrozenChanged: ((Bool) -> Void)?
 
     /// True while the field editor holds an uncommitted IME candidate (Pinyin, Cangjie, romaji…).
     /// `query` never sees marked text — SwiftUI's own `TextField` binding doesn't update until a
@@ -94,7 +94,7 @@ final class PaletteViewModel {
         selection = 0
         forceExpanded = false
         hoverHighlightArmed = false
-        menuOpen = false
+        searchFieldFrozen = false
         isComposing = false
         focusToken = UUID()
         resetToken = UUID()
