@@ -45,3 +45,43 @@ struct AICommandCard: View {
         .armedHover($hovered)
     }
 }
+
+/// The hint shown while the query exactly spells a configured AI command's keyword but has no
+/// argument text yet ("trans", or "trans " the instant the space lands) — there's nothing to run,
+/// so unlike `AICommandCard` this is selectable but never actionable, the same way an error
+/// `CalculatorCard` is: it tells the user the keyword was recognized without pretending Enter does
+/// anything yet.
+struct AICommandHintCard: View {
+    let command: AICommand
+    let selected: Bool
+    @State private var hovered = false
+
+    private var fill: Color {
+        if selected { return Theme.Colors.selection }
+        if hovered { return Theme.Colors.rowHover }
+        return .clear
+    }
+
+    var body: some View {
+        HStack(spacing: Theme.Spacing.lg) {
+            Image(systemName: AICommand.sfSymbol)
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundStyle(.secondary)
+                .frame(width: Theme.Size.rowIcon, height: Theme.Size.rowIcon)
+            Text(command.name)
+                .font(Theme.Typography.rowTitle)
+                .lineLimit(1)
+            Spacer(minLength: Theme.Spacing.lg)
+            Text("Type text to run")
+                .font(Theme.Typography.rowTrailing)
+                .foregroundStyle(.secondary)
+        }
+        .padding(.horizontal, Theme.Spacing.md)
+        .padding(.vertical, Theme.Spacing.sm)
+        .background(
+            RoundedRectangle(cornerRadius: Theme.Radius.row, style: .continuous)
+                .fill(fill)
+        )
+        .armedHover($hovered)
+    }
+}

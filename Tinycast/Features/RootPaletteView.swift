@@ -87,7 +87,16 @@ struct RootPaletteView: View {
         guard vm.mode == .launcher, calcResult == nil, aiProvider.isConfigured else { return nil }
         return AICommand.firstMatch(in: aiCommands.commands, query: vm.query)
     }
-    private var calcCount: Int { (calcResult == nil && aiCommandMatch == nil) ? 0 : 1 }
+    /// The keyword-recognized-but-no-argument-yet hint, same slot and same gate as `aiCommandMatch`,
+    /// shown only when there's no ready match to show instead — see `AICommand.pendingKeyword`.
+    private var aiPendingCommand: AICommand? {
+        guard vm.mode == .launcher, calcResult == nil, aiCommandMatch == nil, aiProvider.isConfigured
+        else { return nil }
+        return AICommand.pendingKeyword(in: aiCommands.commands, query: vm.query)
+    }
+    private var calcCount: Int {
+        (calcResult == nil && aiCommandMatch == nil && aiPendingCommand == nil) ? 0 : 1
+    }
 
     private var resultCount: Int {
         if let screen { return screen.rows.count }
@@ -200,12 +209,14 @@ struct RootPaletteView: View {
         // Every count/selection below derives from this one calc/offset pair — the flat selection index must always match the visible row order, calc card included.
         let calc = calcResult
         let ai = aiCommandMatch
+        let aiPending = aiPendingCommand
         let offset = calcCount
         // Only the active mode is non-empty.
         let count = apps.count + offset + clips.count + hist.count + screenRows
         let sel = count == 0 ? 0 : min(max(vm.selection, 0), count - 1)
         let calcSelected = calc != nil && sel == 0
         let aiSelected = ai != nil && sel == 0
+        let aiPendingSelected = aiPending != nil && sel == 0
         // An error card is selectable but has no action: it must not drive the Copy Answer pill, ⌘K menu, or Enter.
         let calcActionable = calcSelected && calc?.isActionable == true
         let showSections = vm.mode == .launcher && isQueryEmpty
@@ -217,9 +228,11 @@ struct RootPaletteView: View {
             selectedApp: selectedApp, calcActionable: calcActionable,
             aiCommand: aiSelected ? ai?.command : nil)
         // The argument form has no rows to count when its argument takes free text, but ↵ still
-        // does something — and the pill is the only thing that says what.
+        // does something — and the pill is the only thing that says what. The AI hint is the same
+        // shape as an error calc card: selectable, nothing to run yet, so the pill has nothing to say.
         let showActionGroup =
             (count > 0 || vm.mode == .quicklinkArguments) && !(calcSelected && !calcActionable)
+            && !aiPendingSelected
 
         // The `header` (and its single search field) is always attached in the same position via safeAreaInset so its focus survives the compact↔expanded swap — only the results below it toggle. Collapsed shows the bar alone; expanded floats header + action bar over the list with edge-dissolve (see docs/ui.md).
         return Group {
@@ -227,8 +240,8 @@ struct RootPaletteView: View {
                 Color.clear
             } else {
                 content(
-                    apps: apps, clips: clips, hist: hist, calc: calc, ai: ai, selection: sel,
-                    favoriteCount: favoriteCount, showSections: showSections
+                    apps: apps, clips: clips, hist: hist, calc: calc, ai: ai, aiPending: aiPending,
+                    selection: sel, favoriteCount: favoriteCount, showSections: showSections
                 )
             }
         }
@@ -561,32 +574,35 @@ struct RootPaletteView: View {
     @ViewBuilder
     private func content(
         apps: [AppEntry], clips: [ClipboardItem], hist: [CalcHistoryEntry], calc: CalcResult?,
-        ai: AICommandMatch?, selection: Int, favoriteCount: Int, showSections: Bool
+        ai: AICommandMatch?, aiPending: AICommand?, selection: Int, favoriteCount: Int,
+        showSections: Bool
     ) -> some View {
         if let screen {
             screen.body(selection: selection, scroll: scroll)
         } else {
             modeContent(
-                apps: apps, clips: clips, hist: hist, calc: calc, ai: ai, selection: selection,
-                favoriteCount: favoriteCount, showSections: showSections)
+                apps: apps, clips: clips, hist: hist, calc: calc, ai: ai, aiPending: aiPending,
+                selection: selection, favoriteCount: favoriteCount, showSections: showSections)
         }
     }
 
     @ViewBuilder
     private func modeContent(
         apps: [AppEntry], clips: [ClipboardItem], hist: [CalcHistoryEntry], calc: CalcResult?,
-        ai: AICommandMatch?, selection: Int, favoriteCount: Int, showSections: Bool
+        ai: AICommandMatch?, aiPending: AICommand?, selection: Int, favoriteCount: Int,
+        showSections: Bool
     ) -> some View {
         switch vm.mode {
         case .launcher:
-            let offset = (calc == nil && ai == nil) ? 0 : 1
+            let offset = (calc == nil && ai == nil && aiPending == nil) ? 0 : 1
             let calcSelected = calc != nil && selection == 0
             let aiSelected = ai != nil && selection == 0
+            let aiPendingSelected = aiPending != nil && selection == 0
             let appIndex = selection - offset
             let selectedID = apps.indices.contains(appIndex) ? apps[appIndex].id : nil
             LauncherList(
                 results: apps,
-                selectedID: (calcSelected || aiSelected) ? nil : selectedID,
+                selectedID: (calcSelected || aiSelected || aiPendingSelected) ? nil : selectedID,
                 favoriteCount: favoriteCount,
                 showSections: showSections,
                 scroll: scroll,
@@ -607,6 +623,8 @@ struct RootPaletteView: View {
                     vm.selection = 0
                     activateSelection()
                 },
+                aiPending: aiPending,
+                aiPendingSelected: aiPendingSelected,
                 onActivate: { core.launch($0, searchQuery: vm.query) },
                 onActions: { app in
                     if let index = apps.firstIndex(of: app) { vm.selection = index + offset }
@@ -865,6 +883,8 @@ struct RootPaletteView: View {
                 core.beginAICommand(aiCommandMatch)
                 return
             }
+            // The AI hint (keyword recognized, no argument yet) falls through: `calcCount` still
+            // reserves its slot, so `index` lands on -1 and `appResults` correctly has nothing there.
             let index = selection - calcCount
             guard appResults.indices.contains(index) else { return }
             core.launch(appResults[index], searchQuery: vm.query)

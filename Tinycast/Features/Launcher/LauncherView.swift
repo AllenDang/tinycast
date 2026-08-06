@@ -17,23 +17,30 @@ struct LauncherList: View {
     var aiIntent: AICommandMatch?
     var aiIntentSelected = false
     var onActivateAI: () -> Void = {}
+    /// The AI command hint — keyword recognized, no argument text yet — mutually exclusive with both
+    /// `calc` and `aiIntent`, same slot. Never actionable, so there's no `onActivate` for it.
+    var aiPending: AICommand?
+    var aiPendingSelected = false
     let onActivate: (AppEntry) -> Void
     let onActions: (AppEntry) -> Void
     @Environment(RunningAppsMonitor.self) private var runningApps
 
     private nonisolated static let calcRowID = "calc-card"
     private nonisolated static let aiRowID = "ai-command-card"
+    private nonisolated static let aiPendingRowID = "ai-command-hint"
 
     private enum Row: Identifiable {
         case header(String)
         case calc(CalcResult)
         case aiCommand(AICommandMatch)
+        case aiPendingCommand(AICommand)
         case app(AppEntry)
         var id: String {
             switch self {
             case .header(let title): return "header-" + title
             case .calc: return LauncherList.calcRowID
             case .aiCommand: return LauncherList.aiRowID
+            case .aiPendingCommand: return LauncherList.aiPendingRowID
             case .app(let app): return app.id
             }
         }
@@ -43,13 +50,15 @@ struct LauncherList: View {
     private var selectedRowID: String? {
         if calcSelected { return Self.calcRowID }
         if aiIntentSelected { return Self.aiRowID }
+        if aiPendingSelected { return Self.aiPendingRowID }
         return selectedID
     }
 
-    /// Whether the selection sits on flat index 0 — the calc card or AI command card when present, else the first result.
+    /// Whether the selection sits on flat index 0 — the calc card, AI command card or AI hint when present, else the first result.
     private var firstRowSelected: Bool {
         if calc != nil { return calcSelected }
         if aiIntent != nil { return aiIntentSelected }
+        if aiPending != nil { return aiPendingSelected }
         return selectedID != nil && selectedID == results.first?.id
     }
 
@@ -59,6 +68,8 @@ struct LauncherList: View {
             calcRows = [.header("Calculator"), .calc(calc)]
         } else if let aiIntent {
             calcRows = [.header(aiIntent.command.name), .aiCommand(aiIntent)]
+        } else if let aiPending {
+            calcRows = [.header(aiPending.name), .aiPendingCommand(aiPending)]
         }
         guard showSections else {
             guard !results.isEmpty else { return calcRows }
@@ -92,7 +103,7 @@ struct LauncherList: View {
     var body: some View {
         let rows = rows
         return Group {
-            if results.isEmpty && calc == nil && aiIntent == nil {
+            if results.isEmpty && calc == nil && aiIntent == nil && aiPending == nil {
                 EmptyResults(text: "No apps found")
             } else {
                 ScrollViewReader { proxy in
@@ -112,6 +123,9 @@ struct LauncherList: View {
                                     AICommandCard(match: match, selected: aiIntentSelected)
                                         .contentShape(Rectangle())
                                         .onTapGesture(perform: onActivateAI)
+                                        .padding(.bottom, Theme.Spacing.xs)
+                                case .aiPendingCommand(let command):
+                                    AICommandHintCard(command: command, selected: aiPendingSelected)
                                         .padding(.bottom, Theme.Spacing.xs)
                                 case .app(let app):
                                     AppRow(

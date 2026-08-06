@@ -51,6 +51,20 @@ extension AICommand {
         else { return nil }
         return AICommandMatch(command: command, input: input)
     }
+
+    /// The command whose keyword the query currently spells with no argument text yet — either still
+    /// typing the keyword itself (`"trans"`) or having just typed the trailing space (`"trans "`).
+    /// `firstMatch` deliberately matches nothing at this point since there's nothing to run, which
+    /// otherwise leaves the launcher showing no feedback at all that the keyword was even recognized
+    /// — an AI command is never an `AppEntry` (see docs/ai-commands.md), so it never gets a fuzzy-matched
+    /// row the way a custom command or quicklink would. This fills that gap without running anything:
+    /// callers only ever use it to show a hint, never to fire a request.
+    static func pendingKeyword(in commands: [AICommand], query: String) -> AICommand? {
+        guard firstMatch(in: commands, query: query) == nil else { return nil }
+        let keyword = query.firstIndex(where: \.isWhitespace).map { query[..<$0] } ?? Substring(query)
+        guard !keyword.isEmpty else { return nil }
+        return commands.first { $0.keyword.compare(keyword, options: .caseInsensitive) == .orderedSame }
+    }
 }
 
 enum AICommandValidationError: LocalizedError {

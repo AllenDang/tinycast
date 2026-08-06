@@ -122,6 +122,33 @@ struct AICommandTests {
             "an empty query matches nothing",
             AICommand.firstMatch(in: commands, query: "") == nil)
 
+        // MARK: pendingKeyword
+
+        check(
+            "a bare exact keyword is a pending hint",
+            AICommand.pendingKeyword(in: commands, query: "trans")?.name == "Translate")
+        check(
+            "a keyword plus a trailing space with nothing after it is still pending",
+            AICommand.pendingKeyword(in: commands, query: "trans ")?.name == "Translate")
+        check(
+            "a keyword plus only whitespace after it is still pending",
+            AICommand.pendingKeyword(in: commands, query: "trans   ")?.name == "Translate")
+        check(
+            "pending matching is case-insensitive",
+            AICommand.pendingKeyword(in: commands, query: "TRANS")?.name == "Translate")
+        check(
+            "a keyword prefix that isn't the whole keyword is not pending",
+            AICommand.pendingKeyword(in: commands, query: "tra") == nil)
+        check(
+            "an unregistered word is not pending",
+            AICommand.pendingKeyword(in: commands, query: "nope") == nil)
+        check(
+            "an empty query is not pending",
+            AICommand.pendingKeyword(in: commands, query: "") == nil)
+        check(
+            "a ready match is never also reported as pending",
+            AICommand.pendingKeyword(in: commands, query: "trans hello") == nil)
+
         print(failures == 0 ? "\nALL PASSED" : "\n\(failures) FAILED")
         exit(failures == 0 ? 0 : 1)
     }

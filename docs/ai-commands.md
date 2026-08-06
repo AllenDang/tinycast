@@ -41,6 +41,24 @@ only shows intent — "use *Translate* on 'hello'" — because the real answer r
 trip that must never start while the user is still typing. Only committing the card (Enter, or a
 click) calls `AppCore.beginAICommand`, which is the one and only place a request actually goes out.
 
+### The keyword-recognized-but-no-argument-yet hint
+
+An AI command is never an `AppEntry` (see Settings below), so typing just its keyword — `"trans"`,
+nothing after it — has no fuzzy-matched row to fall back on the way a custom command or quicklink
+would. Without a second signal, that reads as a dead end: nothing in the list acknowledges the keyword
+exists until the user has already typed a space and an argument, blind.
+
+`AICommand.pendingKeyword(in:query:)` is that second signal. It fires exactly when `firstMatch` does
+not — the query, up to the first whitespace (or the whole query, if there isn't one yet), spells a
+configured keyword exactly, but there's no argument text after it yet (`"trans"` or `"trans "`, not
+`"tra"` — a partial keyword still doesn't match anything, the same restraint `firstMatch` already
+applies to an empty argument). `AICommandHintCard` renders it in the same flat-index-0 slot as
+`AICommandCard` and `CalculatorCard`, mutually exclusive with both, but it is **selectable and never
+actionable** — the same shape an error `CalculatorCard` already has. Enter does nothing (the existing
+`selection - calcCount` arithmetic already lands on an out-of-range index, the same guard that makes
+Enter a no-op on an error card), and the pill/⌘K action group hides entirely rather than showing a
+misleading label.
+
 ## Provider consent
 
 `AIProviderStore` (`Core/AI/AIProviderStore.swift`) mirrors `CurrencyRateStore`, the app's reference
