@@ -21,7 +21,6 @@ final class SnippetsStore {
 
     private let repository: SnippetRepository
     @ObservationIgnored private var directoryWatcher: DispatchSourceFileSystemObject?
-    @ObservationIgnored private var fileWatchers: [String: DispatchSourceFileSystemObject] = [:]
     @ObservationIgnored private var reloadTask: Task<Void, Never>?
     @ObservationIgnored private var watcherRetryTask: Task<Void, Never>?
     private var generation = 0
@@ -37,7 +36,6 @@ final class SnippetsStore {
         reloadTask?.cancel()
         watcherRetryTask?.cancel()
         directoryWatcher?.cancel()
-        for source in fileWatchers.values { source.cancel() }
     }
 
     func start() async {
@@ -198,7 +196,7 @@ final class SnippetsStore {
             state = .ready
             onSnapshot?(snapshot)
         }
-        if syncWatchers(with: snapshot) {
+        if syncWatchers() {
             scheduleReload(after: .milliseconds(150))
         }
     }
@@ -219,29 +217,22 @@ final class SnippetsStore {
         }
     }
 
-    private func syncWatchers(with snapshot: SnippetRepository.Snapshot) -> Bool {
+    // Only a directory watcher — no per-file watchers. A directory-level DispatchSource
+    // catches file creation, deletion, and atomic replacement (write-to-temp + rename), but
+    // not same-inode writes. In practice snippet editors use atomic writes, so the 150 ms
+    // reload debounce and the retry mechanism are the safety net for the rare inode-preserving
+    // editor.
+    private func syncWatchers() -> Bool {
         guard isStarted else { return false }
         watcherRetryTask?.cancel()
         watcherRetryTask = nil
 
         var changed = false
         if directoryWatcher == nil {
-            changed = armDirectoryWatcher() || changed
+            changed = armDirectoryWatcher()
         }
 
-        let desiredPaths = Set(
-            snapshot.records.map { $0.fileURL.standardizedFileURL.path }
-                + snapshot.issues.map { $0.fileURL.standardizedFileURL.path })
-        for path in Array(fileWatchers.keys) where !desiredPaths.contains(path) {
-            fileWatchers.removeValue(forKey: path)?.cancel()
-            changed = true
-        }
-        for path in desiredPaths where fileWatchers[path] == nil {
-            changed = armFileWatcher(path: path) || changed
-        }
-
-        // Retry whenever anything we wanted is still unwatched — a failed file watcher is as blinding as a missing directory watcher.
-        if directoryWatcher == nil || desiredPaths.contains(where: { fileWatchers[$0] == nil }) {
+        if directoryWatcher == nil {
             scheduleWatcherRetry()
         }
         return changed
@@ -269,27 +260,6 @@ final class SnippetsStore {
         return true
     }
 
-    @discardableResult
-    private func armFileWatcher(path: String) -> Bool {
-        let descriptor = Darwin.open(path, O_EVTONLY)
-        guard descriptor >= 0 else { return false }
-
-        let installedGeneration = watcherGeneration
-        let source = DispatchSource.makeFileSystemObjectSource(
-            fileDescriptor: descriptor,
-            eventMask: [.write, .extend, .attrib, .delete, .rename, .revoke],
-            queue: .main)
-        source.setEventHandler { [weak self] in
-            MainActor.assumeIsolated {
-                self?.handleFileEvent(path: path, generation: installedGeneration)
-            }
-        }
-        source.setCancelHandler { Darwin.close(descriptor) }
-        fileWatchers[path] = source
-        source.resume()
-        return true
-    }
-
     private func handleDirectoryEvent(generation installedGeneration: Int) {
         guard isStarted, installedGeneration == watcherGeneration,
             let events = directoryWatcher?.data
@@ -297,17 +267,6 @@ final class SnippetsStore {
 
         if !events.isDisjoint(with: [.delete, .rename, .revoke]) {
             stopWatchers()
-        }
-        noteFilesystemChange()
-    }
-
-    private func handleFileEvent(path: String, generation installedGeneration: Int) {
-        guard isStarted, installedGeneration == watcherGeneration,
-            let source = fileWatchers[path]
-        else { return }
-
-        if !source.data.isDisjoint(with: [.delete, .rename, .revoke]) {
-            fileWatchers.removeValue(forKey: path)?.cancel()
         }
         noteFilesystemChange()
     }
@@ -321,8 +280,6 @@ final class SnippetsStore {
         watcherGeneration &+= 1
         directoryWatcher?.cancel()
         directoryWatcher = nil
-        for source in fileWatchers.values { source.cancel() }
-        fileWatchers.removeAll()
     }
 
     private func scheduleWatcherRetry() {

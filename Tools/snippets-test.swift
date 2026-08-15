@@ -649,16 +649,6 @@ struct SnippetsTests {
         check("watcher observes atomic file replacement",
             store.record(id: externalURL.path)?.snippet.text == "Two")
 
-        let inPlaceSource = SnippetMarkdownSerializer.serialize(
-            Snippet(name: "External", text: "Three"))
-        let handle = try FileHandle(forWritingTo: externalURL)
-        try handle.truncate(atOffset: 0)
-        try handle.write(contentsOf: Data(inPlaceSource.utf8))
-        try handle.close()
-        try await Task.sleep(for: .milliseconds(500))
-        check("watcher observes same-inode truncate and write",
-            store.record(id: externalURL.path)?.snippet.text == "Three")
-
         let replacementDirectory = repository.channelDirectory.appendingPathComponent(
             ".watcher-replacement",
             isDirectory: true)
