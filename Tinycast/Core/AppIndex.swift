@@ -291,6 +291,43 @@ enum IconCache {
     }
 }
 
+/// Caches bundle metadata keyed on (path, modificationDate), so unchanged bundles skip `Bundle(url:)` init on re-scan. Mirrors `SpotlightNames.Cache`'s pattern.
+struct BundleMetaCache: Sendable {
+    private struct Entry: Sendable {
+        let modified: Date?
+        let name: String
+        let bundleID: String?
+        let executable: String?
+    }
+
+    private let previous: [String: Entry]
+    private var current: [String: Entry] = [:]
+
+    init() { previous = [:] }
+
+    init(reusing cache: BundleMetaCache) { previous = cache.current }
+
+    /// Returns cached metadata when the bundle's modification date hasn't changed; otherwise reads `Bundle(url:)` and stores the result.
+    mutating func metadata(for url: URL) -> (name: String, bundleID: String?, executable: String?) {
+        let modified = try? url.resourceValues(forKeys: [.contentModificationDateKey])
+            .contentModificationDate
+        if let cached = previous[url.path], cached.modified == modified {
+            current[url.path] = cached
+            return (cached.name, cached.bundleID, cached.executable)
+        }
+        let bundle = Bundle(url: url)
+        let bundleID = bundle?.bundleIdentifier
+        let name =
+            (bundle?.object(forInfoDictionaryKey: "CFBundleDisplayName") as? String)
+            ?? (bundle?.object(forInfoDictionaryKey: "CFBundleName") as? String)
+            ?? url.deletingPathExtension().lastPathComponent
+        let executable = bundle?.object(forInfoDictionaryKey: "CFBundleExecutable") as? String
+        let entry = Entry(modified: modified, name: name, bundleID: bundleID, executable: executable)
+        current[url.path] = entry
+        return (name, bundleID, executable)
+    }
+}
+
 @MainActor
 @Observable
 final class AppIndex {
@@ -344,6 +381,7 @@ final class AppIndex {
     private var commandEntries: [AppEntry] = CommandRegistry.all
     private var alternateNameCache = SpotlightNames.Cache()
     private var paneCache: SettingsPaneScanner.Cache?
+    private var bundleMetaCache = BundleMetaCache()
     private var isRefreshing = false
     /// Set when a refresh is requested mid-scan, so a scope edit landing during an in-flight scan isn't silently dropped.
     private var refreshPending = false
@@ -452,38 +490,42 @@ final class AppIndex {
             let scopes = settings?.searchScopes ?? SearchScopes.defaults
             let reusing = alternateNameCache
             let reusingPanes = paneCache
-            let (found, cache, panes) = await Task.detached(priority: .utility) {
+            let reusingMeta = BundleMetaCache(reusing: bundleMetaCache)
+            let result = await Task.detached(priority: .utility) {
                 AppIndex.scan(
                     scopes: scopes, cache: SpotlightNames.Cache(reusing: reusing),
-                    paneCache: reusingPanes)
+                    paneCache: reusingPanes, metaCache: reusingMeta)
             }.value
-            alternateNameCache = cache
-            paneCache = panes
-            guard found != discoveredEntries else { continue }
-            discoveredEntries = found
+            alternateNameCache = result.cache
+            paneCache = result.paneCache
+            bundleMetaCache = result.metaCache
+            guard result.entries != discoveredEntries else { continue }
+            discoveredEntries = result.entries
             publishEntries()
         } while refreshPending
     }
 
+    private struct ScanResult: Sendable {
+        let entries: [AppEntry]
+        let cache: SpotlightNames.Cache
+        let paneCache: SettingsPaneScanner.Cache?
+        let metaCache: BundleMetaCache
+    }
+
     nonisolated private static func scan(
-        scopes: [String], cache: SpotlightNames.Cache, paneCache: SettingsPaneScanner.Cache?
-    ) -> ([AppEntry], SpotlightNames.Cache, SettingsPaneScanner.Cache?) {
+        scopes: [String], cache: SpotlightNames.Cache, paneCache: SettingsPaneScanner.Cache?,
+        metaCache: BundleMetaCache = BundleMetaCache()
+    ) -> ScanResult {
         Signposts.interval("AppIndex.scan") {
             var cache = cache
+            var metaCache = metaCache
             var seenBundleIDs = Set<String>()
             var result: [AppEntry] = []
             for url in SearchScopes.appBundles(in: scopes) {
-                let bundle = Bundle(url: url)
-                let bundleID = bundle?.bundleIdentifier
+                let (name, bundleID, executable) = metaCache.metadata(for: url)
                 // Dedup by bundle id; the earliest scope wins.
                 if let bundleID, !seenBundleIDs.insert(bundleID).inserted { continue }
 
-                let name =
-                    (bundle?.object(forInfoDictionaryKey: "CFBundleDisplayName") as? String)
-                    ?? (bundle?.object(forInfoDictionaryKey: "CFBundleName") as? String)
-                    ?? url.deletingPathExtension().lastPathComponent
-                let executable =
-                    bundle?.object(forInfoDictionaryKey: "CFBundleExecutable") as? String
                 result.append(
                     AppEntry(
                         id: url.path, name: name, url: url, bundleID: bundleID,
@@ -500,7 +542,7 @@ final class AppIndex {
             }
             // Settings panes are `.appex` bundles, which carry no Spotlight alternate names.
             let (panes, panesCache) = SettingsPaneScanner.scan(cache: paneCache)
-            return (apps + panes, cache, panesCache)
+            return ScanResult(entries: apps + panes, cache: cache, paneCache: panesCache, metaCache: metaCache)
         }
     }
 
