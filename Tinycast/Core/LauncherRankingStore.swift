@@ -26,6 +26,7 @@ final class LauncherRankingStore {
     /// `boosts(query:)` builds this from a launcher render; tracked, the write lands mid-body.
     @ObservationIgnored private var lookup: [String: [String: LauncherRankingRecord]]?
     @ObservationIgnored private var isLoaded = false
+    @ObservationIgnored private var pendingWrite = false
 
     init(fileURL: URL? = nil, now: @escaping () -> Date = Date.init) {
         self.fileURL = fileURL ?? Self.defaultFileURL()
@@ -144,6 +145,20 @@ final class LauncherRankingStore {
     private func didMutate() {
         lookup = nil
         revision &+= 1
+        scheduleWrite()
+    }
+
+    private func scheduleWrite() {
+        guard !pendingWrite else { return }
+        pendingWrite = true
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2) { [weak self] in
+            self?.pendingWrite = false
+            self?.flush()
+        }
+    }
+
+    /// Writes the current records to disk immediately. Called by the debounce timer and by `AppCore.prepareForTermination()` so no learned ranking is lost on quit.
+    func flush() {
         if let data = try? JSONEncoder().encode(records) {
             try? data.write(to: fileURL, options: .atomic)
         }

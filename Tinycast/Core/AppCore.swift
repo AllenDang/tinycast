@@ -236,6 +236,7 @@ final class AppCore {
         snippetTextInjector.prepareForTermination()
         snippetListener.stop()
         snippetsStore.stop()
+        launcherRanking.flush()
     }
 
     // MARK: - Feature switches

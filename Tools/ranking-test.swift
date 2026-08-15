@@ -91,6 +91,7 @@ struct RankingTest {
             "one pass returns every item learned for the query",
             Set(table.keys) == [whatsApp, wick])
 
+        store.flush()
         let persistedWickBoost = boost(store, wick, "w")
         let reloaded = LauncherRankingStore(fileURL: fileURL) { clock }
         check(
