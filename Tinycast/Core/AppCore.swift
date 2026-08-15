@@ -190,7 +190,6 @@ final class AppCore {
             quicklinks.load()
             applyQuicklinksPresence()
             Task { await appIndex.refresh() }
-            Task { await emojiIndex.load() }
             currencyRates.start()
 
             hyperKeyTap.healthTicker = healthTicker
@@ -348,6 +347,8 @@ final class AppCore {
         windowController.show()
         // Re-scan on open so an app uninstalled since the last scan drops out of the launcher.
         if palette.mode == .launcher { Task { await appIndex.refresh() } }
+        // Defer emoji catalog parse until the user first opens the picker.
+        if palette.mode == .emoji, !emojiIndex.isLoaded { Task { await emojiIndex.load() } }
     }
 
     func hidePalette(restoreFocus: Bool = true) {
