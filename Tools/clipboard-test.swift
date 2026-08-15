@@ -18,6 +18,10 @@ struct ClipboardTests {
             benchInsertThroughput()
             return
         }
+        if args.contains("--bench-import") {
+            benchImportThroughput()
+            return
+        }
 
         pinOrder()
         unpinRejoinsAsNewest()
@@ -203,6 +207,28 @@ struct ClipboardTests {
     }
 
     // MARK: - Benchmark
+
+    /// Measure import throughput: time to import `count` entries via `importEntries()`, reporting total and per-insert averages.
+    static func benchImportThroughput() {
+        let count = 500
+        let dir = scratchDirectory()
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let store = ClipboardStore(directory: dir)
+
+        let base = Date().addingTimeInterval(-10_000)
+        var entries: [ClipboardItem] = []
+        for i in 0..<count {
+            entries.append(entry("import bench item \(i)", at: base.addingTimeInterval(Double(i))))
+        }
+
+        let start = CFAbsoluteTimeGetCurrent()
+        let inserted = store.importEntries(entries)
+        let elapsed = (CFAbsoluteTimeGetCurrent() - start) * 1000
+
+        print("Imported \(inserted) of \(count) entries in \(String(format: "%.2f", elapsed))ms")
+        print("Per-entry: \(String(format: "%.3f", elapsed / Double(count)))ms")
+        print("Store item count: \(store.items.count)")
+    }
 
     /// Measure insert throughput: time to insert `count` items, reporting total and per-insert averages.
     static func benchInsertThroughput() {

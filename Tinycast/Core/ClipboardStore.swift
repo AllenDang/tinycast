@@ -142,6 +142,8 @@ final class ClipboardStore {
     @ObservationIgnored private var pinStmt: OpaquePointer?
     @ObservationIgnored private var staleImagesStmt: OpaquePointer?
     @ObservationIgnored private var deleteStaleStmt: OpaquePointer?
+    @ObservationIgnored private var textExistsStmt: OpaquePointer?
+    @ObservationIgnored private var imageExistsStmt: OpaquePointer?
 
     /// `directory` defaults to the per-channel cache; `Tools/clipboard-test.swift` passes a throwaway one so a harness run can never reach a real history.
     init(directory: URL? = nil) {
@@ -428,17 +430,16 @@ final class ClipboardStore {
         sqlite3_clear_bindings(stmt)
     }
 
-    private func textExists(_ text: String) -> Bool { exists(column: "text", value: text) }
-    private func imagePathExists(_ path: String) -> Bool {
-        exists(column: "image_path", value: path)
+    private func textExists(_ text: String) -> Bool {
+        guard let stmt = textExistsStmt else { return false }
+        sqlite3_bind_text(stmt, 1, text, -1, SQLITE_TRANSIENT)
+        defer { sqlite3_reset(stmt); sqlite3_clear_bindings(stmt) }
+        return sqlite3_step(stmt) == SQLITE_ROW
     }
-
-    private func exists(column: String, value: String) -> Bool {
-        guard let stmt = prepare("SELECT 1 FROM items WHERE \(column) = ? LIMIT 1") else {
-            return false
-        }
-        defer { sqlite3_finalize(stmt) }
-        sqlite3_bind_text(stmt, 1, value, -1, SQLITE_TRANSIENT)
+    private func imagePathExists(_ path: String) -> Bool {
+        guard let stmt = imageExistsStmt else { return false }
+        sqlite3_bind_text(stmt, 1, path, -1, SQLITE_TRANSIENT)
+        defer { sqlite3_reset(stmt); sqlite3_clear_bindings(stmt) }
         return sqlite3_step(stmt) == SQLITE_ROW
     }
 
@@ -536,9 +537,11 @@ final class ClipboardStore {
             WHERE created_at < ? AND pinned_at IS NULL AND image_path IS NOT NULL
             """)
         deleteStaleStmt = prepare("DELETE FROM items WHERE created_at < ? AND pinned_at IS NULL")
+        textExistsStmt = prepare("SELECT 1 FROM items WHERE text = ? LIMIT 1")
+        imageExistsStmt = prepare("SELECT 1 FROM items WHERE image_path = ? LIMIT 1")
         return insertStmt != nil && loadStmt != nil && windowFloorStmt != nil && searchStmt != nil
             && deleteByIDStmt != nil && pinStmt != nil && staleImagesStmt != nil
-            && deleteStaleStmt != nil
+            && deleteStaleStmt != nil && textExistsStmt != nil && imageExistsStmt != nil
     }
 
     private func prepare(_ sql: String) -> OpaquePointer? {
@@ -559,7 +562,7 @@ final class ClipboardStore {
     private func closeDatabase() {
         [
             insertStmt, loadStmt, windowFloorStmt, searchStmt, deleteByIDStmt, pinStmt,
-            staleImagesStmt, deleteStaleStmt
+            staleImagesStmt, deleteStaleStmt, textExistsStmt, imageExistsStmt
         ].forEach { sqlite3_finalize($0) }
         insertStmt = nil
         loadStmt = nil
@@ -569,6 +572,8 @@ final class ClipboardStore {
         pinStmt = nil
         staleImagesStmt = nil
         deleteStaleStmt = nil
+        textExistsStmt = nil
+        imageExistsStmt = nil
         sqlite3_close_v2(db)
         db = nil
     }
