@@ -9,6 +9,11 @@ struct CalcTests {
     static var passes = 0
 
     static func main() {
+        if CommandLine.arguments.contains("--bench") {
+            runBenchmark()
+            return
+        }
+
         // Arithmetic & precedence
         expectDisplay("2+2", "4")
         expectDisplay("5*7", "35")
@@ -749,5 +754,55 @@ struct CalcTests {
     static func fail(_ query: String, expected: String, got: String) {
         failures += 1
         print("FAIL  \(query)\n      expected: \(expected)\n      got:      \(got)")
+    }
+
+    // MARK: - Benchmark
+
+    static func runBenchmark() {
+        let appQueries = [
+            "safari", "terminal", "firefox", "chrome", "slack",
+            "discord", "zoom", "notion", "figma", "linear",
+            "things", "bear", "craft", "spotify", "mail",
+            "calendar", "notes", "reminders", "messages", "facetime",
+        ]
+
+        let calcQueries = [
+            "2+2", "10km to mi", "100 C to F", "1 euro to dollars", "20% off 500",
+            "255 to hex", "sqrt(64)", "2^10", "5*7", "100/4",
+            "hrs till 9am", "day to s", "sin(30deg)", "log(1000)", "10k + 500",
+        ]
+
+        let iterations = 1000
+
+        // Warmup
+        for q in appQueries { _ = CalcEngine.evaluate(q) }
+        for q in calcQueries { _ = CalcEngine.evaluate(q, currency: .on(fx)) }
+
+        // Benchmark app queries — measure total batch time for precision
+        var totalApp: Double = 0
+        for _ in 0..<iterations {
+            let start = CFAbsoluteTimeGetCurrent()
+            for q in appQueries {
+                _ = CalcEngine.evaluate(q)
+            }
+            totalApp += CFAbsoluteTimeGetCurrent() - start
+        }
+        let appCount = Double(appQueries.count * iterations)
+        let appAvg = totalApp / appCount * 1_000_000
+
+        // Benchmark calc queries
+        var totalCalc: Double = 0
+        for _ in 0..<iterations {
+            let start = CFAbsoluteTimeGetCurrent()
+            for q in calcQueries {
+                _ = CalcEngine.evaluate(q, currency: .on(fx))
+            }
+            totalCalc += CFAbsoluteTimeGetCurrent() - start
+        }
+        let calcCount = Double(calcQueries.count * iterations)
+        let calcAvg = totalCalc / calcCount * 1_000_000
+
+        print("app-query avg: \(String(format: "%.1f", appAvg))µs")
+        print("calc-query avg: \(String(format: "%.1f", calcAvg))µs")
     }
 }

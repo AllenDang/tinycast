@@ -45,6 +45,10 @@ enum CalcEngine {
         let query = raw.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !query.isEmpty, query.count <= 256 else { return nil }
 
+        // Fast pre-filter: reject queries that clearly aren't calculator input.
+        // Conservative — only rejects when certain; false negatives are worse than false positives.
+        guard couldBeCalculatorInput(query) else { return nil }
+
         // Date/time first: `hrs till july` carries no digit, so it must run before the numeric reject below.
         if let dateTime = CalcDateTime.evaluate(query, now: now, calendar: calendar) { return dateTime }
 
@@ -164,6 +168,24 @@ enum CalcEngine {
             payload: .value(
                 display: CalcFormatter.display(value),
                 copyText: CalcFormatter.copyText(value)))
+    }
+
+    // MARK: - Pre-filter
+
+    /// Fast check that rejects queries that clearly aren't calculator input.
+    /// Conservative — only rejects when certain; false negatives are worse than false positives.
+    private static func couldBeCalculatorInput(_ query: String) -> Bool {
+        // Very short queries could be the start of anything.
+        if query.count <= 2 { return true }
+        // Multi-word queries always pass through — could be "eur to usd", "day s", etc.
+        if query.contains(" ") { return true }
+        // Single-word: must have a digit, operator, constant, or parenthesis.
+        if query.contains(where: { $0.isASCII && $0.isNumber }) { return true }
+        if query.contains(where: { "+-*/^×÷%!()".contains($0) }) { return true }
+        let lower = query.lowercased()
+        if lower.contains("pi") || query.contains("π") { return true }
+        if lower == "e" { return true }
+        return false
     }
 
     // MARK: - Partial expressions
