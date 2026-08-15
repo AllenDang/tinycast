@@ -107,6 +107,7 @@ final class ClipboardStore {
     @ObservationIgnored private var orderedCache: [ClipboardItem]?
 
     private static let memoryWindow = 1000
+    private var insertsSinceLastPrune = 0
 
     private static let schema = """
         CREATE TABLE IF NOT EXISTS items(
@@ -380,13 +381,22 @@ final class ClipboardStore {
         guard items.count > Self.memoryWindow, let index = items.lastIndex(where: { !$0.isPinned })
         else { return }
         items.remove(at: index)
+        // The reinsert path never calls insert(), so prune here too when the counter has built up.
+        if insertsSinceLastPrune >= 20 {
+            prune()
+            insertsSinceLastPrune = 0
+        }
     }
 
     private func insert(_ item: ClipboardItem) {
         if let stmt = insertStmt { bindAndInsert(stmt, item) }
         items.insert(item, at: 0)
         trimWindow()
-        prune()
+        insertsSinceLastPrune += 1
+        if insertsSinceLastPrune >= 20 {
+            prune()
+            insertsSinceLastPrune = 0
+        }
     }
 
     private func bindAndInsert(_ stmt: OpaquePointer, _ item: ClipboardItem) {

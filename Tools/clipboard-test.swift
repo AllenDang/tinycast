@@ -13,6 +13,12 @@ struct ClipboardTests {
     static var passes = 0
 
     static func main() {
+        let args = CommandLine.arguments
+        if args.contains("--bench") {
+            benchInsertThroughput()
+            return
+        }
+
         pinOrder()
         unpinRejoinsAsNewest()
         pasteLeavesPinsAlone()
@@ -194,6 +200,26 @@ struct ClipboardTests {
             sqlite(db, "SELECT name FROM sqlite_master WHERE type = 'index'")
                 .contains("items_pinned_at"),
             "and indexed")
+    }
+
+    // MARK: - Benchmark
+
+    /// Measure insert throughput: time to insert `count` items, reporting total and per-insert averages.
+    static func benchInsertThroughput() {
+        let count = 200
+        let dir = scratchDirectory()
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let store = ClipboardStore(directory: dir)
+
+        let start = CFAbsoluteTimeGetCurrent()
+        for i in 0..<count {
+            store.addText("bench item \(i)", sourceBundleID: nil)
+        }
+        let elapsed = (CFAbsoluteTimeGetCurrent() - start) * 1000
+
+        print("Inserted \(count) items in \(String(format: "%.2f", elapsed))ms")
+        print("Per-insert: \(String(format: "%.3f", elapsed / Double(count)))ms")
+        print("Store item count: \(store.items.count)")
     }
 
     // MARK: - Harness
