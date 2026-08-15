@@ -135,6 +135,41 @@ struct RankingTest {
             "the observed boost cap stays under a band stride",
             maxBoost < SearchRelevance.bandStride - FuzzyMatch.maximumScore)
 
+        // Benchmark: init with 1000 records on disk
+        let benchFile = FileManager.default.temporaryDirectory
+            .appendingPathComponent("tinycast-ranking-bench-\(UUID().uuidString).json")
+        defer { try? FileManager.default.removeItem(at: benchFile) }
+
+        let benchRecords: [LauncherRankingRecord] = (0..<1000).map { i in
+            LauncherRankingRecord(
+                itemKey: "com.example.app\(i)", query: "q\(i % 10)", count: i % 20 + 1,
+                lastUsed: clock)
+        }
+        try! JSONEncoder().encode(benchRecords).write(to: benchFile, options: .atomic)
+
+        let benchClock = Date(timeIntervalSince1970: 2_000_000_000)
+
+        let t0 = CFAbsoluteTimeGetCurrent()
+        let benchStore = LauncherRankingStore(fileURL: benchFile) { benchClock }
+        let t1 = CFAbsoluteTimeGetCurrent()
+        let initMs = (t1 - t0) * 1000
+
+        let _ = benchStore.boosts(query: "q0")
+        let t2 = CFAbsoluteTimeGetCurrent()
+        let firstAccessMs = (t2 - t1) * 1000
+
+        let _ = benchStore.boosts(query: "q1")
+        let t3 = CFAbsoluteTimeGetCurrent()
+        let secondAccessMs = (t3 - t2) * 1000
+
+        print("\n--- BENCH: initWith 1000 records on disk ---")
+        print(String(format: "init: %.3f ms", initMs))
+        print(String(format: "first boosts(): %.3f ms", firstAccessMs))
+        print(String(format: "second boosts(): %.3f ms", secondAccessMs))
+
+        check("init is sub-millisecond (< 1ms)", initMs < 1.0)
+        check("first access loads the data", !benchStore.isEmpty)
+
         print(failures == 0 ? "\nALL PASSED" : "\n\(failures) FAILED")
         exit(failures == 0 ? 0 : 1)
     }

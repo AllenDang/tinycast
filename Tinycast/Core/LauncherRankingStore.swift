@@ -19,24 +19,27 @@ final class LauncherRankingStore {
     private let fileURL: URL
     private let now: () -> Date
 
-    private(set) var records: [LauncherRankingRecord]
+    private(set) var records: [LauncherRankingRecord] = []
     /// AppIndex includes this in its one-entry cache key, invalidating a result after a visit/reset.
     private(set) var revision = 0
 
     /// `boosts(query:)` builds this from a launcher render; tracked, the write lands mid-body.
     @ObservationIgnored private var lookup: [String: [String: LauncherRankingRecord]]?
+    @ObservationIgnored private var isLoaded = false
 
     init(fileURL: URL? = nil, now: @escaping () -> Date = Date.init) {
         self.fileURL = fileURL ?? Self.defaultFileURL()
         self.now = now
+    }
 
+    private func ensureLoaded() {
+        guard !isLoaded else { return }
+        isLoaded = true
         if let data = try? Data(contentsOf: self.fileURL),
             let decoded = try? JSONDecoder().decode([LauncherRankingRecord].self, from: data) {
             records = decoded.filter {
                 !$0.itemKey.isEmpty && !$0.query.isEmpty && $0.count > 0
             }
-        } else {
-            records = []
         }
     }
 
@@ -44,6 +47,7 @@ final class LauncherRankingStore {
 
     /// Records every prefix of the submitted query: choosing WhatsApp for "wha" teaches "w", "wh" and "wha", so the preferred result surfaces for progressively shorter input.
     func record(itemKey: String, query: String) {
+        ensureLoaded()
         let query = Self.normalize(query)
         guard !itemKey.isEmpty, !query.isEmpty else { return }
 
@@ -72,6 +76,7 @@ final class LauncherRankingStore {
 
     /// Learned boosts for one query, keyed by item — a ranking pass folds the query and reads the clock once here rather than per candidate.
     func boosts(query: String) -> [String: Int] {
+        ensureLoaded()
         let query = Self.normalize(query)
         guard !query.isEmpty, let learned = rankingLookup()[query] else { return [:] }
         let timestamp = now()
@@ -87,10 +92,12 @@ final class LauncherRankingStore {
     }
 
     func hasRanking(for itemKey: String) -> Bool {
-        records.contains { $0.itemKey == itemKey }
+        ensureLoaded()
+        return records.contains { $0.itemKey == itemKey }
     }
 
     func reset(itemKey: String) {
+        ensureLoaded()
         let oldCount = records.count
         records.removeAll { $0.itemKey == itemKey }
         guard records.count != oldCount else { return }
@@ -98,6 +105,7 @@ final class LauncherRankingStore {
     }
 
     func resetAll() {
+        ensureLoaded()
         guard !records.isEmpty else { return }
         records = []
         didMutate()
