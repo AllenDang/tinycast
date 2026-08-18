@@ -961,11 +961,17 @@ final class AppCore {
     /// already gated the same way, but a card left over from before the user flipped the switch off
     /// mid-keystroke must not still be able to fire.
     func beginAICommand(_ match: AICommandMatch) {
-        guard aiProvider.isConfigured, let baseURL = aiProvider.baseURL else { return }
-        let model = aiProvider.model.trimmingCharacters(in: .whitespaces)
+        guard aiProvider.isConfigured,
+            let providerID = match.command.providerID,
+            let provider = aiProvider.provider(id: providerID),
+            let baseURL = provider.baseURL,
+            aiProvider.isProviderConfigured(providerID)
+        else { return }
+        let model = provider.model.trimmingCharacters(in: .whitespaces)
         aiCommandSession.begin(
             command: match.command, input: match.input, baseURL: baseURL, model: model,
-            apiKey: aiProvider.apiKey, isEnabled: { [weak self] in self?.aiProvider.isEnabled ?? false })
+            apiKey: aiProvider.apiKey(for: providerID),
+            isEnabled: { [weak self] in self?.aiProvider.isEnabled ?? false })
         palette.mode = .aiCommand
     }
 

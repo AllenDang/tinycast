@@ -1,54 +1,18 @@
 import Foundation
 
-/// Consent and connection settings for the AI commands feature: a user-supplied OpenAI-compatible
-/// endpoint, model and API key. No provider name or URL is ever baked in — this is entirely the
-/// user's own configuration — which is also why, unlike `CurrencyRateStore`, there is no bundled
-/// `provider` constant to show in Settings.
-///
-/// Mirrors `CurrencyRateStore`'s consent shape (the app's reference implementation for a networked
-/// feature): ships **off**, the flag lives here rather than on `AppSettings` so `SettingsBackup`
-/// can never silently grant network access, and every entry point that could reach the network
-/// re-checks `isEnabled` rather than trusting a caller. Unlike currency conversion this feature has
-/// no periodic fetch — each request is a single, user-initiated round trip — so there is no refresh
-/// loop to start/stop, only the consent flag itself.
-@MainActor
-@Observable
-final class AIProviderStore {
-    private static let consentKey = "aiProviderEnabled"
-    private static let baseURLKey = "aiProviderBaseURL"
-    private static let modelKey = "aiProviderModel"
+/// A user-configured OpenAI-compatible endpoint. The API key lives in the Keychain (keyed by `id`),
+/// not in UserDefaults — only the name, base URL and model are persisted in plain storage.
+struct AIProvider: Codable, Hashable, Identifiable, Sendable {
+    let id: UUID
+    var name: String
+    var baseURLString: String
+    var model: String
 
-    private let defaults: UserDefaults
-
-    /// Explicit user consent. Deliberately *not* part of `AppSettings`: `SettingsBackup` mirrors that
-    /// type field-for-field, and an imported config must never be able to silently grant network access.
-    private(set) var isEnabled: Bool
-
-    /// Not sensitive, so — unlike the API key — these live in plain UserDefaults alongside the consent flag.
-    var baseURLString: String {
-        didSet {
-            guard baseURLString != oldValue else { return }
-            defaults.set(baseURLString, forKey: Self.baseURLKey)
-        }
-    }
-    var model: String {
-        didSet {
-            guard model != oldValue else { return }
-            defaults.set(model, forKey: Self.modelKey)
-        }
-    }
-
-    /// The Keychain-backed secret. No in-memory cache: read and write go straight through, so this
-    /// store never holds the plaintext key longer than a single access needs it.
-    var apiKey: String {
-        get { AIKeychain.load() ?? "" }
-        set {
-            if newValue.isEmpty {
-                AIKeychain.delete()
-            } else {
-                AIKeychain.save(newValue)
-            }
-        }
+    init(id: UUID = UUID(), name: String, baseURLString: String, model: String) {
+        self.id = id
+        self.name = name
+        self.baseURLString = baseURLString
+        self.model = model
     }
 
     var baseURL: URL? {
@@ -56,29 +20,149 @@ final class AIProviderStore {
         guard !trimmed.isEmpty, let url = URL(string: trimmed), url.scheme != nil else { return nil }
         return url
     }
+}
 
-    /// Ready to send a request: consent, a parseable endpoint, a model name and a stored key.
-    var isConfigured: Bool {
-        isEnabled && baseURL != nil && !model.trimmingCharacters(in: .whitespaces).isEmpty
-            && !apiKey.isEmpty
-    }
+/// Consent and connection settings for the AI commands feature. Manages multiple user-configured
+/// OpenAI-compatible endpoints; each AI command picks one. The global consent flag ships **off** and
+/// lives here rather than on `AppSettings`, so `SettingsBackup` can never silently grant network
+/// access. Every entry point that could reach the network re-checks `isEnabled` rather than trusting
+/// a caller.
+@MainActor
+@Observable
+final class AIProviderStore {
+    private static let consentKey = "aiProviderEnabled"
+    private static let providersKey = "aiProviders"
+    // Legacy keys, read once during migration then cleared.
+    private static let legacyBaseURLKey = "aiProviderBaseURL"
+    private static let legacyModelKey = "aiProviderModel"
+
+    private let defaults: UserDefaults
+
+    private(set) var isEnabled: Bool
+    private(set) var providers: [AIProvider]
 
     init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
-        // Absent reads as false, the only safe default for a network feature.
         isEnabled = defaults.bool(forKey: Self.consentKey)
-        baseURLString = defaults.string(forKey: Self.baseURLKey) ?? ""
-        model = defaults.string(forKey: Self.modelKey) ?? ""
+        if let data = defaults.data(forKey: Self.providersKey),
+            let decoded = try? JSONDecoder().decode([AIProvider].self, from: data)
+        {
+            providers = decoded
+        } else {
+            providers = Self.migrateFromLegacy(defaults: defaults)
+            persistProviders()
+        }
     }
 
-    /// The Settings toggle's only entry point for turning the feature *on* — called after the user
-    /// accepts the consent dialog. Turning it off never needs a dialog, so the pane can call this
-    /// directly either way. The endpoint, model and key are the user's own configuration, not
-    /// downloaded data, so — unlike `CurrencyRateStore.setEnabled(false)` — disabling leaves them in
-    /// place for a quick re-enable; only the "recognizes keywords / makes requests" behavior stops.
+    // MARK: - Consent
+
     func setEnabled(_ enabled: Bool) {
         guard enabled != isEnabled else { return }
         isEnabled = enabled
         defaults.set(enabled, forKey: Self.consentKey)
+    }
+
+    // MARK: - Provider CRUD
+
+    func provider(id: UUID) -> AIProvider? {
+        providers.first { $0.id == id }
+    }
+
+    func addProvider(_ draft: AIProvider) throws {
+        let cleaned = AIProvider(
+            id: draft.id, name: draft.name.trimmingCharacters(in: .whitespacesAndNewlines),
+            baseURLString: draft.baseURLString.trimmingCharacters(in: .whitespacesAndNewlines),
+            model: draft.model.trimmingCharacters(in: .whitespacesAndNewlines))
+        guard !cleaned.name.isEmpty else { throw AIProviderValidationError.emptyName }
+        guard !cleaned.baseURLString.isEmpty else { throw AIProviderValidationError.emptyBaseURL }
+        guard !cleaned.model.isEmpty else { throw AIProviderValidationError.emptyModel }
+        providers.append(cleaned)
+        persistProviders()
+    }
+
+    func updateProvider(_ draft: AIProvider) throws {
+        guard let index = providers.firstIndex(where: { $0.id == draft.id }) else { return }
+        let cleaned = AIProvider(
+            id: draft.id, name: draft.name.trimmingCharacters(in: .whitespacesAndNewlines),
+            baseURLString: draft.baseURLString.trimmingCharacters(in: .whitespacesAndNewlines),
+            model: draft.model.trimmingCharacters(in: .whitespacesAndNewlines))
+        guard !cleaned.name.isEmpty else { throw AIProviderValidationError.emptyName }
+        guard !cleaned.baseURLString.isEmpty else { throw AIProviderValidationError.emptyBaseURL }
+        guard !cleaned.model.isEmpty else { throw AIProviderValidationError.emptyModel }
+        providers[index] = cleaned
+        persistProviders()
+    }
+
+    func removeProvider(id: UUID) {
+        guard let index = providers.firstIndex(where: { $0.id == id }) else { return }
+        providers.remove(at: index)
+        persistProviders()
+        AIKeychain.delete(for: id)
+    }
+
+    // MARK: - API key (Keychain-backed)
+
+    func apiKey(for providerID: UUID) -> String {
+        AIKeychain.load(for: providerID) ?? ""
+    }
+
+    func setAPIKey(_ value: String, for providerID: UUID) {
+        if value.isEmpty {
+            AIKeychain.delete(for: providerID)
+        } else {
+            AIKeychain.save(value, for: providerID)
+        }
+    }
+
+    // MARK: - Readiness
+
+    /// Whether a specific provider is ready to send a request.
+    func isProviderConfigured(_ providerID: UUID) -> Bool {
+        guard let provider = providers.first(where: { $0.id == providerID }) else { return false }
+        return provider.baseURL != nil
+            && !provider.model.trimmingCharacters(in: .whitespaces).isEmpty
+            && !apiKey(for: providerID).isEmpty
+    }
+
+    /// At least one provider is configured and consent is on — the feature can match keywords.
+    var isConfigured: Bool {
+        isEnabled && providers.contains(where: { isProviderConfigured($0.id) })
+    }
+
+    // MARK: - Persistence
+
+    private func persistProviders() {
+        guard let data = try? JSONEncoder().encode(providers) else { return }
+        defaults.set(data, forKey: Self.providersKey)
+    }
+
+    // MARK: - Migration
+
+    private static func migrateFromLegacy(defaults: UserDefaults) -> [AIProvider] {
+        let oldBaseURL = defaults.string(forKey: legacyBaseURLKey) ?? ""
+        let oldModel = defaults.string(forKey: legacyModelKey) ?? ""
+        guard !oldBaseURL.isEmpty || !oldModel.isEmpty else { return [] }
+        let provider = AIProvider(name: "Default", baseURLString: oldBaseURL, model: oldModel)
+        if let oldKey = AIKeychain.loadLegacy(), !oldKey.isEmpty {
+            AIKeychain.save(oldKey, for: provider.id)
+            AIKeychain.deleteLegacy()
+        }
+        defaults.removeObject(forKey: legacyBaseURLKey)
+        defaults.removeObject(forKey: legacyModelKey)
+        return [provider]
+    }
+}
+
+enum AIProviderValidationError: LocalizedError {
+    case emptyName
+    case emptyBaseURL
+    case emptyModel
+
+    var errorDescription: String? {
+        switch self {
+        case .emptyName: return "Enter a name for the provider."
+        case .emptyBaseURL: return "Enter a base URL for the provider."
+        case .emptyModel: return "Enter a model name for the provider."
+        }
     }
 }

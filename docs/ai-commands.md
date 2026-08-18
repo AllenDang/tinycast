@@ -1,11 +1,11 @@
 # AI commands
 
 A user-authored `<keyword> <text>` command: typing a keyword and a space in the launcher, then some
-text, recognizes it — `trans hello` — and Enter runs that text through the user's own
+text, recognizes it — `trans hello` — and Enter runs that text through a user-configured
 OpenAI-compatible endpoint. What the command actually does (translate, fix grammar, summarize,
 anything else) is entirely the user's `promptTemplate`; Tinycast ships no commands and bakes in no
-provider name or URL. The catalog is authored in **Settings → AI Commands**, the same pane that holds
-the endpoint, model and API key.
+provider name or URL. Multiple providers can be configured (e.g. OpenAI, Groq, a local LLM), and
+each command picks one. The catalog and providers are authored in **Settings → AI Commands**.
 
 ## Recognition happens at the raw query string
 
@@ -22,10 +22,11 @@ whitespace and is unique case-insensitively, so two commands can never both clai
 `RootPaletteView.aiCommandMatch` runs this only in `.launcher` mode and only when
 `calcResult == nil` — the calculator card wins if a query somehow parses as both, which in practice
 never happens since no unit or currency name is also a plausible AI-command keyword. It also re-checks
-`aiProvider.isConfigured` right there: with the provider off, or on but missing a base URL, model or
-key, this must read as though the feature doesn't exist — no card, not even a "not configured" hint —
+`aiProvider.isConfigured` right there: with the feature off, or on but no provider configured, this
+must read as though the feature doesn't exist — no card, not even a "not configured" hint —
 the same way `.off` currency conversion produces no card at all rather than leaking that the feature
-exists (see [calculator.md](calculator.md#consent)).
+exists (see [calculator.md](calculator.md#consent)). Commands whose provider isn't configured (or was
+deleted) are filtered out of the active set, so they never match either.
 
 ## The intent card is a preview, not an answer
 
@@ -59,13 +60,19 @@ actionable** — the same shape an error `CalculatorCard` already has. Enter doe
 Enter a no-op on an error card), and the pill/⌘K action group hides entirely rather than showing a
 misleading label.
 
-## Provider consent
+## Providers
 
-`AIProviderStore` (`Core/AI/AIProviderStore.swift`) mirrors `CurrencyRateStore`, the app's reference
-shape for a networked feature (see [calculator.md](calculator.md#consent) and AGENTS.md's "every
-networked feature ships off" invariant), with one difference: currency conversion polls a fixed
-provider on a schedule, so it owns a refresh loop; an AI command is one request per Enter, so there is
-no loop to start or stop — only the consent flag and the user's own endpoint configuration.
+`AIProviderStore` (`Core/AI/AIProviderStore.swift`) manages multiple user-configured
+OpenAI-compatible endpoints. Each `AIProvider` carries a name, base URL, and model; the API key lives
+in the Keychain keyed by provider ID. `AICommand` picks one via its `providerID` field.
+
+### Consent
+
+`AIProviderStore` mirrors `CurrencyRateStore`, the app's reference shape for a networked feature (see
+[calculator.md](calculator.md#consent) and AGENTS.md's "every networked feature ships off" invariant),
+with one difference: currency conversion polls a fixed provider on a schedule, so it owns a refresh
+loop; an AI command is one request per Enter, so there is no loop to start or stop — only the global
+consent flag and the user's own endpoint configurations.
 
 - **Ships off.** `isEnabled` defaults to `false` (`UserDefaults.bool` reads absent as `false`).
 - **Not in `AppSettings`.** The flag lives on `AIProviderStore` alone, so `SettingsBackup` — which
@@ -84,9 +91,25 @@ no loop to start or stop — only the consent flag and the user's own endpoint c
   `URLSession.shared`, so a request or response can never leave a second copy in the shared on-disk
   `URLCache`.
 - **Turning it off keeps the user's configuration.** Unlike `CurrencyRateStore.setEnabled(false)`,
-  which deletes the cached rates, disabling AI commands does not clear the base URL, model or API key —
+  which deletes the cached rates, disabling AI commands does not clear any provider or API key —
   those are the user's own typed-in configuration, not something Tinycast downloaded, so there is
   nothing to "leave behind." Only the ability to match a keyword or fire a request stops.
+
+### Provider readiness
+
+A provider is "configured" when it has a parseable base URL, a non-empty model name, and a stored
+API key. `isProviderConfigured(_:)` checks this per-provider. The store-level `isConfigured` is true
+when consent is on and at least one provider is ready. `RootPaletteView` filters the active command
+set to only those whose provider is configured, so a command whose provider was deleted or lacks a key
+can never match in the launcher.
+
+### Migration
+
+On first launch after upgrade, if the old single-provider keys (`aiProviderBaseURL`,
+`aiProviderModel`) exist but the new `aiProviders` key doesn't, a "Default" provider is created from
+the old configuration, the legacy API key is moved to the new per-provider Keychain entry, and the old
+keys are cleared. Existing commands that lacked a `providerID` are assigned to the migrated provider
+by the store's sanitizer (commands with a nil `providerID` are dropped).
 
 ## Why the API key lives in the Keychain
 
@@ -95,11 +118,12 @@ Support — none of them encrypted, none of them appropriate for a bearer token 
 paid account. `Core/AI/AIKeychain.swift` is a thin `Security.framework` wrapper (`SecItemAdd` /
 `SecItemCopyMatching` / `SecItemUpdate` / `SecItemDelete`), styled like the other small utility enums
 (`AppPaths`, `Permissions`) rather than a class with state — there is nothing to hold, only a
-service/account pair to query. The service string is suffixed onto `Bundle.main.bundleIdentifier`, the
-same channel-isolation rule every other persisted value in Tinycast follows: Dev (`com.tinycast.app.dev`),
-beta and stable each get an independent Keychain item, so clearing one channel's key can never touch
-another's. Base URL and model are not secrets, so — unlike the key — they live in plain
-`UserDefaults` on `AIProviderStore` alongside the consent flag.
+service/account pair to query per provider. The service string is `{bundleID}.ai-provider.{providerID}`,
+the same channel-isolation rule every other persisted value in Tinycast follows: Dev
+(`com.tinycast.app.dev`), beta and stable each get an independent Keychain item per provider, so
+clearing one channel's key can never touch another's. Provider names, base URLs and models are not
+secrets, so — unlike the key — they live in plain `UserDefaults` on `AIProviderStore` alongside the
+consent flag.
 
 ## The prompt template reuses the one template engine
 
@@ -158,9 +182,15 @@ use.
 ## Settings
 
 **Settings → AI Commands** is its own tab (`SettingsTab.aiCommands`) rather than folding into
-Miscellaneous: the provider configuration (Base URL, Model, API Key, the master switch) plus the
-command catalog's own add/edit/delete list is comparable in size to the Quicklinks or Snippets panes,
-which each earned their own tab over sharing Commands'.
+Miscellaneous: the provider management (add/edit/delete endpoints, each with name, Base URL, Model,
+API Key) plus the command catalog's own add/edit/delete list is comparable in size to the Quicklinks
+or Snippets panes, which each earned their own tab over sharing Commands'.
+
+The provider section lists each configured endpoint with a green status dot when ready (all three of
+Base URL, Model and API Key are filled in) and an orange dot when incomplete. Add/Edit opens
+`AIProviderEditorSheet`; delete removes the provider and its Keychain entry. Commands that referenced
+a deleted provider stay in the catalog but won't match — their provider ID no longer resolves to a
+configured endpoint.
 
 The command list's add/edit/delete UI is **not** built on `LauncherItemsCard` — that component reads
 `AppIndex`/`VisibilityStore` to toggle an existing `AppEntry`'s launcher visibility and hotkey, which
@@ -170,8 +200,9 @@ always needs the typed text after its keyword), so it never enters `AppIndex.pub
 from the launcher would be exactly the kind of category invented by sniffing a shape rather than the
 thing actually being a category of launcher entry (see AGENTS.md's `AppEntry.Kind` invariant). Instead
 the pane mirrors `CommandsSettingsView`'s own **custom commands** section — a `SettingsCard` with one
-row per command (`AICommandSettingsRow`), an "Add…" row opening `AICommandEditorSheet` (styled after
-`CustomCommandEditorSheet`), and delete behind a confirmation.
+row per command (`AICommandSettingsRow`), each showing its provider name in a chip, an "Add…" row
+opening `AICommandEditorSheet` (styled after `CustomCommandEditorSheet`, with a provider picker), and
+delete behind a confirmation.
 
 ## Standalone harness
 
@@ -187,3 +218,6 @@ swiftc -swift-version 6 Tinycast/Core/AI/AICommand.swift Tools/ai-command-test.s
 this harness — they touch the Keychain, the network and `Foundation`'s `Task`, none of which the other
 pure-Foundation harnesses attempt to fake, so they are covered by the app build instead, the same way
 `RaycastImportV1` (AppKit-dependent) is covered by the build rather than the Raycast harness.
+
+`AIProviderStore` handles its own migration from the old single-provider format on first init, so
+existing users with one configured endpoint keep working without any manual steps.

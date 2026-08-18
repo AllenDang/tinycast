@@ -123,6 +123,7 @@
 		AC6AF9FA9C6874F257D3F613 /* UninstallTarget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6A6941F59D6E8014A22F1FF7 /* UninstallTarget.swift */; };
 		AD2141EBF98A246BDA3BAB8E /* Gunzip.swift in Sources */ = {isa = PBXBuildFile; fileRef = 32A53295959552ED28D34960 /* Gunzip.swift */; };
 		AE0D0C53004C65D65BE89B6F /* BackupActions.swift in Sources */ = {isa = PBXBuildFile; fileRef = C9D8C2C59C2B578CFE61E004 /* BackupActions.swift */; };
+		AF04BEDD1792ACA87B06E32B /* MarkdownUI in Frameworks */ = {isa = PBXBuildFile; productRef = 2D338508CADBD5072534038E /* MarkdownUI */; };
 		AF560A3CD6047B7230847356 /* AICommandCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E4DF265A2EE17B6039080C59 /* AICommandCardView.swift */; };
 		B1B3F5715BE7A092F0CEFA09 /* ClipboardManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A76E4099082D59FA686C3485 /* ClipboardManager.swift */; };
 		B1B540309BD0EB2B36FE4641 /* SystemAction.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0D16E927986D415F5386CDCF /* SystemAction.swift */; };
@@ -366,6 +367,17 @@
 		F793A92DD4DC73CF1D87F3FD /* CalculatorHistoryStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalculatorHistoryStore.swift; sourceTree = "<group>"; };
 		FD131E932E1B53D39CF30C13 /* UninstallScanner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UninstallScanner.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		5DD96C5B911AE4FC9AAD9EE8 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				AF04BEDD1792ACA87B06E32B /* MarkdownUI in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
 		005F026A8F7D5E209B1CE917 /* Clipboard */ = {
@@ -794,6 +806,7 @@
 			buildPhases = (
 				6E13E657DC484EA7935E1C3A /* Sources */,
 				0E8F5C3C217EFF5576B2CB4F /* Resources */,
+				5DD96C5B911AE4FC9AAD9EE8 /* Frameworks */,
 			);
 			buildRules = (
 			);
@@ -801,6 +814,7 @@
 			);
 			name = Tinycast;
 			packageProductDependencies = (
+				2D338508CADBD5072534038E /* MarkdownUI */,
 			);
 			productName = Tinycast;
 			productReference = 5392500F86E23C099D33561D /* Tinycast.app */;
@@ -830,6 +844,9 @@
 			);
 			mainGroup = FB9897CCA50570B3E7630145;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				223277E1FB59F8588C0A565F /* XCRemoteSwiftPackageReference "swift-markdown-ui" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 114270CAA80F01D311693B63 /* Products */;
 			projectDirPath = "";
@@ -1229,6 +1246,25 @@
 			defaultConfigurationName = Debug;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		223277E1FB59F8588C0A565F /* XCRemoteSwiftPackageReference "swift-markdown-ui" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/gonzalezreal/swift-markdown-ui";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 2.0.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		2D338508CADBD5072534038E /* MarkdownUI */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 223277E1FB59F8588C0A565F /* XCRemoteSwiftPackageReference "swift-markdown-ui" */;
+			productName = MarkdownUI;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = ADDC0DAB183B80B8B278C7BA /* Project object */;
 }

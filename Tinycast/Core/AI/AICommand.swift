@@ -16,12 +16,18 @@ struct AICommand: Codable, Hashable, Identifiable, Sendable {
     /// typed after the keyword. Any other token the engine understands (`{date}`, `{clipboard}`, …)
     /// works too, since this runs through the same expansion as a snippet or quicklink.
     var promptTemplate: String
+    /// The provider that handles this command's requests. Optional for migration — old stored commands
+    /// decoded before the field existed read as nil, and the store's sanitizer drops them.
+    var providerID: UUID?
 
-    init(id: UUID = UUID(), keyword: String, name: String, promptTemplate: String) {
+    init(id: UUID = UUID(), keyword: String, name: String, promptTemplate: String,
+         providerID: UUID? = nil)
+    {
         self.id = id
         self.keyword = keyword
         self.name = name
         self.promptTemplate = promptTemplate
+        self.providerID = providerID
     }
 }
 
@@ -74,6 +80,7 @@ enum AICommandValidationError: LocalizedError {
     case keywordContainsWhitespace
     case duplicateKeyword
     case invalidCharacter
+    case missingProvider
 
     var errorDescription: String? {
         switch self {
@@ -83,6 +90,7 @@ enum AICommandValidationError: LocalizedError {
         case .keywordContainsWhitespace: return "A keyword can't contain spaces."
         case .duplicateKeyword: return "An AI command with this keyword already exists."
         case .invalidCharacter: return "Keywords, names and prompts cannot contain null characters."
+        case .missingProvider: return "Select a provider for the command."
         }
     }
 }
@@ -158,6 +166,7 @@ final class AICommandStore {
         guard !value.keyword.contains("\0"), !value.name.contains("\0"),
             !value.promptTemplate.contains("\0")
         else { throw AICommandValidationError.invalidCharacter }
+        guard value.providerID != nil else { throw AICommandValidationError.missingProvider }
         guard
             !commands.contains(where: {
                 $0.id != value.id
@@ -184,7 +193,6 @@ final class AICommandStore {
         var keywords = Set<String>()
         var result: [AICommand] = []
         for value in values {
-            // Copy-and-clean rather than rebuild, so a new option can never be dropped on import.
             var cleaned = value
             cleaned.keyword = value.keyword.trimmingCharacters(in: .whitespacesAndNewlines)
             cleaned.name = value.name.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -195,7 +203,8 @@ final class AICommandStore {
                 !cleaned.keyword.contains(where: \.isWhitespace),
                 !cleaned.keyword.contains("\0"), !cleaned.name.contains("\0"),
                 !cleaned.promptTemplate.contains("\0"), ids.insert(cleaned.id).inserted,
-                keywords.insert(foldedKeyword).inserted
+                keywords.insert(foldedKeyword).inserted,
+                cleaned.providerID != nil
             else { continue }
             result.append(cleaned)
         }

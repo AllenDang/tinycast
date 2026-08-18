@@ -28,14 +28,18 @@ struct AICommandTests {
             }
         }
 
+        let providerID = UUID()
+
         // MARK: Store
 
         let store = AICommandStore(defaults: defaults)
         let added = try? store.add(
-            AICommand(keyword: "  trans  ", name: "  Translate  ", promptTemplate: "Translate: {input}"))
+            AICommand(keyword: "  trans  ", name: "  Translate  ", promptTemplate: "Translate: {input}",
+                providerID: providerID))
         check("add trims the keyword", added?.keyword == "trans")
         check("add trims the name", added?.name == "Translate")
         check("add keeps the prompt", added?.promptTemplate == "Translate: {input}")
+        check("add keeps the providerID", added?.providerID == providerID)
 
         guard let added else {
             print("FAIL  add returned nothing; the remaining cases need it")
@@ -44,7 +48,9 @@ struct AICommandTests {
 
         var duplicateRejected = false
         do {
-            _ = try store.add(AICommand(keyword: "TRANS", name: "Other", promptTemplate: "{input}"))
+            _ = try store.add(
+                AICommand(keyword: "TRANS", name: "Other", promptTemplate: "{input}",
+                    providerID: providerID))
         } catch AICommandValidationError.duplicateKeyword {
             duplicateRejected = true
         } catch {}
@@ -52,7 +58,9 @@ struct AICommandTests {
 
         var whitespaceRejected = false
         do {
-            _ = try store.add(AICommand(keyword: "fix it", name: "Fix", promptTemplate: "{input}"))
+            _ = try store.add(
+                AICommand(keyword: "fix it", name: "Fix", promptTemplate: "{input}",
+                    providerID: providerID))
         } catch AICommandValidationError.keywordContainsWhitespace {
             whitespaceRejected = true
         } catch {}
@@ -60,14 +68,27 @@ struct AICommandTests {
 
         var emptyPromptRejected = false
         do {
-            _ = try store.add(AICommand(keyword: "empty", name: "Empty", promptTemplate: "   "))
+            _ = try store.add(
+                AICommand(keyword: "empty", name: "Empty", promptTemplate: "   ",
+                    providerID: providerID))
         } catch AICommandValidationError.emptyPrompt {
             emptyPromptRejected = true
         } catch {}
         check("an all-whitespace prompt is rejected", emptyPromptRejected)
 
+        var missingProviderRejected = false
+        do {
+            _ = try store.add(
+                AICommand(keyword: "noprov", name: "No Provider", promptTemplate: "{input}",
+                    providerID: nil))
+        } catch AICommandValidationError.missingProvider {
+            missingProviderRejected = true
+        } catch {}
+        check("a missing providerID is rejected", missingProviderRejected)
+
         try? store.update(
-            AICommand(id: added.id, keyword: "tr", name: "Translate It", promptTemplate: "{input}"))
+            AICommand(id: added.id, keyword: "tr", name: "Translate It", promptTemplate: "{input}",
+                providerID: providerID))
         check("update keeps the id", store.command(id: added.id) != nil)
         check("update applies the new keyword", store.command(id: added.id)?.keyword == "tr")
         check("update applies the new name", store.command(id: added.id)?.name == "Translate It")
@@ -78,9 +99,14 @@ struct AICommandTests {
             AICommandStore(defaults: defaults).commands == expected)
 
         store.replace(with: [
-            AICommand(keyword: "fix", name: "Fix Grammar", promptTemplate: "Fix: {input}"),
+            AICommand(keyword: "fix", name: "Fix Grammar", promptTemplate: "Fix: {input}",
+                providerID: providerID),
             // A duplicate keyword in the same import batch must not survive sanitization either.
-            AICommand(keyword: "FIX", name: "Duplicate", promptTemplate: "{input}")
+            AICommand(keyword: "FIX", name: "Duplicate", promptTemplate: "{input}",
+                providerID: providerID),
+            // A command with nil providerID must not survive sanitization.
+            AICommand(keyword: "orphan", name: "Orphan", promptTemplate: "{input}",
+                providerID: nil)
         ])
         check("import keeps exactly one of a duplicate pair", store.commands.count == 1)
         check("import keeps the first of a duplicate pair", store.commands.first?.name == "Fix Grammar")
@@ -91,8 +117,10 @@ struct AICommandTests {
         // MARK: firstMatch
 
         let commands = [
-            AICommand(keyword: "trans", name: "Translate", promptTemplate: "Translate: {input}"),
-            AICommand(keyword: "fix", name: "Fix Grammar", promptTemplate: "Fix: {input}")
+            AICommand(keyword: "trans", name: "Translate", promptTemplate: "Translate: {input}",
+                providerID: providerID),
+            AICommand(keyword: "fix", name: "Fix Grammar", promptTemplate: "Fix: {input}",
+                providerID: providerID)
         ]
 
         let matched = AICommand.firstMatch(in: commands, query: "trans hello there")

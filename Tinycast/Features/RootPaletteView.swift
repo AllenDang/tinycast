@@ -80,19 +80,27 @@ struct RootPaletteView: View {
         vm.mode == .launcher || vm.mode == .calculatorHistory
             ? CalcMemo.evaluate(vm.query, currency: currencyRates.source) : nil
     }
+    /// Commands whose provider is configured — the only ones that can match. Filtered once per
+    /// render so `firstMatch` and `pendingKeyword` never see a command that can't send a request.
+    private var activeAICommands: [AICommand] {
+        aiCommands.commands.filter { cmd in
+            guard let pid = cmd.providerID else { return false }
+            return aiProvider.isProviderConfigured(pid)
+        }
+    }
     /// The AI command intent card: launcher-only, mutually exclusive with the calc card (calc wins if
     /// somehow both parse), and re-checks consent right here — with the provider off this must read as
     /// though the feature doesn't exist, the same way `.off` currency produces no card at all.
     private var aiCommandMatch: AICommandMatch? {
         guard vm.mode == .launcher, calcResult == nil, aiProvider.isConfigured else { return nil }
-        return AICommand.firstMatch(in: aiCommands.commands, query: vm.query)
+        return AICommand.firstMatch(in: activeAICommands, query: vm.query)
     }
     /// The keyword-recognized-but-no-argument-yet hint, same slot and same gate as `aiCommandMatch`,
     /// shown only when there's no ready match to show instead — see `AICommand.pendingKeyword`.
     private var aiPendingCommand: AICommand? {
         guard vm.mode == .launcher, calcResult == nil, aiCommandMatch == nil, aiProvider.isConfigured
         else { return nil }
-        return AICommand.pendingKeyword(in: aiCommands.commands, query: vm.query)
+        return AICommand.pendingKeyword(in: activeAICommands, query: vm.query)
     }
     private var calcCount: Int {
         (calcResult == nil && aiCommandMatch == nil && aiPendingCommand == nil) ? 0 : 1

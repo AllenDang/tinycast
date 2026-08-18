@@ -4,6 +4,7 @@ excluded:
   - Tinycast/Core/ThinScrollbar.swift
   - Tinycast/Core/EdgeDissolve.swift
   - Tools
+  - build
 
 disabled_rules:
   - opening_brace

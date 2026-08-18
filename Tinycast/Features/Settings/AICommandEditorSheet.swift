@@ -6,9 +6,11 @@ struct AICommandEditorSheet: View {
 
     @Environment(\.dismiss) private var dismiss
     @Environment(AICommandStore.self) private var store
+    @Environment(AIProviderStore.self) private var aiProvider
     @State private var keyword: String
     @State private var name: String
     @State private var promptTemplate: String
+    @State private var providerID: UUID?
     @State private var errorMessage: String?
 
     init(command: AICommand?) {
@@ -16,12 +18,32 @@ struct AICommandEditorSheet: View {
         _keyword = State(initialValue: command?.keyword ?? "")
         _name = State(initialValue: command?.name ?? "")
         _promptTemplate = State(initialValue: command?.promptTemplate ?? "")
+        _providerID = State(initialValue: command?.providerID)
     }
 
     var body: some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.xl) {
             Text(command == nil ? "Add AI Command" : "Edit AI Command")
                 .font(.title2.weight(.bold))
+
+            VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
+                Text("Provider")
+                    .font(.callout.weight(.medium))
+                if aiProvider.providers.isEmpty {
+                    Text("Add a provider above first.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                } else {
+                    Picker("", selection: $providerID) {
+                        Text("Select a provider").tag(nil as UUID?)
+                        ForEach(aiProvider.providers) { provider in
+                            Text(provider.name).tag(provider.id as UUID?)
+                        }
+                    }
+                    .labelsHidden()
+                    .pickerStyle(.menu)
+                }
+            }
 
             VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
                 Text("Keyword")
@@ -77,7 +99,8 @@ struct AICommandEditorSheet: View {
                     .disabled(
                         keyword.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
                             || name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-                            || promptTemplate.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                            || promptTemplate.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                            || providerID == nil)
             }
         }
         .padding(Theme.Spacing.xxl)
@@ -85,9 +108,9 @@ struct AICommandEditorSheet: View {
     }
 
     private func save() {
-        // Editing keeps the UUID, so an unrelated identity change is never possible from this sheet.
         let draft = AICommand(
-            id: command?.id ?? UUID(), keyword: keyword, name: name, promptTemplate: promptTemplate)
+            id: command?.id ?? UUID(), keyword: keyword, name: name, promptTemplate: promptTemplate,
+            providerID: providerID)
         do {
             if command == nil {
                 try store.add(draft)

@@ -1,13 +1,13 @@
 import SwiftUI
 
-/// Provider connection (endpoint, model, API key, the master consent switch) plus the command
-/// catalog itself. Big enough to earn its own tab rather than folding into Miscellaneous, the way
-/// Quicklinks and Snippets each have their own pane instead of sharing Commands'.
+/// Provider management (one or more OpenAI-compatible endpoints) plus the command catalog.
+/// Each command picks a provider; the global consent switch gates the whole feature.
 struct AICommandsSettingsView: View {
     @Environment(AIProviderStore.self) private var aiProvider
     @Environment(AICommandStore.self) private var store
-    @State private var apiKeyDraft = ""
-    @State private var editor: EditorTarget?
+    @State private var apiKeyDrafts: [UUID: String] = [:]
+    @State private var commandEditor: CommandEditorTarget?
+    @State private var providerEditor: ProviderEditorTarget?
     @State private var pendingDeletion: AICommand?
 
     var body: some View {
@@ -25,8 +25,6 @@ struct AICommandsSettingsView: View {
                     tint: .green,
                     statusDot: aiProvider.isEnabled ? .green : nil
                 ) {
-                    // Deliberately not bound straight to the setting: flipping it on only asks for
-                    // consent, so the switch springs back until the user actually accepts.
                     Toggle(
                         "",
                         isOn: Binding(
@@ -47,47 +45,39 @@ struct AICommandsSettingsView: View {
                     .toggleStyle(.switch)
                     .controlSize(.small)
                 }
-                SettingsDivider()
-                SettingsRow(
-                    title: "Base URL",
-                    subtitle: "The server's own root — Tinycast posts to {Base URL}/chat/completions.",
-                    systemImage: "network",
-                    tint: .gray
-                ) {
-                    TextField("https://…", text: $aiProvider.baseURLString)
-                        .textFieldStyle(.roundedBorder)
-                        .frame(width: 220)
+
+                if !aiProvider.providers.isEmpty {
+                    SettingsDivider()
+                    ForEach(Array(aiProvider.providers.enumerated()), id: \.element.id) { index, provider in
+                        if index > 0 { SettingsDivider() }
+                        providerRow(provider)
+                    }
                 }
+
                 SettingsDivider()
                 SettingsRow(
-                    title: "Model",
-                    subtitle: "Sent as “model” in every request — whatever the endpoint expects.",
-                    systemImage: "cpu",
-                    tint: .gray
+                    title: "Add Provider",
+                    subtitle: "Another OpenAI-compatible endpoint — Groq, a local LLM, …",
+                    systemImage: "plus.circle",
+                    tint: .green
                 ) {
-                    TextField("gpt-4o-mini", text: $aiProvider.model)
-                        .textFieldStyle(.roundedBorder)
-                        .frame(width: 220)
-                }
-                SettingsDivider()
-                SettingsRow(
-                    title: "API Key",
-                    subtitle: "Stored in the Keychain, never in a settings file or backup.",
-                    systemImage: "key",
-                    tint: .gray
-                ) {
-                    SecureField("sk-…", text: $apiKeyDraft)
-                        .textFieldStyle(.roundedBorder)
-                        .frame(width: 220)
-                        .onChange(of: apiKeyDraft) { _, newValue in aiProvider.apiKey = newValue }
+                    Button("Add…") { providerEditor = ProviderEditorTarget(provider: nil) }
+                        .controlSize(.small)
                 }
             }
 
             commands
         }
-        .task { apiKeyDraft = aiProvider.apiKey }
-        .sheet(item: $editor) { target in
+        .task {
+            for provider in aiProvider.providers where apiKeyDrafts[provider.id] == nil {
+                apiKeyDrafts[provider.id] = aiProvider.apiKey(for: provider.id)
+            }
+        }
+        .sheet(item: $commandEditor) { target in
             AICommandEditorSheet(command: target.command)
+        }
+        .sheet(item: $providerEditor) { target in
+            AIProviderEditorSheet(provider: target.provider)
         }
         .alert(item: $pendingDeletion) { command in
             Alert(
@@ -105,9 +95,69 @@ struct AICommandsSettingsView: View {
             return "Off — no endpoint is contacted, and keywords below don't match in the launcher."
         }
         return aiProvider.isConfigured
-            ? "Typing a keyword and some text shows a card; ↵ sends it to the endpoint below."
-            : "On, but Base URL, Model or API Key below is still missing — keywords won't match yet."
+            ? "Typing a keyword and some text shows a card; ↵ sends it to the configured endpoint."
+            : "On, but no provider below has a Base URL, Model and API Key — keywords won't match yet."
     }
+
+    // MARK: - Provider row
+
+    private func providerRow(_ provider: AIProvider) -> some View {
+        let configured = aiProvider.isProviderConfigured(provider.id)
+        return HStack(spacing: Theme.Spacing.lg) {
+            Image(systemName: configured ? "network" : "network.slash")
+                .font(.system(size: 13, weight: .medium))
+                .foregroundStyle(configured ? .green : .secondary)
+                .frame(width: Theme.Size.settingsRowIcon)
+
+            VStack(alignment: .leading, spacing: Theme.Spacing.xs / 2) {
+                HStack(spacing: Theme.Spacing.sm) {
+                    Text(provider.name)
+                        .font(.body)
+                        .lineLimit(1)
+                    if !configured {
+                        Circle()
+                            .fill(.orange)
+                            .frame(width: 6, height: 6)
+                    }
+                }
+                Text("\(provider.baseURLString) — \(provider.model)")
+                    .font(.caption.monospaced())
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                    .truncationMode(.middle)
+            }
+
+            Spacer(minLength: Theme.Spacing.lg)
+
+            Button(
+                action: { providerEditor = ProviderEditorTarget(provider: provider) },
+                label: { Image(systemName: "pencil") })
+            .buttonStyle(.plain)
+            .help("Edit Provider")
+            .accessibilityLabel("Edit \(provider.name)")
+
+            Button(
+                action: { deleteProvider(provider) },
+                label: {
+                    Image(systemName: "trash")
+                        .foregroundStyle(.red)
+                })
+            .buttonStyle(.plain)
+            .help("Delete Provider")
+            .accessibilityLabel("Delete \(provider.name)")
+        }
+        .padding(.horizontal, Theme.Spacing.xl)
+        .padding(.vertical, Theme.Spacing.lg)
+    }
+
+    private func deleteProvider(_ provider: AIProvider) {
+        aiProvider.removeProvider(id: provider.id)
+        apiKeyDrafts.removeValue(forKey: provider.id)
+        // Commands that referenced this provider keep their providerID but won't match
+        // (the provider no longer exists, so `isProviderConfigured` returns false).
+    }
+
+    // MARK: - Commands
 
     @ViewBuilder
     private var commands: some View {
@@ -126,7 +176,8 @@ struct AICommandsSettingsView: View {
                     if index > 0 { SettingsDivider() }
                     AICommandSettingsRow(
                         command: command,
-                        onEdit: { editor = EditorTarget(command: command) },
+                        providerName: aiProvider.provider(id: command.providerID ?? UUID())?.name,
+                        onEdit: { commandEditor = CommandEditorTarget(command: command) },
                         onDelete: { pendingDeletion = command })
                 }
             }
@@ -134,15 +185,16 @@ struct AICommandsSettingsView: View {
 
             SettingsRow(
                 title: "Add AI Command",
-                subtitle: "Give it a keyword, a name, and a prompt using {input}.",
+                subtitle: aiProvider.providers.isEmpty
+                    ? "Add a provider above first." : "Give it a keyword, a name, and a prompt using {input}.",
                 systemImage: "plus.circle",
                 tint: .green
             ) {
-                Button("Add…") { editor = EditorTarget(command: nil) }
+                Button("Add…") { commandEditor = CommandEditorTarget(command: nil) }
                     .controlSize(.small)
+                    .disabled(aiProvider.providers.isEmpty)
             }
         }
-        // Same dim as the custom-commands card: the switch above stays live either way.
         .opacity(aiProvider.isEnabled ? 1 : 0.45)
         .disabled(!aiProvider.isEnabled)
     }
@@ -154,13 +206,134 @@ struct AICommandsSettingsView: View {
     }
 }
 
-private struct EditorTarget: Identifiable {
+// MARK: - Editor targets
+
+private struct CommandEditorTarget: Identifiable {
     let id = UUID()
     let command: AICommand?
 }
 
+private struct ProviderEditorTarget: Identifiable {
+    let id = UUID()
+    let provider: AIProvider?
+}
+
+// MARK: - Provider editor
+
+/// Add / edit sheet for a single AI provider, presented from the AI Commands pane.
+struct AIProviderEditorSheet: View {
+    let provider: AIProvider?
+
+    @Environment(\.dismiss) private var dismiss
+    @Environment(AIProviderStore.self) private var aiProvider
+    @State private var name: String
+    @State private var baseURLString: String
+    @State private var model: String
+    @State private var apiKeyDraft: String
+    @State private var errorMessage: String?
+
+    init(provider: AIProvider?) {
+        self.provider = provider
+        _name = State(initialValue: provider?.name ?? "")
+        _baseURLString = State(initialValue: provider?.baseURLString ?? "")
+        _model = State(initialValue: provider?.model ?? "")
+        _apiKeyDraft = State(initialValue: "")
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: Theme.Spacing.xl) {
+            Text(provider == nil ? "Add Provider" : "Edit Provider")
+                .font(.title2.weight(.bold))
+
+            VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
+                Text("Name")
+                    .font(.callout.weight(.medium))
+                TextField("OpenAI", text: $name)
+                    .textFieldStyle(.roundedBorder)
+                Text("A display name for this endpoint — shown in the command editor's provider picker.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
+            VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
+                Text("Base URL")
+                    .font(.callout.weight(.medium))
+                TextField("https://…", text: $baseURLString)
+                    .textFieldStyle(.roundedBorder)
+                Text("The server's own root — Tinycast posts to {Base URL}/chat/completions.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
+            VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
+                Text("Model")
+                    .font(.callout.weight(.medium))
+                TextField("gpt-4o-mini", text: $model)
+                    .textFieldStyle(.roundedBorder)
+                Text("Sent as “model” in every request — whatever the endpoint expects.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
+            VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
+                Text("API Key")
+                    .font(.callout.weight(.medium))
+                SecureField("sk-…", text: $apiKeyDraft)
+                    .textFieldStyle(.roundedBorder)
+                Text("Stored in the Keychain, never in a settings file or backup.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
+            if let errorMessage {
+                Text(errorMessage)
+                    .font(.caption)
+                    .foregroundStyle(.orange)
+            }
+
+            HStack {
+                Spacer()
+                Button("Cancel") { dismiss() }
+                    .keyboardShortcut(.cancelAction)
+                Button("Save", action: save)
+                    .keyboardShortcut(.defaultAction)
+                    .disabled(
+                        name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                            || baseURLString.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                            || model.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+            }
+        }
+        .padding(Theme.Spacing.xxl)
+        .frame(width: Theme.Size.editorSheetWidth)
+        .task {
+            if let provider, apiKeyDraft.isEmpty {
+                apiKeyDraft = aiProvider.apiKey(for: provider.id)
+            }
+        }
+    }
+
+    private func save() {
+        let draft = AIProvider(
+            id: provider?.id ?? UUID(), name: name, baseURLString: baseURLString, model: model)
+        do {
+            if provider == nil {
+                try aiProvider.addProvider(draft)
+            } else {
+                try aiProvider.updateProvider(draft)
+            }
+            aiProvider.setAPIKey(apiKeyDraft, for: draft.id)
+            dismiss()
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+}
+
+// MARK: - Command row
+
 private struct AICommandSettingsRow: View {
     let command: AICommand
+    let providerName: String?
     let onEdit: () -> Void
     let onDelete: () -> Void
 
@@ -172,9 +345,21 @@ private struct AICommandSettingsRow: View {
                 .frame(width: Theme.Size.settingsRowIcon)
 
             VStack(alignment: .leading, spacing: Theme.Spacing.xs / 2) {
-                Text(command.name)
-                    .font(.body)
-                    .lineLimit(1)
+                HStack(spacing: Theme.Spacing.sm) {
+                    Text(command.name)
+                        .font(.body)
+                        .lineLimit(1)
+                    if let providerName {
+                        Text(providerName)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .padding(.horizontal, Theme.Spacing.xs)
+                            .background(
+                                RoundedRectangle(cornerRadius: 4, style: .continuous)
+                                    .fill(Theme.Colors.controlSurface)
+                            )
+                    }
+                }
                 Text("\(command.keyword) → \(command.promptTemplate)")
                     .font(.caption.monospaced())
                     .foregroundStyle(.secondary)
