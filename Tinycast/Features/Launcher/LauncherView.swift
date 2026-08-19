@@ -24,6 +24,7 @@ struct LauncherList: View {
     let onActivate: (AppEntry) -> Void
     let onActions: (AppEntry) -> Void
     @Environment(RunningAppsMonitor.self) private var runningApps
+    @Environment(HotKeyManager.self) private var hotKeys
 
     private nonisolated static let calcRowID = "calc-card"
     private nonisolated static let aiRowID = "ai-command-card"
@@ -62,7 +63,11 @@ struct LauncherList: View {
         return selectedID != nil && selectedID == results.first?.id
     }
 
-    private var rows: [Row] {
+    /// Cached rows so arrow-key nav doesn't re-map the same results array every render.
+    @State private var cachedRows: [Row] = []
+    @State private var cacheKey: [AppEntry.ID] = []
+
+    private func computeRows() -> [Row] {
         var calcRows: [Row] = []
         if let calc {
             calcRows = [.header("Calculator"), .calc(calc)]
@@ -101,7 +106,8 @@ struct LauncherList: View {
     }
 
     var body: some View {
-        let rows = rows
+        let currentKey = results.map(\.id)
+        let rows = cacheKey == currentKey ? cachedRows : computeRows()
         return Group {
             if results.isEmpty && calc == nil && aiIntent == nil && aiPending == nil {
                 EmptyResults(text: "No apps found")
@@ -131,7 +137,8 @@ struct LauncherList: View {
                                     AppRow(
                                         app: app,
                                         selected: app.id == selectedID,
-                                        running: runningApps.isRunning(app)
+                                        running: runningApps.isRunning(app),
+                                        shortcutCaps: app.hotKeyAction.flatMap { hotKeys.binding(for: $0)?.keycaps }
                                     )
                                     .contentShape(Rectangle())
                                     .onTapGesture { onActivate(app) }
@@ -160,6 +167,10 @@ struct LauncherList: View {
                             }
                         }
                     }
+                    .onChange(of: results.map(\.id)) { _, newKey in
+                        cachedRows = computeRows()
+                        cacheKey = newKey
+                    }
                 }
             }
         }
@@ -186,8 +197,10 @@ private struct AppRow: View {
     let app: AppEntry
     let selected: Bool
     let running: Bool
-    /// Observed so a hotkey set/cleared in Settings re-renders the row's keycaps immediately.
-    @Environment(HotKeyManager.self) private var hotKeys
+    /// Keycaps for this entry's hotkey, or `nil` if none is bound. Pre-computed by the parent so
+    /// `AppRow` doesn't need its own `@Environment(HotKeyManager.self)` — that would re-register
+    /// observation tracking on every visible row every render during arrow-key nav.
+    let shortcutCaps: [String]?
     @State private var hovered = false
 
     /// Selection wins over hover when a row is both; otherwise hover shows its fainter layer.
@@ -195,12 +208,6 @@ private struct AppRow: View {
         if selected { return Theme.Colors.selection }
         if hovered { return Theme.Colors.rowHover }
         return .clear
-    }
-
-    /// Keycaps for this entry's hotkey, or `nil` if none is bound.
-    private var shortcutCaps: [String]? {
-        guard let action = app.hotKeyAction else { return nil }
-        return hotKeys.binding(for: action)?.keycaps
     }
 
     var body: some View {

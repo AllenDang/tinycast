@@ -29,6 +29,8 @@ struct RootPaletteView: View {
     @State private var menuSelection = 0
     /// The pending scroll request for whichever list or grid is mounted (modes are exclusive, so one piece of state serves all of them). Set only by keyboard nav and resets; mouse selection targets a visible row, so it leaves this and the scroll position put.
     @State private var scroll = ScrollIntent(kind: .top)
+    /// Cached calcCount so `move()` during arrow-key nav doesn't re-enter `aiCommandMatch`/`aiPendingCommand` (which access @Environment). Updated each render in `body`.
+    @State private var cachedCalcCount = 0
 
     private var isQueryEmpty: Bool { vm.query.trimmingCharacters(in: .whitespaces).isEmpty }
 
@@ -109,9 +111,9 @@ struct RootPaletteView: View {
     private var resultCount: Int {
         if let screen { return screen.rows.count }
         switch vm.mode {
-        case .launcher: return appResults.count + calcCount
+        case .launcher: return appResults.count + cachedCalcCount
         case .clipboard: return clipResults.count
-        case .calculatorHistory: return histResults.count + calcCount
+        case .calculatorHistory: return histResults.count + cachedCalcCount
         default: return 0
         }
     }
@@ -222,7 +224,8 @@ struct RootPaletteView: View {
         let calc = calcResult
         let ai = aiCommandMatch
         let aiPending = aiPendingCommand
-        let offset = calcCount
+        let offset = (calc == nil && ai == nil && aiPending == nil) ? 0 : 1
+        cachedCalcCount = offset
         // Only the active mode is non-empty.
         let count = apps.count + offset + clips.count + hist.count + screenRows
         let sel = count == 0 ? 0 : min(max(vm.selection, 0), count - 1)
@@ -832,8 +835,9 @@ struct RootPaletteView: View {
     // MARK: - Actions
 
     private func move(_ delta: Int) {
-        guard resultCount > 0 else { return }
-        vm.selection = min(max(selection + delta, 0), resultCount - 1)
+        let cnt = appResults.count + cachedCalcCount
+        guard cnt > 0 else { return }
+        vm.selection = min(max(vm.selection + delta, 0), cnt - 1)
         scroll = ScrollIntent(kind: .follow)
     }
 
