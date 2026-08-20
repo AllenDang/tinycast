@@ -23,6 +23,10 @@ struct LauncherList: View {
     var aiPendingSelected = false
     let onActivate: (AppEntry) -> Void
     let onActions: (AppEntry) -> Void
+    /// Function name autocomplete suggestions (shown after the calculator card, before app results).
+    var funcSuggestions: [CalcParser.FunctionSuggestion] = []
+    var funcSuggestionSelectedIndex: Int = -1
+    var onSelectFuncSuggestion: (CalcParser.FunctionSuggestion) -> Void = { _ in }
     @Environment(RunningAppsMonitor.self) private var runningApps
     @Environment(HotKeyManager.self) private var hotKeys
 
@@ -35,6 +39,7 @@ struct LauncherList: View {
         case calc(CalcResult)
         case aiCommand(AICommandMatch)
         case aiPendingCommand(AICommand)
+        case funcSuggestion(CalcParser.FunctionSuggestion, Int)  // suggestion + index in suggestions array
         case app(AppEntry)
         var id: String {
             switch self {
@@ -42,6 +47,7 @@ struct LauncherList: View {
             case .calc: return LauncherList.calcRowID
             case .aiCommand: return LauncherList.aiRowID
             case .aiPendingCommand: return LauncherList.aiPendingRowID
+            case .funcSuggestion(let f, _): return "func-\(f.name)"
             case .app(let app): return app.id
             }
         }
@@ -64,8 +70,6 @@ struct LauncherList: View {
     }
 
     /// Cached rows so arrow-key nav doesn't re-map the same results array every render.
-    @State private var cachedRows: [Row] = []
-    @State private var cacheKey: [AppEntry.ID] = []
 
     private func computeRows() -> [Row] {
         var calcRows: [Row] = []
@@ -77,10 +81,19 @@ struct LauncherList: View {
             calcRows = [.header(aiPending.name), .aiPendingCommand(aiPending)]
         }
         guard showSections else {
-            guard !results.isEmpty else { return calcRows }
-            return calcRows + [.header("Results")] + results.map(Row.app)
+            var rows = calcRows
+            if !funcSuggestions.isEmpty {
+                rows.append(.header("Functions"))
+                rows.append(contentsOf: funcSuggestions.enumerated().map { .funcSuggestion($0.element, $0.offset) })
+            }
+            guard !results.isEmpty else { return rows }
+            return rows + [.header("Results")] + results.map(Row.app)
         }
         var rows: [Row] = calcRows
+        if !funcSuggestions.isEmpty {
+            rows.append(.header("Functions"))
+            rows.append(contentsOf: funcSuggestions.enumerated().map { .funcSuggestion($0.element, $0.offset) })
+        }
         let favorites = results.prefix(favoriteCount)
         let rest = results.dropFirst(favoriteCount)
         // `rest` is apps, panes, quicklinks, snippets, system actions, window commands, custom
@@ -106,10 +119,9 @@ struct LauncherList: View {
     }
 
     var body: some View {
-        let currentKey = results.map(\.id)
-        let rows = cacheKey == currentKey ? cachedRows : computeRows()
+        let rows = computeRows()
         return Group {
-            if results.isEmpty && calc == nil && aiIntent == nil && aiPending == nil {
+            if results.isEmpty && calc == nil && aiIntent == nil && aiPending == nil && funcSuggestions.isEmpty {
                 EmptyResults(text: "No apps found")
             } else {
                 ScrollViewReader { proxy in
@@ -132,6 +144,11 @@ struct LauncherList: View {
                                         .padding(.bottom, Theme.Spacing.xs)
                                 case .aiPendingCommand(let command):
                                     AICommandHintCard(command: command, selected: aiPendingSelected)
+                                        .padding(.bottom, Theme.Spacing.xs)
+                                case .funcSuggestion(let fn, let idx):
+                                    FuncSuggestionRow(suggestion: fn, selected: idx == funcSuggestionSelectedIndex)
+                                        .contentShape(Rectangle())
+                                        .onTapGesture { onSelectFuncSuggestion(fn) }
                                         .padding(.bottom, Theme.Spacing.xs)
                                 case .app(let app):
                                     AppRow(
@@ -166,10 +183,6 @@ struct LauncherList: View {
                                 proxy.reveal(selectedRowID)
                             }
                         }
-                    }
-                    .onChange(of: results.map(\.id)) { _, newKey in
-                        cachedRows = computeRows()
-                        cacheKey = newKey
                     }
                 }
             }
@@ -347,5 +360,43 @@ enum AppActionsMenu {
         case .windowCommand: return "Move Window"
         case .quicklink: return "Open Quicklink"
         }
+    }
+}
+
+/// Row for a function autocomplete suggestion: name, signature, and category.
+private struct FuncSuggestionRow: View {
+    let suggestion: CalcParser.FunctionSuggestion
+    let selected: Bool
+    @State private var hovered = false
+
+    private var fill: Color {
+        if selected { return Theme.Colors.selection }
+        if hovered { return Theme.Colors.rowHover }
+        return .clear
+    }
+
+    var body: some View {
+        HStack(spacing: Theme.Spacing.md) {
+            Image(systemName: "function")
+                .font(.body)
+                .foregroundStyle(.secondary)
+                .frame(width: Theme.Size.rowIcon)
+            Text(suggestion.name)
+                .font(Theme.Typography.rowTitle.weight(.semibold))
+            Text(suggestion.signature)
+                .font(.body.monospaced())
+                .foregroundStyle(.secondary)
+            Spacer()
+            Text(suggestion.category)
+                .font(Theme.Typography.rowTrailing)
+                .foregroundStyle(.tertiary)
+        }
+        .padding(.horizontal, Theme.Spacing.md)
+        .padding(.vertical, Theme.Spacing.sm)
+        .background(
+            RoundedRectangle(cornerRadius: Theme.Radius.row, style: .continuous)
+                .fill(fill)
+        )
+        .armedHover($hovered)
     }
 }

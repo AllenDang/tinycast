@@ -7,6 +7,26 @@ enum CalcFormatter {
         grouped(copyText(value))
     }
 
+    /// Human-facing display for a CalcValue (scalar or vector).
+    static func displayValue(_ value: CalcValue) -> String {
+        switch value {
+        case .scalar(let v): return display(v)
+        case .vec2(let x, let y): return "(\(display(x)), \(display(y)))"
+        case .vec3(let x, let y, let z): return "(\(display(x)), \(display(y)), \(display(z)))"
+        case .vec4(let x, let y, let z, let w): return "(\(display(x)), \(display(y)), \(display(z)), \(display(w)))"
+        }
+    }
+
+    /// Pasteboard text for a CalcValue (scalar or vector).
+    static func copyTextValue(_ value: CalcValue) -> String {
+        switch value {
+        case .scalar(let v): return copyText(v)
+        case .vec2(let x, let y): return "(\(copyText(x)), \(copyText(y)))"
+        case .vec3(let x, let y, let z): return "(\(copyText(x)), \(copyText(y)), \(copyText(z)))"
+        case .vec4(let x, let y, let z, let w): return "(\(copyText(x)), \(copyText(y)), \(copyText(z)), \(copyText(w)))"
+        }
+    }
+
     /// Every integer up to 2^53 is exactly representable as a Double.
     private static let maxExactInteger = 9_007_199_254_740_992.0
 

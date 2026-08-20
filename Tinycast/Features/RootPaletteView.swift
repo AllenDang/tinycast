@@ -77,11 +77,26 @@ struct RootPaletteView: View {
         }
     }
 
-    /// Inline calculator answer for the current query, live in both the launcher and Calculator History search; when present it occupies flat selection index 0 so rows shift by `calcCount`.
+    /// Inline calculator answer for the current query, live in both the launcher and Calculator History search; when present it occupies flat selection index 0 so rows shift by `calcCount`. Triggered only by a leading `=`, so the calculator stays silent until the user explicitly asks for it.
     private var calcResult: CalcResult? {
-        vm.mode == .launcher || vm.mode == .calculatorHistory
-            ? CalcMemo.evaluate(vm.query, currency: currencyRates.source) : nil
+        guard vm.mode == .launcher || vm.mode == .calculatorHistory else { return nil }
+        return CalcMemo.evaluate(vm.query, currency: currencyRates.source)
     }
+
+    /// Function autocomplete suggestions when the user is typing a function name after `=`.
+    private var funcSuggestions: [CalcParser.FunctionSuggestion] {
+        guard vm.mode == .launcher else { return [] }
+        let trimmed = vm.query.trimmingCharacters(in: .whitespaces)
+        guard let first = trimmed.first, first == "=" || first == "＝" else { return [] }
+        let expression = String(trimmed.dropFirst()).trimmingCharacters(in: .whitespaces)
+        let lastToken = expression.split { " +-*/^×÷%!(),".contains($0) }.last.map(String.init) ?? ""
+        guard lastToken.allSatisfy({ $0.isLetter || $0.isNumber }),
+              lastToken.first?.isLetter == true,
+              lastToken.count >= 1
+        else { return [] }
+        return CalcParser.FunctionSuggestion.suggestions(matching: lastToken)
+    }
+
     /// Commands whose provider is configured — the only ones that can match. Filtered once per
     /// render so `firstMatch` and `pendingKeyword` never see a command that can't send a request.
     private var activeAICommands: [AICommand] {
@@ -108,10 +123,17 @@ struct RootPaletteView: View {
         (calcResult == nil && aiCommandMatch == nil && aiPendingCommand == nil) ? 0 : 1
     }
 
+    /// The index of the currently selected function suggestion, or -1 if none is selected.
+    private var funcSuggestionIndex: Int {
+        guard !funcSuggestions.isEmpty else { return -1 }
+        let idx = vm.selection - cachedCalcCount
+        return (idx >= 0 && idx < funcSuggestions.count) ? idx : -1
+    }
+
     private var resultCount: Int {
         if let screen { return screen.rows.count }
         switch vm.mode {
-        case .launcher: return appResults.count + cachedCalcCount
+        case .launcher: return appResults.count + cachedCalcCount + funcSuggestions.count
         case .clipboard: return clipResults.count
         case .calculatorHistory: return histResults.count + cachedCalcCount
         default: return 0
@@ -225,9 +247,10 @@ struct RootPaletteView: View {
         let ai = aiCommandMatch
         let aiPending = aiPendingCommand
         let offset = (calc == nil && ai == nil && aiPending == nil) ? 0 : 1
+        let funcCount = funcSuggestions.isEmpty ? 0 : funcSuggestions.count
         cachedCalcCount = offset
         // Only the active mode is non-empty.
-        let count = apps.count + offset + clips.count + hist.count + screenRows
+        let count = apps.count + offset + funcCount + clips.count + hist.count + screenRows
         let sel = count == 0 ? 0 : min(max(vm.selection, 0), count - 1)
         let calcSelected = calc != nil && sel == 0
         let aiSelected = ai != nil && sel == 0
@@ -616,7 +639,8 @@ struct RootPaletteView: View {
             let calcSelected = calc != nil && selection == 0
             let aiSelected = ai != nil && selection == 0
             let aiPendingSelected = aiPending != nil && selection == 0
-            let appIndex = selection - offset
+            let funcCount = funcSuggestions.count
+            let appIndex = selection - offset - funcCount
             let selectedID = apps.indices.contains(appIndex) ? apps[appIndex].id : nil
             LauncherList(
                 results: apps,
@@ -645,8 +669,13 @@ struct RootPaletteView: View {
                 aiPendingSelected: aiPendingSelected,
                 onActivate: { core.launch($0, searchQuery: vm.query) },
                 onActions: { app in
-                    if let index = apps.firstIndex(of: app) { vm.selection = index + offset }
+                    if let index = apps.firstIndex(of: app) { vm.selection = index + offset + funcCount }
                     openActions()
+                },
+                funcSuggestions: funcSuggestions,
+                funcSuggestionSelectedIndex: funcSuggestionIndex,
+                onSelectFuncSuggestion: { fn in
+                    insertFuncSuggestion(fn)
                 }
             )
         case .clipboard:
@@ -769,6 +798,7 @@ struct RootPaletteView: View {
     ) -> String {
         if let screen { return screen.primaryActionTitle }
         if let aiCommand { return "Run \(aiCommand.name)" }
+        if funcSuggestionIndex >= 0 { return "Insert Function" }
         switch vm.mode {
         case .clipboard:
             return vm.pasteTarget?.pasteTitle ?? "Paste"
@@ -835,7 +865,7 @@ struct RootPaletteView: View {
     // MARK: - Actions
 
     private func move(_ delta: Int) {
-        let cnt = appResults.count + cachedCalcCount
+        let cnt = appResults.count + cachedCalcCount + funcSuggestions.count
         guard cnt > 0 else { return }
         vm.selection = min(max(vm.selection + delta, 0), cnt - 1)
         scroll = ScrollIntent(kind: .follow)
@@ -884,6 +914,22 @@ struct RootPaletteView: View {
         vm.prepare(mode: .launcher)
     }
 
+    /// Insert a function name into the query after the `=` prefix.
+    private func insertFuncSuggestion(_ fn: CalcParser.FunctionSuggestion) {
+        let trimmed = vm.query.trimmingCharacters(in: .whitespaces)
+        guard let first = trimmed.first, first == "=" || first == "＝" else { return }
+        // Replace the last partial token with the full function name + "("
+        let expression = String(trimmed.dropFirst()).trimmingCharacters(in: .whitespaces)
+        let parts = expression.split(omittingEmptySubsequences: false) { " +-*/^×÷%!(),".contains($0) }
+        if let last = parts.last {
+            let prefix = expression.dropLast(last.count)
+            let newExpression = prefix + fn.name + "("
+            vm.query = String(first) + newExpression
+        } else {
+            vm.query = String(first) + fn.name + "("
+        }
+    }
+
     private func activateSelection() {
         // Nothing is visibly selected in the collapsed compact bar; launch only via ⌘1–⌘5 or by typing.
         guard !isCollapsed else { return }
@@ -904,7 +950,12 @@ struct RootPaletteView: View {
             }
             // The AI hint (keyword recognized, no argument yet) falls through: `calcCount` still
             // reserves its slot, so `index` lands on -1 and `appResults` correctly has nothing there.
-            let index = selection - calcCount
+            let funcIdx = selection - cachedCalcCount
+            if !funcSuggestions.isEmpty, funcIdx >= 0, funcIdx < funcSuggestions.count {
+                insertFuncSuggestion(funcSuggestions[funcIdx])
+                return
+            }
+            let index = funcIdx - funcSuggestions.count
             guard appResults.indices.contains(index) else { return }
             core.launch(appResults[index], searchQuery: vm.query)
         case .clipboard:

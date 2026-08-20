@@ -28,18 +28,44 @@ struct CalcResult: Equatable, Sendable {
         if case .value = payload { return true }
         return false
     }
+
+    /// Convenience: build a value result from a CalcValue.
+    static func valueResult(expression: String, value: CalcValue, sourceBadge: String? = "Expression", targetBadge: String? = "Result") -> CalcResult {
+        CalcResult(
+            expression: expression,
+            sourceBadge: sourceBadge,
+            targetBadge: targetBadge,
+            payload: .value(
+                display: CalcFormatter.displayValue(value),
+                copyText: CalcFormatter.copyTextValue(value)))
+    }
 }
 
 /// Entry point turning a raw query into a calculator answer (or nil when it isn't calculator input), via a pure pre-filter → base → unit → quantity → arithmetic pipeline; kept Foundation-only so `Tools/calc-test.swift` compiles it standalone.
 enum CalcEngine {
-    /// Public entry: evaluates against the live clock. `currency` defaults to `.off` so any caller that
-    /// hasn't been handed a consented source gets the feature disabled rather than silently enabled.
+    /// Public entry: evaluates against the live clock. Requires a leading `=` (or fullwidth `＝`) to trigger.
+    /// `currency` defaults to `.off` so any caller that hasn't been handed a consented source gets the feature disabled rather than silently enabled.
     static func evaluate(_ raw: String, currency: CurrencySource = .off) -> CalcResult? {
         evaluate(raw, now: Date(), calendar: .current, currency: currency)
     }
 
     /// `now`/`calendar` are injected so the date/time paths are deterministic under `Tools/calc-test.swift`.
     static func evaluate(
+        _ raw: String, now: Date, calendar: Calendar, currency: CurrencySource = .off
+    ) -> CalcResult? {
+        let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty, trimmed.count <= 256 else { return nil }
+
+        // Calculator mode: explicit = (or fullwidth ＝) trigger is required.
+        guard let first = trimmed.first, first == "=" || first == "＝" else { return nil }
+        let expression = String(trimmed.dropFirst()).trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !expression.isEmpty else { return nil }
+
+        return evaluateExpression(expression, now: now, calendar: calendar, currency: currency)
+    }
+
+    /// Internal evaluation without the `=` trigger check — used by recursive paths (partial results, etc.).
+    static func evaluateExpression(
         _ raw: String, now: Date, calendar: Calendar, currency: CurrencySource = .off
     ) -> CalcResult? {
         let query = raw.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -59,7 +85,7 @@ enum CalcEngine {
             return partial
         }
 
-        // A lone literal or constant is more likely an app search than a calculation, so no card — except a radix literal ("0xff"), where echoing the decimal is useful.
+        // A lone literal or constant is more likely an app search than a calculation, so no card — except a radix literal ("0xff"), compact number ("10k"), or a named constant ("pi", "tau") where echoing the value is useful.
         if tokens.count == 1 {
             if case .intLiteral(let value, let radix) = tokens[0], radix != 10 {
                 let display = CalcFormatter.grouped(String(value))
@@ -75,6 +101,10 @@ enum CalcEngine {
                     payload: .value(
                         display: CalcFormatter.display(value),
                         copyText: CalcFormatter.copyText(value)))
+            }
+            if case .ident(let name) = tokens[0], let constant = CalcParser.constants[name] {
+                return CalcResult.valueResult(
+                    expression: query, value: .scalar(constant))
             }
             return nil
         }
@@ -154,20 +184,18 @@ enum CalcEngine {
         // Natural-language percent: `20% off 500`, `50 as % of 200`.
         if let percent = CalcPercent.evaluate(tokens, query: query) { return percent }
 
-        // Cheap reject for the arithmetic fallback: plain math always carries a digit or a constant, keeping the common app-search case a no-card.
+        // Cheap reject for the arithmetic fallback: plain math always carries a digit, a constant, or a known function name — keeping the common app-search case a no-card.
         guard
             query.contains(where: { $0.isASCII && $0.isNumber })
                 || query.lowercased().contains("e") || query.contains("π")
+                || query.contains("tau") || query.contains("phi") || query.contains("φ")
+                || CalcParser.allFunctionNames.contains(
+                    query.split(whereSeparator: \.isWhitespace).first.map(String.init) ?? "")
         else { return nil }
 
-        guard let value = CalcParser.evaluate(tokens) else { return nil }
-        return CalcResult(
-            expression: prettyExpression(query),
-            sourceBadge: "Expression",
-            targetBadge: "Result",
-            payload: .value(
-                display: CalcFormatter.display(value),
-                copyText: CalcFormatter.copyText(value)))
+        guard let value = CalcParser.evaluateValue(tokens) else { return nil }
+        return CalcResult.valueResult(
+            expression: prettyExpression(query), value: value)
     }
 
     // MARK: - Pre-filter
@@ -181,10 +209,12 @@ enum CalcEngine {
         if query.contains(" ") { return true }
         // Single-word: must have a digit, operator, constant, or parenthesis.
         if query.contains(where: { $0.isASCII && $0.isNumber }) { return true }
-        if query.contains(where: { "+-*/^×÷%!()".contains($0) }) { return true }
+        if query.contains(where: { "+-*/^×÷%!(),".contains($0) }) { return true }
         let lower = query.lowercased()
         if lower.contains("pi") || query.contains("π") { return true }
-        if lower == "e" { return true }
+        if lower == "e" || lower == "tau" || lower == "phi" || lower == "φ" { return true }
+        // Known function names — a single-word query like "length" or "normalize" could be the start of a function call.
+        if CalcParser.allFunctionNames.contains(lower) { return true }
         return false
     }
 
@@ -209,18 +239,14 @@ enum CalcEngine {
         }
 
         // A conversion's own echo drops its target ("10 km" for `10km to mi`), so echo the typed text instead — the badges still name both units.
-        if let complete = evaluate(
+        if let complete = evaluateExpression(
             tokenQuery(prefixTokens), now: now, calendar: calendar, currency: currency) {
             return replacingExpression(complete, with: prettyExpression(query))
         }
 
-        guard let value = CalcParser.evaluate(prefixTokens) else { return nil }
-        return CalcResult(
-            expression: prettyExpression(query),
-            sourceBadge: "Expression", targetBadge: "Result",
-            payload: .value(
-                display: CalcFormatter.display(value),
-                copyText: CalcFormatter.copyText(value)))
+        guard let value = CalcParser.evaluateValue(prefixTokens) else { return nil }
+        return CalcResult.valueResult(
+            expression: prettyExpression(query), value: value)
     }
 
     private static func partialOperatorText(_ token: CalcToken) -> String? {
@@ -247,6 +273,8 @@ enum CalcEngine {
                 return name
             case .op(let op):
                 return String(op)
+            case .comma:
+                return ","
             case .arrow:
                 return "->"
             }

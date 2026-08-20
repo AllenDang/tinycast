@@ -244,6 +244,8 @@ enum CalcQuantity {
                 if op == "-" || op == "+" { attachNext = isSign(at: index, tokens) }
             case .arrow:
                 add("→")
+            case .comma:
+                add(",")
             }
             index += 1
         }

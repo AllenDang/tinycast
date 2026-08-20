@@ -57,6 +57,7 @@
 		465B8661E7399F3AA32BD75C /* SnippetKeywordPolicy.swift in Sources */ = {isa = PBXBuildFile; fileRef = CD3764D91B2F3170690A473A /* SnippetKeywordPolicy.swift */; };
 		48AB20B04EB50F9F4A68BD66 /* SnippetTemplateEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A002AC0DE601E1F65D20C4A /* SnippetTemplateEngine.swift */; };
 		4B938A5DDED7D009F8C0E29F /* AICommandScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7789EA319B18729D1BB275BD /* AICommandScreen.swift */; };
+		4D453CE1429B4203149F985D /* CalcValue.swift in Sources */ = {isa = PBXBuildFile; fileRef = E78E9ACE8768F93CB672A34A /* CalcValue.swift */; };
 		4F3D96E59E117459153336F4 /* SettingsPaneScanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = C722D73D270A3A6CED4023F7 /* SettingsPaneScanner.swift */; };
 		4F740AF85545CF4133C89B82 /* AboutView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4802942FF89B327A76432A9B /* AboutView.swift */; };
 		4F8C9F202EE37D39C1AC13EF /* CalloutShape.swift in Sources */ = {isa = PBXBuildFile; fileRef = C24AD5CFE167900DF8B2705C /* CalloutShape.swift */; };
@@ -359,6 +360,7 @@
 		E4DF265A2EE17B6039080C59 /* AICommandCardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AICommandCardView.swift; sourceTree = "<group>"; };
 		E5051622CC6497E2151326CA /* SnippetKeywordListener.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SnippetKeywordListener.swift; sourceTree = "<group>"; };
 		E6999B617ECF28C9021027B9 /* RaycastImportV2.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RaycastImportV2.swift; sourceTree = "<group>"; };
+		E78E9ACE8768F93CB672A34A /* CalcValue.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalcValue.swift; sourceTree = "<group>"; };
 		E874F8DFCBE0ACDD59C8664B /* AppPickerPopover.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppPickerPopover.swift; sourceTree = "<group>"; };
 		EB20A38DA4C5603DF7430B3C /* VisualEffectView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VisualEffectView.swift; sourceTree = "<group>"; };
 		EDE084FDBE22B01204E7BEDA /* SnippetMarkdownSerializer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SnippetMarkdownSerializer.swift; sourceTree = "<group>"; };
@@ -769,6 +771,7 @@
 				88A65B4EC5AE7E22594BFC5E /* CalcPercent.swift */,
 				8D93A4CEA9FE857034D63EF7 /* CalcQuantity.swift */,
 				25B8A7D8DBB0CE2ACEDB3979 /* CalcUnits.swift */,
+				E78E9ACE8768F93CB672A34A /* CalcValue.swift */,
 				5E08668A3C8418E2F0970300 /* CurrencyData.generated.swift */,
 			);
 			path = Calculator;
@@ -903,6 +906,7 @@
 				D3CA50C1CFABC31E6BC7B73C /* CalcPercent.swift in Sources */,
 				FC934E5AE6A933F5BC7AC4DD /* CalcQuantity.swift in Sources */,
 				9EC89A6398BD075275FECC9E /* CalcUnits.swift in Sources */,
+				4D453CE1429B4203149F985D /* CalcValue.swift in Sources */,
 				DB04CC2AFEDD69D0676CA1D1 /* CalculatorCardView.swift in Sources */,
 				42828BD1C5E4E6E7AA1BF103 /* CalculatorHistoryStore.swift in Sources */,
 				FE6A9C75F87C3495F413E66E /* CalculatorHistoryView.swift in Sources */,
@@ -1144,7 +1148,7 @@
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				MACOSX_DEPLOYMENT_TARGET = 26.0;
-				MARKETING_VERSION = 0.1.0;
+				MARKETING_VERSION = 0.3.0;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;
@@ -1210,7 +1214,7 @@
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				MACOSX_DEPLOYMENT_TARGET = 26.0;
-				MARKETING_VERSION = 0.1.0;
+				MARKETING_VERSION = 0.3.0;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
 				PRODUCT_NAME = "$(TARGET_NAME)";
