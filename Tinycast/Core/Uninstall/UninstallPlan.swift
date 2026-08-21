@@ -24,7 +24,8 @@ struct UninstallCandidate: Identifiable, Hashable, Sendable {
     let locationLabel: String
     let evidence: UninstallEvidence
     let isDirectory: Bool
-    let size: MeasuredSize
+    /// Nil until a directory's walk lands; a file's size comes straight from its `lstat`.
+    var size: MeasuredSize?
     let protection: UninstallProtection
 
     var id: String { path }
@@ -36,7 +37,7 @@ struct UninstallCandidate: Identifiable, Hashable, Sendable {
 /// Everything attributable to one app, bundle pinned first.
 struct UninstallPlan: Equatable, Sendable {
     let target: UninstallTarget
-    let candidates: [UninstallCandidate]
+    var candidates: [UninstallCandidate]
     let isTargetRunning: Bool
 
     var removableIDs: Set<UninstallCandidate.ID> {
@@ -45,11 +46,17 @@ struct UninstallPlan: Equatable, Sendable {
 
     var lockedCount: Int { candidates.count { $0.isLocked } }
 
-    var totalBytes: Int64 { candidates.reduce(0) { $0 + $1.size.bytes } }
+    var totalBytes: Int64 { candidates.reduce(0) { $0 + ($1.size?.bytes ?? 0) } }
 
     /// Everything removable, name matches included: they're exact, confined, and only ever cost a drag back out of the Trash.
     var defaultSelection: UninstallSelection {
         UninstallSelection(plan: self, checked: removableIDs)
+    }
+
+    /// How a walk lands on the row it measured, without disturbing the order or the checked set.
+    mutating func setSize(_ size: MeasuredSize, forPath path: String) {
+        guard let index = candidates.firstIndex(where: { $0.path == path }) else { return }
+        candidates[index].size = size
     }
 }
 
@@ -75,7 +82,7 @@ struct UninstallSelection: Equatable, Sendable {
     var count: Int { checked.count }
 
     func bytes(in plan: UninstallPlan) -> Int64 {
-        plan.candidates.reduce(0) { $0 + (checked.contains($1.id) ? $1.size.bytes : 0) }
+        plan.candidates.reduce(0) { $0 + (checked.contains($1.id) ? ($1.size?.bytes ?? 0) : 0) }
     }
 
     func candidates(in plan: UninstallPlan) -> [UninstallCandidate] {

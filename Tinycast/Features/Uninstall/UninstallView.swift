@@ -111,7 +111,7 @@ private struct UninstallRow: View {
                     .lineLimit(1)
             }
             Spacer(minLength: Theme.Spacing.md)
-            Text(candidate.size.formatted)
+            Text(candidate.size?.formatted ?? "")
                 .font(Theme.Typography.rowTrailing)
                 .foregroundStyle(.secondary)
             FileIconView(path: candidate.path)

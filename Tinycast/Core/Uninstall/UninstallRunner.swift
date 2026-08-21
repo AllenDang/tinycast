@@ -10,7 +10,7 @@ struct UninstallReport: Sendable {
     let failed: [UninstallFailedItem]
 
     var trashedCount: Int { trashed.count }
-    var freedBytes: Int64 { trashed.reduce(0) { $0 + $1.size.bytes } }
+    var freedBytes: Int64 { trashed.reduce(0) { $0 + ($1.size?.bytes ?? 0) } }
     var hasFailures: Bool { !failed.isEmpty }
     /// Gates the reference cleanup: a leftovers-only run leaves the app installed.
     var removedBundle: Bool { trashed.contains { $0.evidence == .bundle } }

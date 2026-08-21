@@ -111,11 +111,7 @@ enum CalcCurrency {
         }
     }
 
-    /// The only currency data still written by hand: nouns several currencies share, where CLDR
-    /// correctly refuses to choose ("US dollars", "Canadian dollars" — never a bare "dollars") and
-    /// the calculator has to. The count is how many of the feed's currencies claim that word.
-    /// Everything unambiguous — names, signs, and 129 uncontested nouns — is generated.
-    /// `pound`/`pounds` deliberately overlaps `CalcUnits`' weight; the pipeline order resolves it.
+    /// Hand-written because CLDR won't assign a shared noun. docs/features/calculator.md
     private static let contested: [String: [String]] = [
         "USD": ["dollar", "dollars"],  // 22 claimants
         "CHF": ["franc", "francs"],  // 10
@@ -130,8 +126,12 @@ enum CalcCurrency {
         "SAR": ["riyal", "riyals"]  // 2
     ]
 
-    /// Lookup by lowercased ident. Codes, display names and uncontested nouns come from
-    /// `CurrencyData.generated.swift`; `contested` above is applied last so its choices win.
+    /// ISO 4217's own names where CLDR carries a different one; the standard is the source of truth.
+    private static let isoNames: [String: [String]] = [
+        "CNY": ["rmb", "renminbi"]  // ISO 4217 names CNY "Yuan Renminbi"; CLDR says "Chinese Yuan"
+    ]
+
+    /// Lookup by lowercased ident, generated data first so the hand-written tables above win.
     static let byName: [String: CurrencyDef] = {
         var defs: [String: CurrencyDef] = [:]
         var table: [String: CurrencyDef] = [:]
@@ -144,6 +144,10 @@ enum CalcCurrency {
         }
         for (word, code) in CurrencyData.aliases { table[word] = defs[code] }
         for (code, words) in contested {
+            guard let def = defs[code] else { continue }
+            for word in words { table[word] = def }
+        }
+        for (code, words) in isoNames {
             guard let def = defs[code] else { continue }
             for word in words { table[word] = def }
         }

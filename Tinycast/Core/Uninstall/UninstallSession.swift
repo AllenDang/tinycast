@@ -45,7 +45,7 @@ final class UninstallSession {
         let name = app.name
         let bundleID = app.bundleID
         scanTask = Task(priority: .userInitiated) { [weak self] in
-            let result = await Self.runScan(
+            let result = await Self.runDiscovery(
                 url: url, name: name, bundleID: bundleID, otherAppNames: otherAppNames,
                 otherBundleIDs: otherBundleIDs, isRunning: isRunning)
             guard let self, !Task.isCancelled else { return }
@@ -53,6 +53,7 @@ final class UninstallSession {
             case .success(let plan):
                 state = .ready(plan)
                 selection = plan.defaultSelection
+                await measurePending(in: plan)
             case .failure(let error):
                 state = .failed(
                     (error as? UninstallScanner.Failure)?.errorDescription
@@ -79,14 +80,25 @@ final class UninstallSession {
         isTrashing = trashing
     }
 
+    /// Rows are already on screen, so each walk writes its own row rather than gating the list.
+    private func measurePending(in plan: UninstallPlan) async {
+        let paths = plan.candidates.filter { $0.size == nil }.map(\.path)
+        guard !paths.isEmpty else { return }
+        await UninstallScanner.measure(paths: paths) { [weak self] path, size in
+            guard let self, case .ready(var plan) = state else { return }
+            plan.setSize(size, forPath: path)
+            state = .ready(plan)
+        }
+    }
+
     /// Off-main, and `scanTask`'s own child: that is what makes `cancel()` release the scan itself.
-    private nonisolated static func runScan(
+    private nonisolated static func runDiscovery(
         url: URL, name: String, bundleID: String?, otherAppNames: [String],
         otherBundleIDs: [String], isRunning: Bool
     ) async -> Result<UninstallPlan, Error> {
         do {
             return .success(
-                try await UninstallScanner.scan(
+                try await UninstallScanner.discover(
                     target: makeTarget(url: url, name: name, bundleID: bundleID),
                     otherAppNames: otherAppNames, otherBundleIDs: otherBundleIDs,
                     isTargetRunning: isRunning))

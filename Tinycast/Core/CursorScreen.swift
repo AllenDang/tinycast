@@ -8,4 +8,9 @@ extension NSScreen {
         // NSMouseInRect, not `contains`: a pointer on a display's topmost row otherwise resolves to the display stacked above it.
         return screens.first { NSMouseInRect(mouse, $0.frame, false) } ?? main
     }
+
+    /// The menu-bar display: the one at the global origin, which `NSScreen.main` is not.
+    static var primary: NSScreen? {
+        screens.first { $0.frame.origin == .zero } ?? screens.first
+    }
 }
