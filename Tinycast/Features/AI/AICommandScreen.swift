@@ -66,6 +66,11 @@ private struct StreamingMarkdownView: View {
                     .markdownTextStyle(\.text) {
                         ForegroundColor(.white)
                     }
+                    // 1.2x line height: +0.2em relative to each block's own font size.
+                    .markdownBlockStyle(\.paragraph) { configuration in
+                        configuration.label
+                            .relativeLineSpacing(.em(0.2))
+                    }
                     .markdownTextStyle(\.code) {
                         FontFamilyVariant(.monospaced)
                     }
