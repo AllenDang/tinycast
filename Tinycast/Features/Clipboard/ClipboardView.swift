@@ -236,8 +236,7 @@ private struct ClipboardRow: View {
         case .image:
             AsyncThumbnail(url: imageURL, maxPixel: 64) { image in
                 image
-                    .resizable()
-                    .aspectRatio(contentMode: .fill)
+                    .resizable().scaledToFill()
                     .frame(width: Theme.Size.rowIcon, height: Theme.Size.rowIcon)
                     .clipShape(
                         RoundedRectangle(cornerRadius: Theme.Radius.thumbnail, style: .continuous))
@@ -327,8 +326,7 @@ struct ClipboardPreview: View {
         case .image:
             AsyncThumbnail(url: store.imageURL(for: item), maxPixel: Self.previewMaxPixel) { image in
                 image
-                    .resizable()
-                    .aspectRatio(contentMode: .fit)
+                    .resizable().scaledToFit()
                     .clipShape(
                         RoundedRectangle(cornerRadius: Theme.Radius.card, style: .continuous)
                     )

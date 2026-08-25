@@ -162,6 +162,7 @@
 		DA2EBB18F026BD055E0270CD /* AppLauncher.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A2EF9C70F8BC9571089D5EB /* AppLauncher.swift */; };
 		DA5BCA13045FF91B3FC8EB35 /* OnboardingState.swift in Sources */ = {isa = PBXBuildFile; fileRef = B8A9B4E6E477C30372C85F86 /* OnboardingState.swift */; };
 		DB04CC2AFEDD69D0676CA1D1 /* CalculatorCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C64C87569634E26E1BE99A91 /* CalculatorCardView.swift */; };
+		DC63B8469A0F4F890BBB94D1 /* PaletteViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D01DE5D5DDCB09AAC1576A1 /* PaletteViewModel.swift */; };
 		DCC36924E538C11136CEC060 /* LauncherView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6BB7C545EFD9589A77AD7BE2 /* LauncherView.swift */; };
 		DEC660F280699E43AA028E8A /* HotKeyCenter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1DB0D6E17E2B2D6F2CB47E0D /* HotKeyCenter.swift */; };
 		E5072CA7D34BA877D97DF392 /* ImageThumbnail.swift in Sources */ = {isa = PBXBuildFile; fileRef = 99945F0952ADADBBEB9B8388 /* ImageThumbnail.swift */; };
@@ -269,6 +270,7 @@
 		68BD5E61831CB92150C62E1F /* CalculatorHistoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalculatorHistoryView.swift; sourceTree = "<group>"; };
 		6A6941F59D6E8014A22F1FF7 /* UninstallTarget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UninstallTarget.swift; sourceTree = "<group>"; };
 		6BB7C545EFD9589A77AD7BE2 /* LauncherView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LauncherView.swift; sourceTree = "<group>"; };
+		6D01DE5D5DDCB09AAC1576A1 /* PaletteViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PaletteViewModel.swift; sourceTree = "<group>"; };
 		6E7DD73DC688DBFAFC4B04AC /* WindowManagementSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WindowManagementSettingsView.swift; sourceTree = "<group>"; };
 		6EA607D74B37C51BABA2B33A /* QuicklinkArgumentsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuicklinkArgumentsView.swift; sourceTree = "<group>"; };
 		6EB4BA1A385F78B9C5E7EBCF /* UninstallRules.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UninstallRules.swift; sourceTree = "<group>"; };
@@ -431,6 +433,7 @@
 				B8A9B4E6E477C30372C85F86 /* OnboardingState.swift */,
 				3FF10C4F5E4F73503F58D03B /* OverlayScroller.swift */,
 				555E9C7EA62BDB40891A5751 /* PalettePanel.swift */,
+				6D01DE5D5DDCB09AAC1576A1 /* PaletteViewModel.swift */,
 				A5447AEAD87BFE0E2D979B39 /* PaletteWindowController.swift */,
 				C01FB6EBC716BBFD38471D95 /* PanelTransition.swift */,
 				6185011A02366B30B48B5B6C /* Paster.swift */,
@@ -968,6 +971,7 @@
 				9A3972BE11AE353EFBB839A0 /* PalettePanel.swift in Sources */,
 				9F8806D46EBAF7058FC2EAEC /* PaletteRowIndex.swift in Sources */,
 				A66E6C662757455D3669824B /* PaletteScreen.swift in Sources */,
+				DC63B8469A0F4F890BBB94D1 /* PaletteViewModel.swift in Sources */,
 				F25D58ED6EF3308D38D01732 /* PaletteWindowController.swift in Sources */,
 				CAAEFE43F2A89406E4EE48AC /* PanelTransition.swift in Sources */,
 				F2B68DBA258D85DD5C6DC1CC /* Paster.swift in Sources */,
@@ -1148,7 +1152,7 @@
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				MACOSX_DEPLOYMENT_TARGET = 26.0;
-				MARKETING_VERSION = 0.3.0;
+				MARKETING_VERSION = 0.4.0;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;
@@ -1214,7 +1218,7 @@
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				MACOSX_DEPLOYMENT_TARGET = 26.0;
-				MARKETING_VERSION = 0.3.0;
+				MARKETING_VERSION = 0.4.0;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
 				PRODUCT_NAME = "$(TARGET_NAME)";

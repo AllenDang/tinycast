@@ -81,7 +81,8 @@ final class LauncherRankingStore {
         let query = Self.normalize(query)
         guard !query.isEmpty, let learned = rankingLookup()[query] else { return [:] }
         let timestamp = now()
-        return learned.mapValues { boost($0, at: timestamp) }
+        let result = learned.mapValues { boost($0, at: timestamp) }
+        return result
     }
 
     private func boost(_ record: LauncherRankingRecord, at timestamp: Date) -> Int {

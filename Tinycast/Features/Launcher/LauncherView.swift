@@ -71,7 +71,27 @@ struct LauncherList: View {
 
     /// Cached rows so arrow-key nav doesn't re-map the same results array every render.
 
+    private struct RowsKey: Equatable {
+        let results: [AppEntry]
+        let favoriteCount: Int
+        let showSections: Bool
+        let funcSuggestions: [CalcParser.FunctionSuggestion]
+        let hasCalc: Bool
+        let hasAIIntent: Bool
+        let hasAIPending: Bool
+    }
+
+    @State private var rowsMemo = Memo<RowsKey, [Row]>()
+
     private func computeRows() -> [Row] {
+        let key = RowsKey(
+            results: results, favoriteCount: favoriteCount, showSections: showSections,
+            funcSuggestions: funcSuggestions,
+            hasCalc: calc != nil, hasAIIntent: aiIntent != nil, hasAIPending: aiPending != nil)
+        return rowsMemo.value(for: key) { computeRowsUncached() }
+    }
+
+    private func computeRowsUncached() -> [Row] {
         var calcRows: [Row] = []
         if let calc {
             calcRows = [.header("Calculator"), .calc(calc)]
@@ -96,22 +116,27 @@ struct LauncherList: View {
         }
         let favorites = results.prefix(favoriteCount)
         let rest = results.dropFirst(favoriteCount)
-        // `rest` is apps, panes, quicklinks, snippets, system actions, window commands, custom
-        // commands, then built-in commands by the AppIndex sort invariant, so filtering by kind
-        // keeps row order identical and the flat selection index valid.
-        // Annotated: with this many sections the inference pass times out.
-        let sections: [(String, [AppEntry])] = [
-            ("Favorites", Array(favorites)),
-            ("Applications", rest.filter { $0.kind == .application }),
-            ("System Settings", rest.filter { $0.kind == .systemSettings }),
-            ("Quicklinks", rest.filter { $0.kind == .quicklink }),
-            ("Snippets", rest.filter { $0.kind == .snippet }),
-            ("System Actions", rest.filter { $0.kind == .systemAction }),
-            ("Window Management", rest.filter { $0.kind == .windowCommand }),
-            ("Custom Commands", rest.filter { $0.kind == .customCommand }),
-            ("Commands", rest.filter { $0.kind == .command })
+        // Single pass: bucket by kind instead of 9 separate filter passes. Section order is fixed.
+        var groups: [AppEntry.Kind: [AppEntry]] = [:]
+        for entry in rest {
+            groups[entry.kind, default: []].append(entry)
+        }
+        let sectionOrder: [(String, AppEntry.Kind)] = [
+            ("Applications", .application),
+            ("System Settings", .systemSettings),
+            ("Quicklinks", .quicklink),
+            ("Snippets", .snippet),
+            ("System Actions", .systemAction),
+            ("Window Management", .windowCommand),
+            ("Custom Commands", .customCommand),
+            ("Commands", .command)
         ]
-        for (title, group) in sections where !group.isEmpty {
+        if !favorites.isEmpty {
+            rows.append(.header("Favorites"))
+            rows.append(contentsOf: favorites.map(Row.app))
+        }
+        for (title, kind) in sectionOrder {
+            guard let group = groups[kind], !group.isEmpty else { continue }
             rows.append(.header(title))
             rows.append(contentsOf: group.map(Row.app))
         }

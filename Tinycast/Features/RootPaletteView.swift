@@ -242,12 +242,20 @@ struct RootPaletteView: View {
         // Newest stored clip + the reorder token: the pair changes only when the store mutates, never when a query filters the list.
         let clipFollow = ClipFollowKey(
             id: vm.mode == .clipboard ? store.items.first?.id : nil, token: vm.followToken)
-        // Every count/selection below derives from this one calc/offset pair — the flat selection index must always match the visible row order, calc card included.
+        // Compute calc/ai/aiPending inline so computed properties don't chain-recompute each other.
         let calc = calcResult
-        let ai = aiCommandMatch
-        let aiPending = aiPendingCommand
+        let aiConfigured = vm.aiConfigured
+        let ai: AICommandMatch? = {
+            guard vm.mode == .launcher, calc == nil, aiConfigured else { return nil }
+            return AICommand.firstMatch(in: activeAICommands, query: vm.query)
+        }()
+        let aiPending: AICommand? = {
+            guard vm.mode == .launcher, calc == nil, ai == nil, aiConfigured else { return nil }
+            return AICommand.pendingKeyword(in: activeAICommands, query: vm.query)
+        }()
         let offset = (calc == nil && ai == nil && aiPending == nil) ? 0 : 1
-        let funcCount = funcSuggestions.isEmpty ? 0 : funcSuggestions.count
+        let funcSugs = funcSuggestions
+        let funcCount = funcSugs.count
         cachedCalcCount = offset
         // Only the active mode is non-empty.
         let count = apps.count + offset + funcCount + clips.count + hist.count + screenRows

@@ -25,6 +25,8 @@ struct AppEntry: Identifiable, Hashable, Sendable {
     var alternateNames: [String] = []
     /// `CFBundleExecutable`, matched literally as a last resort. Applications only.
     var executableName: String?
+    /// Pre-normalized search fields, computed once at scan time so query-time scoring never calls `FuzzyMatch.normalized`. Nil for entries created outside of scan (custom commands, snippets, etc.) — those fall back to the slow path in `rank`.
+    var normalizedSearchFields: SearchFieldsNormalized?
 
     /// Stable identity for learned ranking, favorites, and other per-entry preferences.
     var preferenceKey: String { bundleID ?? id }
@@ -542,7 +544,13 @@ final class AppIndex {
             }
             // Settings panes are `.appex` bundles, which carry no Spotlight alternate names.
             let (panes, panesCache) = SettingsPaneScanner.scan(cache: paneCache)
-            return ScanResult(entries: apps + panes, cache: cache, paneCache: panesCache, metaCache: metaCache)
+            // Pre-normalize every scan-created entry once so query-time scoring skips `FuzzyMatch.normalized`.
+            let entries = (apps + panes).map { entry -> AppEntry in
+                var e = entry
+                e.normalizedSearchFields = SearchFieldsNormalized(from: e.searchFields)
+                return e
+            }
+            return ScanResult(entries: entries, cache: cache, paneCache: panesCache, metaCache: metaCache)
         }
     }
 
@@ -562,7 +570,8 @@ final class AppIndex {
         guard !q.isEmpty else { return apps }
         let key = MatchKey(
             query: q, entriesRevision: entriesRevision, rankingRevision: ranking.revision)
-        return matchMemo.value(for: key) { rank(q, limit: limit) }
+        let cached = matchMemo.value(for: key) { rank(q, limit: limit) }
+        return cached
     }
 
     /// The launcher's ordered list: ranked matches minus hidden entries, favorites pinned first.
@@ -573,34 +582,47 @@ final class AppIndex {
         let key = ResultsKey(
             query: q, entriesRevision: entriesRevision, rankingRevision: ranking.revision,
             visibilityRevision: visibility.revision, favoritesRevision: favorites.revision)
-        return resultsMemo.value(for: key) {
+        let result = resultsMemo.value(for: key) {
             // Filtering stays downstream of `matches` so that memo is never keyed on hidden state.
             let base = matches(q).filter(visibility.isVisible)
             guard q.isEmpty, !favorites.keys.isEmpty else { return base }
             let split = favorites.ordered(base)
             return split.favorites + split.rest
         }
+        return result
     }
 
     private func rank(_ q: String, limit: Int) -> [AppEntry] {
-        Signposts.interval("AppIndex.rank") {
-            let learned = ranking.boosts(query: q)
-            let scored = apps.compactMap { app -> (AppEntry, Int)? in
-                // Base relevance comes from the entry's strongest matching field; the learned boost is added after and never knows which field that was.
-                guard let score = SearchRelevance.score(query: q, fields: app.searchFields) else {
-                    return nil
-                }
-                return (app, score + (learned[app.preferenceKey] ?? 0))
-            }
-            return
-                scored
-                .sorted {
-                    $0.1 != $1.1
-                        ? $0.1 > $1.1
-                        : $0.0.name.localizedCaseInsensitiveCompare($1.0.name) == .orderedAscending
-                }
-                .prefix(limit)
-                .map(\.0)
+        let learned = ranking.boosts(query: q)
+        let query = FuzzyMatch.Query(q)
+        // Phase 2: character pre-filter — reject entries missing any query character before the expensive fuzzy match.
+        let queryChars = Set(query.text)
+        let scored: [(AppEntry, Int)] = apps.compactMap { app in
+            scoreOne(app: app, query: query, queryChars: queryChars, learned: learned)
         }
+        return
+            scored
+            .sorted {
+                $0.1 != $1.1
+                    ? $0.1 > $1.1
+                    : $0.0.name.localizedCaseInsensitiveCompare($1.0.name) == .orderedAscending
+            }
+            .prefix(limit)
+            .map(\.0)
+    }
+
+    private func scoreOne(
+        app: AppEntry, query: FuzzyMatch.Query, queryChars: Set<Character>,
+        learned: [String: Int]
+    ) -> (AppEntry, Int)? {
+        let baseScore: Int?
+        if let nf = app.normalizedSearchFields {
+            guard queryChars.isSubset(of: nf.characterSet) else { return nil }
+            baseScore = SearchRelevance.score(query: query, normalizedFields: nf)
+        } else {
+            baseScore = SearchRelevance.score(query: query.text, fields: app.searchFields)
+        }
+        guard let score = baseScore else { return nil }
+        return (app, score + (learned[app.preferenceKey] ?? 0))
     }
 }
