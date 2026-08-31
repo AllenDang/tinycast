@@ -20,9 +20,31 @@ enum FuzzyMatch {
     /// A query folded once, so ranking a list doesn't re-fold the same string for every candidate field.
     struct Query: Sendable {
         let text: String
+        let characters: [Character]
+        let characterSet: Set<Character>
         var isEmpty: Bool { text.isEmpty }
 
-        init(_ raw: String) { text = FuzzyMatch.normalized(raw) }
+        init(_ raw: String) {
+            text = FuzzyMatch.normalized(raw)
+            characters = Array(text)
+            characterSet = Set(characters)
+        }
+    }
+
+    /// A scan-time folded candidate and its graphemes, so the subsequence fallback allocates nothing while typing.
+    struct NormalizedCandidate: Sendable, Hashable {
+        let text: String
+        let characters: [Character]
+
+        init(_ raw: String) {
+            text = FuzzyMatch.normalized(raw)
+            characters = Array(text)
+        }
+
+        init(normalized: String) {
+            text = normalized
+            characters = Array(normalized)
+        }
     }
 
     /// Tiered relevance (higher is better), or nil when the query doesn't match; tiers are spaced so a better kind always wins.
@@ -57,10 +79,10 @@ enum FuzzyMatch {
     /// The widest score `match` can return; `SearchRelevance` sizes its bands off this so they never overlap.
     static let maximumScore = 100_000
 
-    /// Tiered relevance for a pre-normalized candidate, skipping the per-call `normalized` step. The caller must have already run `normalized` on the candidate — doing it once at scan time instead of once per keystroke per field.
-    static func match(_ query: Query, normalizedCandidate: String) -> Match? {
+    /// Tiered relevance for a candidate normalized at index time, including precomputed graphemes for the subsequence fallback.
+    static func match(_ query: Query, normalizedCandidate: NormalizedCandidate) -> Match? {
         let q = query.text
-        let c = normalizedCandidate
+        let c = normalizedCandidate.text
         guard !q.isEmpty else { return Match(tier: .exact, score: 0) }
 
         if c == q { return Match(tier: .exact, score: 100_000) }
@@ -73,7 +95,9 @@ enum FuzzyMatch {
                 score: (atWordStart ? 80_000 : 70_000) - c.count)
         }
 
-        guard let sub = subsequenceScore(Array(q), Array(c)) else { return nil }
+        guard let sub = subsequenceScore(query.characters, normalizedCandidate.characters) else {
+            return nil
+        }
         return Match(tier: .subsequence, score: sub)
     }
 
@@ -132,22 +156,27 @@ struct SearchFields: Sendable {
 
 /// Pre-normalized search fields — every string lowered and format-stripped at scan time so query-time scoring never calls `FuzzyMatch.normalized`. The character set is the union of all characters across every field, for the Phase 2 pre-filter.
 struct SearchFieldsNormalized: Sendable, Hashable {
-    let names: [String]
-    let alternateNames: [String]
-    let bundleID: String?
-    let executableName: String?
+    let names: [FuzzyMatch.NormalizedCandidate]
+    let alternateNames: [FuzzyMatch.NormalizedCandidate]
+    let bundleID: FuzzyMatch.NormalizedCandidate?
+    let bundleIDIdentifyingPart: FuzzyMatch.NormalizedCandidate?
+    let executableName: FuzzyMatch.NormalizedCandidate?
     let characterSet: Set<Character>
 
     init(from fields: SearchFields) {
-        names = fields.names.map { FuzzyMatch.normalized($0) }
-        alternateNames = fields.alternateNames.map { FuzzyMatch.normalized($0) }
-        bundleID = fields.bundleID.map { FuzzyMatch.normalized($0) }
-        executableName = fields.executableName.map { FuzzyMatch.normalized($0) }
+        names = fields.names.map { FuzzyMatch.NormalizedCandidate($0) }
+        alternateNames = fields.alternateNames.map { FuzzyMatch.NormalizedCandidate($0) }
+        bundleID = fields.bundleID.map { FuzzyMatch.NormalizedCandidate($0) }
+        bundleIDIdentifyingPart = bundleID.map {
+            FuzzyMatch.NormalizedCandidate(
+                normalized: SearchRelevance.identifyingPart(of: $0.text))
+        }
+        executableName = fields.executableName.map { FuzzyMatch.NormalizedCandidate($0) }
         var chars = Set<Character>()
-        for name in names { chars.formUnion(name) }
-        for alt in alternateNames { chars.formUnion(alt) }
-        if let bid = bundleID { chars.formUnion(bid) }
-        if let exe = executableName { chars.formUnion(exe) }
+        for name in names { chars.formUnion(name.characters) }
+        for alternate in alternateNames { chars.formUnion(alternate.characters) }
+        if let bundleID { chars.formUnion(bundleID.characters) }
+        if let executableName { chars.formUnion(executableName.characters) }
         characterSet = chars
     }
 }
@@ -180,7 +209,9 @@ enum SearchRelevance {
         guard !query.isEmpty else { return 0 }
         var best: Int?
 
-        func consider(_ candidate: String, literal: Band, subsequence: Band?) {
+        func consider(
+            _ candidate: FuzzyMatch.NormalizedCandidate, literal: Band, subsequence: Band?
+        ) {
             guard let match = FuzzyMatch.match(query, normalizedCandidate: candidate) else { return }
             guard let band = match.tier.isLiteral ? literal : subsequence else { return }
             best = max(best ?? Int.min, band.offset + match.score)
@@ -192,8 +223,9 @@ enum SearchRelevance {
         for alternate in normalizedFields.alternateNames {
             consider(alternate, literal: .alternateNameLiteral, subsequence: .alternateNameSubsequence)
         }
-        if let bundleID = normalizedFields.bundleID {
-            consider(identifyingPart(of: bundleID), literal: .bundleID, subsequence: nil)
+        if let bundleID = normalizedFields.bundleID,
+           let identifyingPart = normalizedFields.bundleIDIdentifyingPart {
+            consider(identifyingPart, literal: .bundleID, subsequence: nil)
             if let match = FuzzyMatch.match(query, normalizedCandidate: bundleID), match.tier == .exact {
                 best = max(best ?? Int.min, Band.bundleID.offset + match.score)
             }
@@ -232,7 +264,7 @@ enum SearchRelevance {
     }
 
     /// `apple.Photos` for `com.apple.Photos` — the leading reverse-DNS component carries no identity, and `com` alone prefixes nearly every installed app.
-    private static func identifyingPart(of bundleID: String) -> String {
+    fileprivate static func identifyingPart(of bundleID: String) -> String {
         guard let dot = bundleID.firstIndex(of: ".") else { return bundleID }
         return String(bundleID[bundleID.index(after: dot)...])
     }

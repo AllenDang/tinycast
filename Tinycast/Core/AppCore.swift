@@ -16,8 +16,7 @@ final class AppCore {
     let clipboardStore = ClipboardStore()
     let clipboardManager: ClipboardManager
     let snippetsStore: SnippetsStore
-    let snippetListener = SnippetKeywordListener(
-        syntheticEventTag: Paster.tinycastEventTag)
+    let snippetListener = SnippetKeywordListener(syntheticEventTag: Paster.tinycastEventTag)
     let snippetTextInjector: SnippetTextInjector
     let hotKeys = HotKeyManager()
     let hyperKeyTap = HyperKeyTap()

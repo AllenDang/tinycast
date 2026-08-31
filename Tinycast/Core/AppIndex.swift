@@ -25,7 +25,7 @@ struct AppEntry: Identifiable, Hashable, Sendable {
     var alternateNames: [String] = []
     /// `CFBundleExecutable`, matched literally as a last resort. Applications only.
     var executableName: String?
-    /// Pre-normalized search fields, computed once at scan time so query-time scoring never calls `FuzzyMatch.normalized`. Nil for entries created outside of scan (custom commands, snippets, etc.) — those fall back to the slow path in `rank`.
+    /// Pre-normalized search fields, computed before publication so query-time scoring never calls `FuzzyMatch.normalized`.
     var normalizedSearchFields: SearchFieldsNormalized?
 
     /// Stable identity for learned ranking, favorites, and other per-entry preferences.
@@ -556,9 +556,15 @@ final class AppIndex {
 
     private func publishEntries() {
         // Each slice is already in its own display order — alphabetical, or pinned-first for quicklinks. The slice order is the launcher's section order (LauncherList mirrors it), so custom commands sit in their own section ahead of the built-ins.
-        let updated =
+        let combined =
             discoveredEntries + quicklinkEntries + snippetEntries + Self.systemActionEntries
             + windowCommandEntries + customCommandEntries + commandEntries
+        let updated = combined.map { entry -> AppEntry in
+            guard entry.normalizedSearchFields == nil else { return entry }
+            var normalized = entry
+            normalized.normalizedSearchFields = SearchFieldsNormalized(from: entry.searchFields)
+            return normalized
+        }
         guard updated != apps else { return }
         apps = updated
         entriesRevision &+= 1
@@ -596,9 +602,13 @@ final class AppIndex {
         let learned = ranking.boosts(query: q)
         let query = FuzzyMatch.Query(q)
         // Phase 2: character pre-filter — reject entries missing any query character before the expensive fuzzy match.
-        let queryChars = Set(query.text)
-        let scored: [(AppEntry, Int)] = apps.compactMap { app in
-            scoreOne(app: app, query: query, queryChars: queryChars, learned: learned)
+        var scored: [(AppEntry, Int)] = []
+        scored.reserveCapacity(apps.count)
+        for app in apps {
+            guard let match = scoreOne(
+                app: app, query: query, queryChars: query.characterSet, learned: learned)
+            else { continue }
+            scored.append(match)
         }
         return
             scored
