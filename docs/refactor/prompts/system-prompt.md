@@ -124,7 +124,7 @@ Doing any of these fails the phase, even if the code is better afterwards:
   leave it alone**.
 - Renaming anything the phase did not ask you to rename.
 - Editing any file listed in the phase's **Files that must NOT change**.
-- Touching `Tinycast/Core/EdgeDissolve.swift` or `Tinycast/Core/ThinScrollbar.swift`. These are
+- Touching `Tinycast/DesignSystem/Scrolling/EdgeDissolve.swift` or `Tinycast/DesignSystem/Scrolling/ThinScrollbar.swift`. These are
   off-limits by `AGENTS.md` — tuned by eye, any edit is a visual regression. A phase may _move_ these
   files; nothing ever edits their contents.
 
@@ -154,11 +154,13 @@ Work in this order and do not skip steps.
    your plan differs from the phase document, stop and ask.
 3. **Edit.** Smallest diff that satisfies the objectives. Nothing else.
 4. **Build.** Run:
+
    ```
    xcodegen generate
    xcodebuild build -project Tinycast.xcodeproj -scheme Tinycast -configuration Debug \
      CODE_SIGNING_ALLOWED=NO
    ```
+
    Fix every compile error and every new warning **you introduced**. Do not fix pre-existing warnings.
 5. **Test.** Run every `Tools/` harness the phase names as a gate. Commands are in
    `docs/development.md`. A harness that passed before must still pass.

@@ -60,7 +60,7 @@ Match the surrounding code.
 - Single-line comments only. Comment the _why_, never the _what_.
 - Views stay declarative; logic lives in models and managers.
 - Swift 6 isolation — heavy work off the main actor.
-- [`Core/Theme.swift`](Tinycast/Core/Theme.swift) tokens only. Read [`docs/ui.md`](docs/ui.md) before
+- [`DesignSystem/Theme.swift`](Tinycast/DesignSystem/Theme.swift) tokens only. Read [`docs/ui.md`](docs/ui.md) before
   any new view or restyle. Dark only — no light-mode styling.
 - New long-lived state goes on `AppCore`, wired in `start()`.
 - Networked features ship **off** and consent-gated. Follow `CurrencyRateStore`.

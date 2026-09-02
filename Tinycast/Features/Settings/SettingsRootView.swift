@@ -5,74 +5,6 @@ extension Notification.Name {
     static let tinycastSelectSettingsTab = Notification.Name("TinycastSelectSettingsTab")
 }
 
-enum SettingsTab: Int, CaseIterable, Identifiable {
-    // Declaration order is sidebar order: general, then one pane per launcher category, then the rest.
-    case general, applications, systemSettings, systemActions, commands, quicklinks, snippets,
-        aiCommands, windowManagement, clipboard, emoji, permissions, backup, miscellaneous, about
-    var id: Int { rawValue }
-
-    var title: String {
-        switch self {
-        case .general: return "General"
-        case .applications: return "Applications"
-        case .systemSettings: return "System Settings"
-        case .systemActions: return "System Actions"
-        case .commands: return "Commands"
-        case .quicklinks: return "Quicklinks"
-        case .snippets: return "Snippets"
-        case .aiCommands: return "AI Commands"
-        case .windowManagement: return "Window Management"
-        case .clipboard: return "Clipboard"
-        case .emoji: return "Emoji & Symbols"
-        case .permissions: return "Permissions"
-        case .backup: return "Backup"
-        case .miscellaneous: return "Miscellaneous"
-        case .about: return "About"
-        }
-    }
-
-    var systemImage: String {
-        switch self {
-        case .general: return "switch.2"
-        case .applications: return "square.grid.2x2"
-        case .systemSettings: return "gearshape"
-        case .systemActions: return "bolt"
-        case .commands: return "terminal"
-        case .quicklinks: return "link"
-        case .snippets: return "curlybraces"
-        case .aiCommands: return AICommand.sfSymbol
-        case .windowManagement: return "macwindow"
-        case .clipboard: return "doc.on.clipboard"
-        case .emoji: return "face.smiling"
-        case .permissions: return "lock.shield"
-        case .backup: return "arrow.up.arrow.down.circle"
-        case .miscellaneous: return "ellipsis.circle"
-        case .about: return "info.circle"
-        }
-    }
-
-    /// Colored icon tile, System Settings style — a small cue that makes the sidebar scannable.
-    var tint: Color {
-        switch self {
-        case .general: return .gray
-        case .applications: return .blue
-        case .systemSettings: return .indigo
-        case .systemActions: return .orange
-        case .commands: return .green
-        case .quicklinks: return .cyan
-        case .snippets: return .green
-        case .aiCommands: return .mint
-        case .windowManagement: return .blue
-        case .clipboard: return .orange
-        case .emoji: return .yellow
-        case .permissions: return .blue
-        case .backup: return .teal
-        case .miscellaneous: return .purple
-        case .about: return .pink
-        }
-    }
-}
-
 struct SettingsRootView: View {
     @State private var tab: SettingsTab
 
@@ -84,7 +16,6 @@ struct SettingsRootView: View {
         HStack(spacing: 0) {
             sidebar
 
-            // A plain conditional swap, not a `TabView`: `NSTabView` re-hosts each tab on selection, which flickers and tears down the hotkey recorder's window membership mid-interaction — swapping this way keeps each pane's hosting view stable.
             Group {
                 switch tab {
                 case .general: GeneralSettingsView()
@@ -100,12 +31,11 @@ struct SettingsRootView: View {
                 case .emoji: EmojiSettingsView()
                 case .permissions: PermissionsSettingsView()
                 case .backup: BackupSettingsView()
-                case .miscellaneous: MiscellaneousSettingsView()
+                case .miscellaneous: CalculatorSettingsView()
                 case .about: AboutView()
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
-            // Only the background bleeds to every window edge; the pane content keeps the safe area, so it lays out below the transparent titlebar with no manual spacer.
             .background(
                 VisualEffectView(material: .contentBackground, blending: .behindWindow)
                     .ignoresSafeArea()
@@ -129,7 +59,6 @@ struct SettingsRootView: View {
         .padding(.horizontal, Theme.Spacing.md)
         .frame(width: Theme.Size.settingsSidebar)
         .frame(maxHeight: .infinity)
-        // Bleed the sidebar material to every edge so it reads as one continuous surface, with the trailing hairline in the same background since a plain `Divider` would stop at the safe area.
         .background(
             ZStack(alignment: .trailing) {
                 VisualEffectView(material: .sidebar, blending: .behindWindow)
@@ -151,7 +80,6 @@ struct SettingsRootView: View {
     }
 }
 
-/// One sidebar entry: a colored icon tile + label, with an accent highlight when selected and a subtle hover state otherwise.
 private struct SidebarRow: View {
     let title: String
     let systemImage: String
@@ -186,12 +114,10 @@ private struct SidebarRow: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        // The selected-row fill already marks the current tab; a focus ring on top of it is just noise.
         .focusEffectDisabled()
         .onHover { hovering = $0 }
     }
 
-    // Match the launcher list: a soft neutral selection fill (not a saturated accent block), with a fainter hover layer.
     private var background: Color {
         if isSelected { return Theme.Colors.selection }
         if hovering { return Theme.Colors.rowHover }

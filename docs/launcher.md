@@ -5,14 +5,13 @@ earliest scope wins).
 
 ## Search scopes
 
-`SearchScopes` (`Core/SearchScopes.swift`) owns the paths; the list is user-editable in General
+`SearchScopes` (`Features/Launcher/Model/SearchScopes.swift`) owns the paths; the list is user-editable in General
 Settings and persisted as `AppSettings.searchScopes`. A scope is either a directory or a single `.app`
 bundle, stored tilde-abbreviated so the UI reads cleanly and a settings backup stays portable.
 
-Enumeration is **flat** — one `contentsOfDirectory` per scope, no recursion. A nested folder such as
-`/Applications/Adobe` is indexed by adding it as its own scope, which keeps the list honest: what it
-shows is exactly what is scanned. (A one-level nested walk was measured against the flat list over the
-real default set: same 96 apps, same ~0.5 ms once `Bundle()` metadata reads are counted.)
+Enumeration scans each scope and one real subfolder beneath it, so apps grouped under vendor folders
+such as `/Applications/Adobe` are found automatically. Deeper nesting needs its own scope. An `.app`
+is always a leaf: its `Contents` hierarchy is never searched for more bundles.
 
 The defaults cover `/Applications` and `/System/Applications` plus their `Utilities` folders,
 `/System/Library/CoreServices/Applications`, the cryptex apps under
@@ -87,7 +86,7 @@ Selecting a launcher result records every prefix of the submitted query, so choo
 `wha` also teaches `w` and `wh`. Direct hotkeys and empty-query favorites do not affect learned
 ranking. Learned data stays on device in `launcher-ranking.json`; a result that has learned ranking
 offers a per-item reset in its Actions menu, and users can clear all learned ranking in General
-Settings.
+Settings after `LauncherCoordinator` confirms through the app-owned dialog presenter.
 
 Rankings are memoized one query deep and keyed by the ranking store's revision, so a launch or reset
 invalidates the cached order. `rank` resolves the whole learned table for a query up front via
@@ -180,7 +179,7 @@ Only the display name is indexed. Activation resolves the stable UUID through th
 to `ShellCommandRunner`; see [custom-commands.md](custom-commands.md) for persistence, hotkeys and
 execution semantics.
 
-> **Invariant:** `Tools/fuzz-test.swift` compiles the real `Tinycast/Core/SearchRelevance.swift`, so
+> **Invariant:** `Tools/fuzz-test.swift` compiles the real `Tinycast/Features/Launcher/Model/SearchRelevance.swift`, so
 > that file must stay Foundation-only and pure. There is no copy of the scorer to keep in sync.
 
 The ranking harness covers prefix learning, frequency/recency scoring, persistence, and both reset

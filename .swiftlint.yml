@@ -1,8 +1,8 @@
 excluded:
-  - Tinycast/Core/Emoji/EmojiData.generated.swift
-  - Tinycast/Core/Calculator/CurrencyData.generated.swift
-  - Tinycast/Core/ThinScrollbar.swift
-  - Tinycast/Core/EdgeDissolve.swift
+  - Tinycast/Features/Emoji/Model/EmojiData.generated.swift
+  - Tinycast/Features/Calculator/Model/CurrencyData.generated.swift
+  - Tinycast/DesignSystem/Scrolling/ThinScrollbar.swift
+  - Tinycast/DesignSystem/Scrolling/EdgeDissolve.swift
   - Tools
   - build
 

@@ -16,15 +16,15 @@ Same split as `WindowManagement`: a pure half that decides, an impure half that 
 
 | File                                       | Role                                                                                                                    |
 | ------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------- |
-| `Core/Uninstall/UninstallTarget.swift`     | `UninstallTarget`, `UninstallEvidence`, `UninstallIdentity` — and every guard rail, applied in `UninstallIdentity.make` |
-| `Core/Uninstall/UninstallSearchRoot.swift` | The root table (where to look, which styles are legal there) and `binDirectories`                                       |
-| `Core/Uninstall/UninstallRules.swift`      | Matching, plus `isAcceptableCandidate`                                                                                  |
-| `Core/Uninstall/UninstallProtection.swift` | `PathFacts` → `UninstallProtection`                                                                                     |
-| `Core/Uninstall/UninstallPlan.swift`       | `UninstallCandidate`, `UninstallPlan`, `UninstallSelection`                                                             |
-| `Core/Uninstall/UninstallScanner.swift`    | **Impure.** `contentsOfDirectory`, `lstat`, sizes, the FDA probe                                                        |
-| `Core/Uninstall/UninstallRunner.swift`     | **Impure.** `trashItem`, and nothing else                                                                               |
-| `Core/Uninstall/UninstallSession.swift`    | `@MainActor` lifecycle behind the screen                                                                                |
-| `Features/Uninstall/UninstallView.swift`   | List, row, actions menu                                                                                                 |
+| `Features/Uninstall/Model/UninstallTarget.swift`     | `UninstallTarget`, `UninstallEvidence`, `UninstallIdentity` — and every guard rail, applied in `UninstallIdentity.make` |
+| `Features/Uninstall/Model/UninstallSearchRoot.swift` | The root table (where to look, which styles are legal there) and `binDirectories`                                       |
+| `Features/Uninstall/Model/UninstallRules.swift`      | Matching, plus `isAcceptableCandidate`                                                                                  |
+| `Features/Uninstall/Model/UninstallProtection.swift` | `PathFacts` → `UninstallProtection`                                                                                     |
+| `Features/Uninstall/Model/UninstallPlan.swift`       | `UninstallCandidate`, `UninstallPlan`, `UninstallSelection`                                                             |
+| `Features/Uninstall/Service/UninstallScanner.swift`  | **Impure.** `contentsOfDirectory`, `lstat`, sizes, the FDA probe                                                        |
+| `Features/Uninstall/Service/UninstallRunner.swift`   | **Impure.** `trashItem`, and nothing else                                                                               |
+| `Features/Uninstall/Service/UninstallSession.swift`  | `@MainActor` lifecycle behind the screen                                                                                |
+| `Features/Uninstall/UI/UninstallView.swift`          | List, row, actions menu                                                                                                 |
 
 The first five compile standalone into `Tools/uninstall-test.swift`, so they stay Foundation-only
 and take every environment fact as a parameter. The scanner hands the rules **child names**, never
@@ -189,9 +189,9 @@ what stayed behind.
 ## Tests
 
 ```sh
-swiftc -swift-version 6 Tinycast/Core/Uninstall/UninstallTarget.swift \
-    Tinycast/Core/Uninstall/UninstallSearchRoot.swift Tinycast/Core/Uninstall/UninstallRules.swift \
-    Tinycast/Core/Uninstall/UninstallProtection.swift Tinycast/Core/Uninstall/UninstallPlan.swift \
+swiftc -swift-version 6 Tinycast/Features/Uninstall/Model/UninstallTarget.swift \
+    Tinycast/Features/Uninstall/Model/UninstallSearchRoot.swift Tinycast/Features/Uninstall/Model/UninstallRules.swift \
+    Tinycast/Features/Uninstall/Model/UninstallProtection.swift Tinycast/Features/Uninstall/Model/UninstallPlan.swift \
     Tools/uninstall-test.swift -o /tmp/uninstall-test && /tmp/uninstall-test
 ```
 

@@ -1,6 +1,10 @@
 // Standalone test for the quicklinks model, destination detection, store and archive — compiles the
 // *real* sources (no copy to sync):
-// swiftc -swift-version 6 Tinycast/Core/Quicklinks/Quicklink.swift Tinycast/Core/Quicklinks/QuicklinkDestination.swift Tinycast/Core/Quicklinks/QuicklinkStore.swift Tinycast/Core/Quicklinks/QuicklinkArchive.swift Tools/quicklink-test.swift -o /tmp/quicklink-test && /tmp/quicklink-test
+// swiftc -swift-version 6 Tinycast/Features/Quicklinks/Model/Quicklink.swift \
+//     Tinycast/Features/Quicklinks/Model/QuicklinkDestination.swift \
+//     Tinycast/Features/Quicklinks/Model/QuicklinkStore.swift \
+//     Tinycast/Features/Quicklinks/Model/QuicklinkArchive.swift Tools/quicklink-test.swift \
+//     -o /tmp/quicklink-test && /tmp/quicklink-test
 //
 // Every store here is built on a throwaway directory under the system temp dir and every path rule
 // is asked against an injected home, so a run can never see or touch a real quicklink library.

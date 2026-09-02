@@ -74,13 +74,78 @@ behaviour changes are what this checklist exists to catch.
 
 ## 5 · Comments — H-1 budget
 
-```
-git diff -U0 | grep -c '^+\s*//'          # comment lines added
-git diff -U0 | grep -A1 '^+\s*//' | grep -c '^+\s*//'   # rough stacking signal
+```bash
+python3 - <<'PY'
+from pathlib import Path
+
+excluded = {"EdgeDissolve.swift", "ThinScrollbar.swift"}
+files = [p for p in Path("Tinycast").rglob("*.swift")
+         if not p.name.endswith(".generated.swift") and p.name not in excluded]
+findings = []
+for path in files:
+    previous_leading = False
+    in_block = False
+    in_multiline = False
+    for number, line in enumerate(path.read_text().splitlines(), 1):
+        i = 0
+        comment = None
+        quoted = False
+        escaped = False
+        while i < len(line):
+            pair = line[i:i + 2]
+            triple = line[i:i + 3]
+            if in_block:
+                if pair == "*/":
+                    in_block = False
+                    i += 2
+                else:
+                    i += 1
+                continue
+            if in_multiline:
+                if triple == '\"\"\"':
+                    in_multiline = False
+                    i += 3
+                else:
+                    i += 1
+                continue
+            if quoted:
+                if escaped:
+                    escaped = False
+                elif line[i] == "\\":
+                    escaped = True
+                elif line[i] == '\"':
+                    quoted = False
+                i += 1
+                continue
+            if triple == '\"\"\"':
+                in_multiline = True
+                i += 3
+            elif line[i] == '\"':
+                quoted = True
+                i += 1
+            elif pair == "/*":
+                in_block = True
+                i += 2
+            elif pair == "//":
+                comment = i
+                break
+            else:
+                i += 1
+        leading = comment is not None and not line[:comment].strip()
+        if leading and previous_leading:
+            findings.append(f"stacked: {path}:{number}")
+        if comment is not None and len(line.encode()) > 100:
+            findings.append(f"over 100 bytes: {path}:{number}")
+        previous_leading = leading
+if findings:
+    raise SystemExit("\n".join(findings))
+PY
 ```
 
-- [ ] **Zero** new stacked comment blocks (two consecutive `//` lines)
-- [ ] No new comment exceeds 100 characters including indentation
+The gate checks leading and trailing comments, excluding generated and off-limits files.
+
+- [ ] **Zero** stacked comment blocks outside `EdgeDissolve.swift` and `ThinScrollbar.swift`
+- [ ] No comment exceeds 100 characters outside those two files
 - [ ] No comment explains "why I changed this" — the diff is not the audience
 - [ ] Moved comments moved verbatim, not rewritten
 - [ ] Net comment lines added is small, and ideally negative

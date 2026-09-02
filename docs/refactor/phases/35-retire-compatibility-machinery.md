@@ -9,8 +9,8 @@
 
 ## Overview
 
-Three pieces of the codebase exist purely to keep old data readable. The policy makes them dead. Delete
-them and take the simplification.
+Three roadmap-listed pieces and one post-roadmap AI migration exist purely to keep old data readable.
+The policy makes them dead. Delete them and take the simplification.
 
 ## Why this phase exists
 
@@ -32,7 +32,8 @@ Supersedes the compatibility clauses in **§2.4 hotkeys**, the `HotKeyBinding` n
 1. Retire the legacy `KeyboardShortcuts_<name>` UserDefaults key namespace.
 2. Simplify `HotKeyBinding`'s hand-written `Codable` conformance to the synthesised one.
 3. Delete `ClipboardStore`'s two schema-migration `ALTER TABLE` guards.
-4. Amend `AGENTS.md` so the contract matches reality — including **removing the refactor banner** at
+4. Delete the single-provider AI defaults and Keychain migration added after this roadmap was written.
+5. Amend `AGENTS.md` so the contract matches reality — including **removing the refactor banner** at
    the top of it. The refactor is over; a banner announcing one in progress would be false.
 
 ## Expected files to modify
@@ -44,6 +45,8 @@ Supersedes the compatibility clauses in **§2.4 hotkeys**, the `HotKeyBinding` n
 | `Features/HotKeys/Model/KeyShortcut.swift`      | Only if its `Codable` was shaped by the legacy record.                                                                |
 | `Features/Clipboard/Model/ClipboardStore.swift` | Delete the `source_app` and `pinned_at` `ALTER TABLE` migrations and `columnExists`; fold both columns into `schema`. |
 | `Features/Backup/Model/SettingsBackup.swift`    | Drop the `version` field's back-compat comment; keep the field.                                                       |
+| `Features/AI/Service/AIProviderStore.swift`     | Delete the old single-provider defaults migration; keep current provider storage and consent.                        |
+| `Features/AI/Service/AIKeychain.swift`          | Delete legacy single-provider Keychain helpers; keep per-provider bundle-scoped access.                              |
 | `AGENTS.md`                                     | Amend the three superseded clauses; remove the refactor banner.                                                       |
 | `Tools/clipboard-test.swift`                    | Only if it asserts on the migration path.                                                                             |
 
@@ -83,7 +86,8 @@ Supersedes the compatibility clauses in **§2.4 hotkeys**, the `HotKeyBinding` n
 6. A settings backup exported by this build imports into this build with every binding restored.
 7. `AGENTS.md`'s three superseded clauses are amended, **the refactor banner at the top is removed**,
    and `POLICY.md`'s "Conflicts" section is updated to say so.
-8. Net line count is **negative**.
+8. The supervisor-approved AI gap has no old defaults keys, migration method or legacy Keychain helper.
+9. Net line count is **negative**.
 
 ## Manual verification checklist
 

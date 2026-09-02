@@ -1,4 +1,4 @@
-# Phase 26 — Fix the three dependency inversions
+# Phase 26 — Fix the Core dependency inversions
 
 **Milestone:** M4 · **Effort:** M · **Risk:** Med · **Context:** Med
 
@@ -6,17 +6,19 @@
 
 ## Overview
 
-Three places in `Core/` reach _up_ into `AppCore.shared`. Break each one by injecting what it needs.
+Break the three documented `Core/` reaches into `AppCore.shared`, plus the omitted Backup reach,
+by injecting exactly what each feature needs.
 
 ## Why this phase exists
 
-The intended direction is `Features → AppCore → stores → pure core`. These three invert it:
+The intended direction is `Features → AppCore → stores → pure core`. Four dependency clusters invert it:
 
 | Site                                   | Reaches for                                  | Why it is a problem                                                 |
 | -------------------------------------- | -------------------------------------------- | ------------------------------------------------------------------- |
 | `HotKeyManager.displayName` (4 refs)   | `appIndex`, `customCommands`, `quicklinks`   | You cannot understand `HotKeyManager` without three other stores    |
 | `KeyShortcut.collapsedModifierSymbols` | `settings.hyperKey`, `hyperKeyReplacesGlyph` | A pure-ish formatting helper depends on global app state            |
 | `SystemActionRunner` async completion  | `AppCore.shared.presentSystemActionFailure`  | Bends the documented "runner owns effects, `AppCore` owns UI" split |
+| Backup gather/apply and UI flows       | stores, replacement methods and dialogs      | Serialization and import orchestration actively locate the composition root |
 
 None is a type-level cycle, but each is a cycle in reasoning — and each blocks the file from ever being
 harness-reachable.
@@ -30,20 +32,26 @@ harness-reachable.
 1. `HotKeyManager.displayName` takes a name-resolver closure, injected at wiring time.
 2. `KeyShortcut.collapsedModifierSymbols` takes the Hyper display preference as parameters.
 3. `SystemActionRunner` reports its async failure through an injected callback.
+4. A feature-owned `BackupCoordinator` receives stores, replacement closures and dialog closures once;
+   `SettingsBackup` receives a concrete dependency context and `BackupActions` stays stateless.
 
 ## Expected files to modify
 
 | File                                     | Change                                                    |
 | ---------------------------------------- | --------------------------------------------------------- |
 | `Tinycast/Core/HotKeyManager.swift`      | `displayName` uses an injected resolver.                  |
-| `Tinycast/Core/HotKey/KeyShortcut.swift` | `collapsedModifierSymbols(from:hyperKey:replacesGlyph:)`. |
+| `Tinycast/Core/HotKey/KeyShortcut.swift` | `collapsedModifierSymbols` takes Hyper display parameters. |
 | `Tinycast/Core/SystemActionRunner.swift` | `onAsyncFailure` callback instead of `AppCore.shared`.    |
-| `Tinycast/Core/AppCore.swift`            | Wires all three in `start()`.                             |
+| `Tinycast/Core/AppCore.swift`            | Wires all dependencies once in `start()` / the composition root. |
+| `Tinycast/Core/Backup/SettingsBackup.swift` | Explicit concrete context, no `AppCore` type.                 |
+| `Tinycast/Core/Backup/BackupActions.swift`  | Stateless panels, detection and summary helpers only.        |
+| `Tinycast/Features/Backup/BackupCoordinator.swift` | **New.** Owns backup/import orchestration.             |
+| Backup UI call sites                       | Call the feature coordinator; Phase 32 environment-injects it. |
 | Call sites of `collapsedModifierSymbols` | Pass the two new arguments.                               |
 
 ## Files that must NOT change
 
-- `Tinycast/Core/HotKey/HotKeyBinding.swift`, `HotKeyCenter.swift`, `DoubleTapMonitor.swift`
+- `Tinycast/Core/HotKey/HotKeyCenter.swift`, `DoubleTapMonitor.swift`
 - `Tinycast/Core/SystemAction.swift` — harness-compiled
 - `Tinycast/Core/AppIndex.swift`, `Core/CustomCommand.swift`, `Core/Quicklinks/QuicklinkStore.swift`
 - Any coordinator from phases 24–25
@@ -64,12 +72,16 @@ harness-reachable.
   `openApplication` completion handler stays — only the destination changes.
 - **Do not** attempt to make any of these three files harness-compiled in this phase. Removing the
   inversion is the objective; adding a harness is a separate, later decision.
-- `HotKeyManager` keeps `capture` and `doubleTapMonitor` as `let` properties. This phase does not touch
-  ownership.
+- Backup keeps one feature coordinator owned by `AppCore`; it receives concrete stores plus narrow
+  replacement/dialog closures. No protocol, DI container, global locator, second dialog or store owner.
+- `SettingsBackup`'s JSON fields, partial-apply semantics and consent exclusion stay unchanged.
+- Raycast detection/decryption/mapping and snippet → settings → clipboard import ordering stay unchanged.
 
 ## Detailed acceptance criteria
 
-1. `grep -rn "AppCore.shared" Tinycast/Core` returns **nothing**.
+1. `rg "AppCore\\.shared|AppCore = \\.shared|AppCore\\b" Tinycast/Core --glob '*.swift'` finds no
+   active lower-layer dependency outside `AppCore.swift`; explanatory comments and the palette window's
+   composition-root host reference are listed explicitly.
 2. No protocol was introduced.
 3. `collapsedModifierSymbols` is a pure function; it reads no global state.
 4. The recorder's "Used by …" conflict message still names apps, panes, custom commands, system actions,
@@ -78,12 +90,16 @@ harness-reachable.
    callout.
 6. Turning "Replace occurrences of ⌃⌥⇧⌘ with ✦" off restores the full modifier glyphs everywhere.
 7. A screen-saver launch failure still surfaces its dialog.
-8. `AppCore.start()` wires all three, once.
+8. `AppCore.start()` wires the three callback inversions once.
+9. Backup serialization/import code has no `AppCore` type or singleton lookup; its external JSON and
+   consent behavior are unchanged.
+10. Native and Raycast import keep executable-command confirmation and snippet/settings/clipboard order.
 
 ## Manual verification checklist
 
 - [ ] `checklists/build.md`
-- [ ] `checklists/testing.md` — `hotkey-test`, `callout-test`, `system-action-test`
+- [ ] `checklists/testing.md` — `hotkey-test`, `callout-test`, `system-action-test`, `raycast-test`,
+      `snippets-test`, `clipboard-test`, `quicklink-test`, `palette-selection-test`
 - [ ] `checklists/regression.md` — Core sweep + **Hotkeys** + **System actions & window management**
 - [ ] Bind a shortcut to an app; try to bind the same combo to a **custom command** → the conflict
       message names the **app**
@@ -96,7 +112,8 @@ harness-reachable.
 - [ ] Toggle "Include Shift" → the glyph set changes consistently in all three places
 - [ ] Delete `/System/Library/CoreServices/ScreenSaverEngine.app` is not testable; instead verify a
       different async failure path, or confirm by inspection that the callback is wired
-- [ ] `grep -rn "AppCore.shared" Tinycast/Core` → empty
+- [ ] Export/import a native backup and confirm `snippetsEnabled` remains excluded
+- [ ] Import Raycast snippets/settings/clipboard and verify the existing result summary/order
 
 ## Regression risks
 
@@ -107,6 +124,7 @@ harness-reachable.
 | A protocol sneaks in "for cleanliness"                                             | AC2                                        |
 | The failure callback is wired but never set, so a real failure is silent           | AC8 — read `start()`                       |
 | `HotKeyManager` loses its static-catalog fallbacks and shows raw IDs               | AC4                                        |
+| Backup dependencies or ordering drift                                             | AC9/AC10 + backup/Raycast harnesses         |
 
 ## Rollback strategy
 
@@ -114,17 +132,16 @@ harness-reachable.
 
 ## Expected commit size
 
-5 files, +60 / −45 lines.
+14 files plus one new coordinator; net size depends on the moved Backup orchestration.
 
 ## Suggested commit message
 
-```
-Break the three Core → AppCore.shared inversions
+```text
+Break Core dependency inversions
 
-HotKeyManager's conflict-message name lookup, KeyShortcut's ✦ collapse
-preference, and SystemActionRunner's async failure report each reached up
-into AppCore.shared. All three now take what they need — one closure or
-two parameters, wired once in start(). No protocols introduced.
+Inject hotkey names, Hyper glyph configuration and asynchronous system-action
+failure reporting. Move Backup orchestration behind a feature coordinator with
+explicit stores and closures, leaving serialization independent of AppCore.
 ```
 
 ## Dependencies
@@ -134,8 +151,9 @@ Phase 15 (`HotKeyManager` observation) and **phase 25** (`AppCore` settled). Blo
 ## Definition of Done
 
 - All acceptance criteria met
-- `grep -rn "AppCore.shared" Tinycast/Core` empty
+- No active lower-layer composition-root lookup remains in `Core/`
 - All six conflict-owner kinds verified by hand
+- Native backup and Raycast import behavior verified
 - Merged
 
 ## Estimated difficulty

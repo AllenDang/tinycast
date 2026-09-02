@@ -2,7 +2,7 @@
 
 ## Poll-based capture
 
-`ClipboardManager` runs a 0.5s `Timer` watching `NSPasteboard.general.changeCount`. To avoid
+`ClipboardMonitor` runs a 0.5s `Timer` watching `NSPasteboard.general.changeCount`. To avoid
 re-capturing Tinycast's own writes, every write stamps a private `internalType` marker on the
 pasteboard and the poller skips anything carrying it.
 
@@ -21,9 +21,8 @@ inserts, search, and pruning stay on the main actor.
 ## Pinned entries
 
 A row's ⌘K Actions menu carries **Pin Entry / Unpin Entry** (⌘P), persisted as a `pinned_at` column
-on `items` (added to existing databases by an `ALTER TABLE` migration, alongside `source_app`'s) —
-a stamp rather than a flag, because the Pinned section is ordered by _when you pinned_, not by
-recency.
+in the fresh `items` schema — a stamp rather than a flag, because the Pinned section is ordered by
+_when you pinned_, not by recency.
 
 Pins change four things:
 
@@ -39,8 +38,9 @@ Pins change four things:
   the same) rather than dropping back into the date bucket it came from, which would scroll the list
   out from under the selection. It's the same delete + re-insert `promote` uses.
 - **Retention.** Pruning skips pinned rows (`AND pinned_at IS NULL`), so a pin outlives the retention
-  window. "Clear History" still deletes everything.
-- **Selection.** Pinning lifts a row out of its date bucket, so `AppCore.togglePinnedClip` moves the
+  window. "Clear History" still deletes everything after `ClipboardCoordinator` confirms through the
+  app-owned dialog presenter.
+- **Selection.** Pinning lifts a row out of its date bucket, so `ClipboardCoordinator.togglePinned` moves the
   palette selection to the row's new index in the _current_ results and bumps `palette.followToken`,
   which is what makes the list scroll the highlight back into view.
 

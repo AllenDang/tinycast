@@ -228,6 +228,5 @@ These come from `AGENTS.md` and hold in every phase without being restated:
 
 If a phase appears to require breaking one of these, **the phase is wrong**. Stop and re-plan.
 
-**Superseded by [`POLICY.md`](POLICY.md):** `AGENTS.md`'s clauses about the legacy
-`KeyboardShortcuts_<name>` keys and `HotKeyBinding`'s `Codable` compatibility seam no longer apply —
-there are no existing users to stay compatible with. Phase 35 removes them and amends `AGENTS.md`.
+Phase 35 removed the Tinycast-only compatibility machinery superseded by [`POLICY.md`](POLICY.md).
+`AGENTS.md` now describes the final key namespace, Codable shape and architecture.

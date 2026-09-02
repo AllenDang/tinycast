@@ -130,8 +130,7 @@ and use the system handler, once, without changing what is saved.
 
 Application Support, not Caches: quicklinks are **authored data, not a regenerable cache**. That one
 fact decides the two ways `QuicklinkStore` differs from `ClipboardStore`, which it otherwise mirrors
-(WAL, `PRAGMA table_info` column sniffing plus `ALTER TABLE` for migrations, prepared statements, an
-`isolated deinit`):
+(WAL, a complete fresh schema, prepared statements and an `isolated deinit`):
 
 - The database lives beside the snippets library rather than in the cache.
 - **A database that won't open is never deleted.** `ClipboardStore` discards and recreates a corrupt
@@ -140,12 +139,13 @@ fact decides the two ways `QuicklinkStore` differs from `ClipboardStore`, which 
   and the pane says so. `Tools/quicklink-test.swift` asserts the file survives byte-for-byte.
 
 Editing preserves the UUID, and with it the quicklink's shortcut, favorite slot, visibility and
-learned ranking. Deleting goes through `AppCore`, which unwinds all four before removing the row.
+learned ranking. Deleting goes through `QuicklinkCoordinator`, which unwinds all four before removing
+the row.
 Duplicating takes a **new** identity, so the copy can't inherit the original's shortcut.
 
 ## Hotkeys
 
-`HotKeyAction.quicklink(id:)` persists under `KeyboardShortcuts_quicklinkHotkey.<uuid>` with a
+`HotKeyAction.quicklink(id:)` persists under `hotkey.quicklink.<uuid>` with a
 `boundQuicklinkIDs` index, the same shape custom commands use — both are per-item rather than
 per-catalog-entry, so both need an index for `start()` to re-register from. The store therefore loads
 **even while the feature is off** and before `hotKeys.start`: the stale-binding prune reads that
@@ -169,8 +169,8 @@ excluding it would be cargo-culting.
 ## Standalone harness
 
 ```sh
-swiftc -swift-version 6 Tinycast/Core/Quicklinks/Quicklink.swift \
-  Tinycast/Core/Quicklinks/QuicklinkDestination.swift \
-  Tinycast/Core/Quicklinks/QuicklinkStore.swift Tinycast/Core/Quicklinks/QuicklinkArchive.swift \
+swiftc -swift-version 6 Tinycast/Features/Quicklinks/Model/Quicklink.swift \
+  Tinycast/Features/Quicklinks/Model/QuicklinkDestination.swift \
+  Tinycast/Features/Quicklinks/Model/QuicklinkStore.swift Tinycast/Features/Quicklinks/Model/QuicklinkArchive.swift \
   Tools/quicklink-test.swift -o /tmp/quicklink-test && /tmp/quicklink-test
 ```

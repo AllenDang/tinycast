@@ -1,0 +1,121 @@
+import SwiftUI
+import UniformTypeIdentifiers
+
+struct ClipboardSettingsView: View {
+    @Environment(AppSettings.self) private var settings
+    @Environment(ClipboardStore.self) private var store
+    @Environment(ClipboardCoordinator.self) private var coordinator
+    @State private var showingAppPicker = false
+
+    var body: some View {
+        @Bindable var settings = settings
+        SettingsPane(
+            title: "Clipboard",
+            subtitle: "Control how much history Tinycast keeps and which apps are recorded."
+        ) {
+            SettingsCard(header: "Shortcut") {
+                SettingsRow(
+                    title: "Clipboard History",
+                    subtitle: "Open the clipboard history browser.",
+                    systemImage: "doc.on.clipboard",
+                    tint: .orange
+                ) {
+                    ShortcutRecorder(action: .toggleClipboard)
+                }
+            }
+
+            SettingsCard(header: "History") {
+                SettingsRow(
+                    title: "Keep history for",
+                    subtitle: "Entries older than this are deleted automatically.",
+                    systemImage: "clock.arrow.circlepath",
+                    tint: .orange
+                ) {
+                    Picker("", selection: $settings.clipboardRetention) {
+                        ForEach(ClipboardRetention.allCases) { retention in
+                            Text(retention.title).tag(retention)
+                        }
+                    }
+                    .labelsHidden()
+                    .fixedSize()
+                    .onChange(of: settings.clipboardRetention) {
+                        store.maxAge = settings.clipboardRetention.maxAge
+                        store.enforceLimits()
+                    }
+                }
+            }
+
+            SettingsCard(header: "Disabled Applications") {
+                ForEach(settings.clipboardDisabledApps, id: \.self) { bundleID in
+                    DisabledAppRow(bundleID: bundleID) {
+                        settings.clipboardDisabledApps.removeAll { $0 == bundleID }
+                    }
+                    SettingsDivider()
+                }
+
+                HStack(spacing: Theme.Spacing.lg) {
+                    Text("Clipboard changes from these apps won't be recorded.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    Spacer(minLength: Theme.Spacing.xl)
+                    Button {
+                        showingAppPicker = true
+                    } label: {
+                        Image(systemName: "plus")
+                            .font(.system(size: 12, weight: .medium))
+                    }
+                    .buttonStyle(.borderless)
+                    .popover(isPresented: $showingAppPicker, arrowEdge: .bottom) {
+                        AppPickerPopover(excluded: Set(settings.clipboardDisabledApps)) { bundleID in
+                            if let bundleID { settings.clipboardDisabledApps.append(bundleID) }
+                            showingAppPicker = false
+                        }
+                    }
+                }
+                .padding(.horizontal, Theme.Spacing.xl)
+                .padding(.vertical, Theme.Spacing.md)
+            }
+
+            SettingsCard(header: "Danger Zone") {
+                SettingsRow(
+                    title: "Clear history",
+                    subtitle: "Permanently remove every saved clip and image.",
+                    systemImage: "trash",
+                    tint: .red
+                ) {
+                    Button("Clear…", role: .destructive) {
+                        Task { await coordinator.clearHistory() }
+                    }
+                    .controlSize(.regular)
+                }
+            }
+        }
+    }
+}
+
+private struct DisabledAppRow: View {
+    let bundleID: String
+    let onRemove: () -> Void
+
+    @Environment(AppIndex.self) private var appIndex
+
+    var body: some View {
+        let (name, icon) = AppPresentation.resolve(bundleID: bundleID, in: appIndex)
+        HStack(spacing: Theme.Spacing.lg) {
+            Image(nsImage: icon)
+                .resizable()
+                .frame(width: 22, height: 22)
+            Text(name)
+                .font(.body)
+                .lineLimit(1)
+            Spacer(minLength: Theme.Spacing.xl)
+            Button(action: onRemove) {
+                Image(systemName: "xmark.circle.fill")
+                    .foregroundStyle(.tertiary)
+            }
+            .buttonStyle(.plain)
+        }
+        .padding(.horizontal, Theme.Spacing.xl)
+        .padding(.vertical, Theme.Spacing.lg)
+    }
+}

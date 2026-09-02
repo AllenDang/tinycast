@@ -58,7 +58,7 @@ These look like compatibility constraints and are not. They remain in force.
 
 ### 1 · An intended default is not backward compatibility
 
-`AppSettings` contains eight properties written as:
+`AppSettings` contains nine properties written as:
 
 ```swift
 defaults.object(forKey: Key.x) == nil || defaults.bool(forKey: Key.x)
@@ -83,7 +83,7 @@ Rename anything you like, but within a single build the reader and the writer mu
 - `AppEntry.id` values (including `CommandID` raw values and the `quicklink:` / `custom-command:` /
   `window-command:` prefixes) are the keys for favourites, visibility and learned ranking **within a
   session**. Rename freely; keep every producer and consumer in step.
-- `ClipboardManager.internalType` marks Tinycast's own pasteboard writes so the poller skips them.
+- `ClipboardMonitor.internalType` marks Tinycast's own pasteboard writes so the poller skips them.
   Rename it if you want; if the writer and the poller disagree, Tinycast re-captures its own pastes in
   a loop.
 - SQLite column names must match between the schema, the prepared statements and the row decoder.
@@ -111,7 +111,7 @@ build**.
 | **05** AppPaths                  | Every resolved path had to stay byte-identical                                                 | Change paths freely. Adopt `AppPaths` everywhere the harness constraint allows. Risk **Med → Low**   |
 | **06** HotKey binding cache      | Legacy `KeyboardShortcuts_<name>` key format and JSON string shape frozen                      | Format is no longer frozen. _Changing_ it is still not this phase's objective — see phase 35         |
 | **15** HotKeyManager observation | Persisted format unchanged                                                                     | No longer a constraint                                                                               |
-| **16** AppSettings observation   | 25 keys frozen; `defaults export` diff mandatory                                               | Keys renameable. **The eight fresh-install defaults still stand** (carve-out 1). Risk **High → Med** |
+| **16** AppSettings observation   | 25 keys frozen; `defaults export` diff mandatory                                               | Keys renameable. **The nine fresh-install defaults still stand** (carve-out 1). Risk **High → Med** |
 | **17** Stores observation        | Data-safety verification                                                                       | Replaced by clean-install verification                                                               |
 | **30** Naming                    | Persisted identifiers frozen — the phase's entire sharp edge                                   | Rename persisted keys along with their types. Risk essentially removed                               |
 | **31** `AppEntry.Kind`           | Raw values frozen for `hiddenKinds`                                                            | Renameable (carve-out 2 applies)                                                                     |
@@ -144,32 +144,14 @@ settings take their intended defaults, nothing crashes on an absent key or an ab
 
 ---
 
-## Conflicts with `AGENTS.md`
+## Close-out
 
-`AGENTS.md` is loaded into every Claude Code session **before** anything the operator pastes, and it
-describes the codebase as it is today. Conflicts with this policy are therefore guaranteed, not
-accidental. Three are known and listed here so they are recorded rather than discovered mid-phase:
+Phase 35 removed the Tinycast-only compatibility machinery this policy made obsolete:
 
-1. > _"Hotkeys persist under legacy `KeyboardShortcuts_<name>` UserDefaults keys (from the removed
-   > KeyboardShortcuts package) so old bindings survive."_
+- hotkeys now use the app-owned `hotkey.…` namespace and synthesized `Codable`;
+- clipboard columns are part of the fresh schema, with no `ALTER TABLE` path;
+- the single-provider AI defaults and Keychain migration were deleted;
+- `AGENTS.md` now describes the final architecture and no longer carries the refactor banner.
 
-   **Superseded.** Old bindings need not survive.
-
-2. > _"Its `Codable` conformance is the compatibility seam — a `.combo` must keep encoding as the bare
-   > `{"carbonKeyCode":N,"carbonModifiers":N}` record … or every existing binding and backup breaks."_
-
-   **Superseded.** See phase 35.
-
-3. > _"`SettingsBackup` … Every field is optional so an import applies only the keys actually present."_
-
-   **Retained** — but for a different reason. Optionality supports **partial** files and Raycast
-   imports, not old Tinycast versions.
-
-`AGENTS.md` now carries a banner at the top pointing here and stating that structural rules are being
-changed by the refactor — so the correction arrives in the first thing an agent reads, rather than
-depending on the operator pasting the standing prompt.
-
-The three clauses above are still **superseded but not yet deleted**. Phase 35 deletes them, amends the
-surrounding text, and **removes the banner** — the refactor is over at that point and the banner would
-become a lie. Until then, this document wins and a phase that trips over one of them should proceed and
-note it.
+Raycast import and snippet Markdown remain unchanged because they are external interchange formats.
+Fresh-install defaults, same-build producer/consumer consistency and consent exclusions remain intact.

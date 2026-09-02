@@ -11,7 +11,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
-        AppCore.shared.handleReopen()
+        AppCore.shared.paletteCoordinator.handleReopen()
         return true
     }
 }

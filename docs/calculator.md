@@ -1,6 +1,6 @@
 # Inline calculator
 
-`Core/Calculator/` is a **Foundation-only** engine (no AppKit / SwiftUI imports) fronted by
+`Features/Calculator/Model/` is a **Foundation-only** engine (no AppKit / SwiftUI imports) fronted by
 `CalcMemo`, a one-deep memo mirroring `AppIndex`'s. It must stay Foundation-only because the
 `Tools/calc-test.swift` harness compiles the real engine sources — including `CalcDateTime`. It is
 also **pure**: the one input it can't compute, the FX rate table, is passed in (see Currency below).
@@ -168,7 +168,7 @@ private **cacheless** `URLSession` (`.ephemeral`, `urlCache = nil`) rather than 
 The provider serves the table `Cache-Control: public, max-age=…`, so the shared session would store a
 second copy in the on-disk `URLCache` that deleting `currency-rates.json` doesn't touch.
 
-Rates come from `CurrencyRateStore` (`Core/`, owned by `AppCore`), which reads
+Rates come from `CurrencyRateStore` (`Features/Calculator/Service/`, owned by `AppCore`), which reads
 [Frankfurter](https://frankfurter.dev) — open source, no key, no account, no quota, rates blended
 from 84 central banks. One `GET api.frankfurter.dev/v2/rates?base=USD`, ~1.4 KB gzipped. v2 answers
 with one flat `{date, base, quote, rate}` row per pair rather than a keyed table, and omits the

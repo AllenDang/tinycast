@@ -1,0 +1,52 @@
+{
+  "Tinycast/DesignSystem/Scrolling/OverlayScroller.swift": {
+    "32": {
+      "line": "            attemptsRemaining = 12  // re-attached to a fresh hierarchy; give the splice a few ticks again",
+      "prefix": "            attemptsRemaining = 12",
+      "prefix_sha256": "5bef574331e0d23898aa37ee3584596870ece689532090fe41b61495e59496d7",
+      "statement_prefix": "            attemptsRemaining = 12  "
+    },
+    "55": {
+      "line": "                return  // already in the target state \u2014 don't churn layout on re-runs",
+      "prefix": "                // Avoid layout churn after reaching the target state.\n                return",
+      "prefix_sha256": "0ab5a6aa3aa8747a1d95dd631740dafa6851e95bd3066f8a39b06aee9638933d",
+      "statement_prefix": "                return  "
+    },
+    "57": {
+      "line": "            scrollView.scrollerStyle = .overlay  // thin floating knob that reserves no width",
+      "prefix": "            scrollView.scrollerStyle = .overlay",
+      "prefix_sha256": "40635269df9aeaf3f8e153f3aae6610b4df0487837de0a33e4fadbc45bd3b669",
+      "statement_prefix": "            scrollView.scrollerStyle = .overlay  "
+    },
+    "60": {
+      "line": "            scrollView.tile()  // reclaim any gutter the legacy scroller had reserved, same layout pass",
+      "prefix": "            scrollView.tile()",
+      "prefix_sha256": "5db4447ffc43d8f5458ce54cb3433ed787c107d1707df540cc68d58f2360d946",
+      "statement_prefix": "            scrollView.tile()  "
+    }
+  },
+  "Tinycast/Features/Calculator/Model/CalcParser.swift": {
+    "444": {
+      "line": "            return BinaryOp(op: \"^\", bindingPower: 30, rightBindingPower: 30)  // right-associative: 2^3^2 = 512",
+      "prefix": "            return BinaryOp(op: \"^\", bindingPower: 30, rightBindingPower: 30)",
+      "prefix_sha256": "0490541f1b74164ea49f281d9d2305da61885976de3797f0268c0288111071bf",
+      "statement_prefix": "            return BinaryOp(op: \"^\", bindingPower: 30, rightBindingPower: 30)  "
+    }
+  },
+  "Tinycast/Features/HotKeys/Service/EscapeComboProbe.swift": {
+    "5": {
+      "line": "    private static let signature: OSType = 0x5459_5052  // FourCC \"TYPR\" \u2014 distinct from HotKeyCenter's \"TYCT\" so the two installed handlers never mistake the other's hotkey ID",
+      "prefix": "    private static let signature: OSType = 0x5459_5052",
+      "prefix_sha256": "6d1c0fd1a86efa16d656f0a3821d693722f3e2290965b7e220253a6b346bb0ae",
+      "statement_prefix": "    private static let signature: OSType = 0x5459_5052  "
+    }
+  },
+  "Tinycast/Features/Launcher/UI/LauncherList.swift": {
+    "36": {
+      "line": "        case funcSuggestion(CalcParser.FunctionSuggestion, Int)  // suggestion + index in suggestions array",
+      "prefix": "        case funcSuggestion(CalcParser.FunctionSuggestion, Int)",
+      "prefix_sha256": "82f4f32b07988404749dd6d3acba1e21e5136e97187e0cdd5b58503dd0553488",
+      "statement_prefix": "        case funcSuggestion(CalcParser.FunctionSuggestion, Int)  "
+    }
+  }
+}

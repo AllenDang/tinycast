@@ -86,6 +86,14 @@ receives one captured expansion context: clipboard
 history, selected text, clock, calendar, locale, time zone, and a UUID source. Everything the engine
 needs is injected, so the whole placeholder surface is covered by the standalone harness. If arguments
 require a prompt, the same context is reused afterward, so nothing can drift while the prompt is open.
+The prompt is an async `DialogController` form: text fields focus the first free-text argument, option
+lists start on their first choice, Enter expands, Escape cancels, and a second dialog is refused.
+Turning the feature off cancels its argument task and dismisses only the matching dialog request token.
+A task canceled before presentation never opens a panel, and an old token cannot close a newer dialog.
+A keyword event targeting Tinycast itself is rejected before automatic generation begins, so dialog
+typing cannot invalidate the expansion waiting on that same dialog. Stale prompt generations cannot
+cancel a newer delivery or activate the old target; automatic delivery also checks generation before
+activation, so a rejected request never steals focus from the user's current app.
 
 The token set follows [Raycast's dynamic placeholders](https://manual.raycast.com/dynamic-placeholders)
 so a migrated snippet keeps working.
@@ -114,8 +122,8 @@ The editor's **Insert…** menu lists every token above; parameters and modifier
 Any value-producing token accepts a modifier pipeline, applied left to right:
 `{clipboard | trim | uppercase}`. The modifiers are `uppercase`, `lowercase`, `trim`,
 `percent-encode` (escapes everything outside RFC 3986's unreserved set), `json-stringify` (escapes for
-use _inside_ a JSON string, without adding the quotes), and `raw`, which opts a value out of any
-automatic formatting the _result_ asks for. A snippet asks for none, so `raw` is a no-op there; a
+use *inside* a JSON string, without adding the quotes), and `raw`, which opts a value out of any
+automatic formatting the *result* asks for. A snippet asks for none, so `raw` is a no-op there; a
 quicklink expanding into a URL percent-encodes every value, and `raw` is how a template opts one out.
 `{cursor}` and snippet references are structural, so they take no modifiers.
 
@@ -150,7 +158,7 @@ enable keystroke listening.
 
 **Accessibility is the only permission snippets need.** The keyword listener installs a listen-only
 `CGEventTap`, which the Accessibility grant already authorizes — the same grant `HyperKeyTap` uses for
-its _modifying_ tap, and the same one clipboard pasting needs. Input Monitoring is deliberately not
+its *modifying* tap, and the same one clipboard pasting needs. Input Monitoring is deliberately not
 used: `CGPreflightListenEventAccess()` reports success whenever Accessibility is granted, so a second
 permission would show as permanently granted while never appearing in System Settings, which cannot be
 managed or revoked. It is managed where it always was, in **Settings → Permissions**.
@@ -245,7 +253,7 @@ Run the real model, codec, template engine, repository, keyword listener with a 
 main-actor watcher against temporary roots:
 
 ```sh
-swiftc -swift-version 6 Tinycast/Core/NotificationToken.swift \
-  Tinycast/Core/HealthTicker.swift Tinycast/Core/Snippets/*.swift \
+swiftc -swift-version 6 Tinycast/Platform/NotificationToken.swift \
+  Tinycast/Platform/HealthTicker.swift Tinycast/Features/Snippets/Model/*.swift Tinycast/Features/Snippets/Service/*.swift \
   Tools/snippets-test.swift -o /tmp/snippets-test && /tmp/snippets-test
 ```

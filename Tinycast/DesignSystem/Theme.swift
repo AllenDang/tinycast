@@ -1,0 +1,146 @@
+import SwiftUI
+
+enum Theme {
+    enum Spacing {
+        static let xxs: CGFloat = 2
+        static let xs: CGFloat = 4
+        static let sm: CGFloat = 6
+        static let md: CGFloat = 8
+        static let lg: CGFloat = 10
+        static let xl: CGFloat = 12
+        static let xxl: CGFloat = 20
+        /// Calculator answer card's roomier vertical breathing room.
+        static let xxxl: CGFloat = 28
+        static let sectionHeaderBottom: CGFloat = 4
+        static let sectionSpacing: CGFloat = 12
+    }
+
+    enum Radius {
+        static let panel: CGFloat = 26
+        static let row: CGFloat = 10
+        static let menu: CGFloat = 6
+        /// Hover highlight behind a popover menu row.
+        static let menuRow: CGFloat = 10
+        static let menuPanel: CGFloat = 16
+        static let dialog: CGFloat = 20
+        static let thumbnail: CGFloat = 6
+        static let card: CGFloat = 10
+        static let keyCap: CGFloat = 6
+        /// Settings shortcut-recorder keycap — smaller than the palette's `keyCap` chip.
+        static let recorderKeyCap: CGFloat = 4
+    }
+
+    enum Size {
+        static let panelWidth: CGFloat = 750
+        static let panelHeight: CGFloat = 475
+        static let paletteTopMarginFraction: CGFloat = 0.18
+        static let headerHeight: CGFloat = 44
+        static let headerIconSlot: CGFloat = 22
+        static let headerPadding: CGFloat = 10
+        /// Collapsed compact bar: the search row centered in symmetric `headerPadding` slack.
+        static let compactHeight: CGFloat = headerHeight + headerPadding * 2
+        static let bottomBarHeight: CGFloat = 52
+        static let rowIcon: CGFloat = 24
+        static let keyCap: CGFloat = 18
+        /// Settings shortcut-recorder keycap — smaller than the palette's `keyCap` chip.
+        static let recorderKeyCap: CGFloat = 16
+        /// Fixed so the recorder can't resize as its binding changes.
+        static let shortcutRecorder: CGFloat = 120
+        /// One text line in the recorder callout.
+        static let shortcutPopoverLine: CGFloat = 14
+        static let shortcutPopover = CGSize(
+            width: 132,
+            height: Spacing.sm * 2 + heroKeyCap + Spacing.sm + shortcutPopoverLine + Spacing.sm
+                + compactKeyCap + calloutCaretHeight)
+        /// The callout's pointer: a triangle with a rounded tip.
+        static let calloutCaretWidth: CGFloat = 15
+        static let calloutCaretHeight: CGFloat = 7
+        static let calloutCaretTip: CGFloat = 2.5
+        static let compactKeyCap: CGFloat = 15
+        static let heroKeyCap: CGFloat = 22
+        static let menuButton: CGFloat = 36
+        /// The uninstall list's leading checkbox / lock glyph.
+        static let checkbox: CGFloat = 16
+        static let clipboardListWidth: CGFloat = 290
+        static let emojiCell: CGFloat = 56
+        static let menuWidth: CGFloat = 276
+        static let menuIcon: CGFloat = 20
+        /// Settings window: sidebar column width and the small icon used in setting rows.
+        static let settingsSidebar: CGFloat = 184
+        static let settingsRowIcon: CGFloat = 20
+        static let statusDot: CGFloat = 6
+        /// Settings editor modals (Custom Commands, Snippets): fixed width, intrinsic height.
+        static let editorSheetWidth: CGFloat = 480
+        static let editorTextHeight: CGFloat = 120
+        static let argumentPromptWidth: CGFloat = 220
+        static let hudMaxWidth: CGFloat = 420
+        static let hudEdgeOffset: CGFloat = 48
+        /// Tinycast's own dialog: fixed width, height measured from the SwiftUI content.
+        static let dialogWidth: CGFloat = 420
+        static let dialogIcon: CGFloat = 32
+        /// Transient volume HUD shown after any volume or mute command.
+        static let hudWidth: CGFloat = 200
+        static let hudHeight: CGFloat = 100
+        /// Volume slider geometry, shared by the Set Volume dialog and the HUD's read-only bar.
+        static let volumeTrackHeight: CGFloat = 6
+        static let volumeKnob: CGFloat = 16
+        static let volumeReadout: CGFloat = 38
+    }
+
+    enum Duration {
+        static let messageHUD: TimeInterval = 2.4
+        static let volumeHUD: TimeInterval = 1.6
+        static let enter: TimeInterval = 0.18
+        static let exit: TimeInterval = 0.12
+        /// Fade-in/out for a hover `Tooltip`.
+        static let tooltip: TimeInterval = 0.15
+    }
+
+    /// System text styles (not hardcoded sizes) so the UI honors Dynamic Type.
+    enum Typography {
+        static let searchField = Font.system(size: 20, weight: .regular)
+        static let headerIcon = Font.system(size: 18, weight: .medium)
+        static let rowTitle = Font.body
+        static let rowTrailing = Font.callout
+        static let sectionHeader = Font.subheadline.weight(.medium)
+        /// The big value line on the calculator answer card (both source and target sides).
+        static let calcResult = Font.title
+        static let keyCap = Font.caption
+        /// Pair with the matching `Size` for `KeyCapChip.Scale`.
+        static let compactKeyCap = Font.caption2
+        static let heroKeyCap = Font.body
+        static let bar = Font.callout.weight(.medium)
+        static let menuRow = Font.body
+        static let menuIcon = Font.body
+    }
+
+    enum Colors {
+        /// Black opacity of the panel's surface tint over the behind-window material.
+        static let panelDimming: CGFloat = 0.4
+        static let selection = Color.white.opacity(0.10)
+        static let rowHover = Color.white.opacity(0.05)
+        static let menuHover = Color.white.opacity(0.10)
+        static let separator = Color.white.opacity(0.10)
+        /// Small control surfaces: kbd chips, glyph tiles.
+        static let controlSurface = Color.white.opacity(0.10)
+        /// Control borders: outlined kbd chips.
+        static let border = Color.white.opacity(0.20)
+        static let textSecondary = Color.white.opacity(0.60)
+        static let textTertiary = Color.white.opacity(0.40)
+        static let cardFill = Color.white.opacity(0.05)
+        static let cardStroke = Color.white.opacity(0.10)
+        static let glassFrost = Color.white.opacity(0.05)
+        /// The violet of the app mark, used only to tint the About support callout.
+        static let brand = Color(red: 0.525, green: 0.231, blue: 1.0)
+        static let destructive = Color.red
+        /// Success tint: the leading glyph of a `.success` dialog.
+        static let success = Color.green
+    }
+}
+
+extension View {
+    func frosted(in shape: some Shape) -> some View {
+        glassEffect(.regular.interactive().tint(Theme.Colors.glassFrost), in: shape)
+            .tint(.clear)
+    }
+}

@@ -1,6 +1,6 @@
 # Hotkeys (in-house, zero dependencies)
 
-`Core/HotKey/` holds:
+`Features/HotKeys/` holds:
 
 - `KeyShortcut` — Sendable model, Carbon keycode + modifiers, layout-aware glyphs via `UCKeyTranslate`.
 - `HotKeyBinding` — what an action is actually bound to: a `.combo(KeyShortcut)` or a
@@ -10,37 +10,31 @@
   (see below).
 - `DoubleTapModifier` / `DoubleTapDetector` / `DoubleTapMonitor` — the double-tap stack.
 
-`HotKeyManager` owns them all: persistence, conflict lookup, and dispatch. Every action reads and
+`HotKeyBindings` owns them all: persistence, conflict lookup, and dispatch. Every action reads and
 writes one `HotKeyBinding`, so the two kinds share persistence, conflict detection, the recorder and
 the keycap rendering — only the _engine_ differs.
 
 ## Persistence
 
-Bindings persist as JSON strings under `KeyboardShortcuts_<name>` UserDefaults keys — a **legacy
-format** from the removed KeyboardShortcuts package, kept so old bindings survive. The set of bound
-bundle IDs lives in `boundAppBundleIDs` and is re-registered on launch. System Settings panes use
-`boundPaneBundleIDs`; custom commands and quicklinks use their stable UUIDs in
+Bindings persist as JSON strings under stable, app-owned `hotkey.<action>` UserDefaults keys. The set
+of bound bundle IDs lives in `boundAppBundleIDs` and is re-registered on launch. System Settings panes
+use `boundPaneBundleIDs`; custom commands and quicklinks use their stable UUIDs in
 `boundCustomCommandIDs` and `boundQuicklinkIDs`. Those two are the per-item case — unlike a fixed
 catalog, there is no `allCases` to walk — so each needs an index for `start()` to re-register from
 and to prune bindings whose record was deleted while Tinycast wasn't running. That prune is why
 `QuicklinkStore` loads at launch even when the feature is off
 (see [quicklinks.md](quicklinks.md#hotkeys)).
 
-A `.combo` writes the original `{"carbonKeyCode":N,"carbonModifiers":N}` record and
-`HotKeyBinding.init(from:)` tries that shape first, so nothing needs migrating. A `.doubleTap` writes
-`{"doubleTapModifier":"command"}` — a shape a pre-double-tap build fails to decode and therefore reads
-as _unbound_, which is the intended degradation. The same wrapper is what `SettingsBackup.HotkeyBackup`
-stores, so old backup files import unchanged; a backup containing a double-tap cannot be read by an
-older build, which is what the `version` 3 bump records (`version` 4 adds the quicklinks array).
+`HotKeyBinding` synthesizes `Codable`: both `.combo(KeyShortcut)` and
+`.doubleTap(DoubleTapModifier)` round-trip through the same current format. The same values are stored
+by `SettingsBackup.HotkeyBackup`, so export and import within one build use one representation.
 
-System actions and window commands are the fixed-catalog case: they persist under
-`KeyboardShortcuts_systemActionHotkey.<raw-id>` and `KeyboardShortcuts_windowCommandHotkey.<raw-id>`
-and need **no** bound-ID index, because `start()` and `conflictOwner` can just iterate `allCases` and
-`register` no-ops on an unbound item. A registered window-command shortcut still runs nothing while the
-feature switch is off — `AppCore.runWindowCommand` re-checks it (see
-[window-management.md](window-management.md)); a system-action shortcut likewise goes through
-`AppCore.runSystemAction(id:)`, so the confirmation gate holds for a hotkey exactly as it does for the
-palette.
+System actions and window commands are the fixed-catalog case. Their stable keys are
+`hotkey.systemAction.<raw-id>` and `hotkey.windowCommand.<raw-id>`, and they need no bound-ID index:
+`start()` and `conflictOwner` iterate `allCases`, and `register` ignores an unbound item. A registered
+window-command shortcut still does nothing while the feature switch is off because
+`AppCore.runWindowCommand` re-checks it. System actions route through `SystemActionCoordinator`, so the
+confirmation gate applies equally to hotkeys and palette activation.
 
 ## Double-tap modifiers
 
@@ -80,14 +74,14 @@ where a bare ⇧ combo would shadow typing.
 
 ## Recorder
 
-The settings recorder (`Features/Settings/ShortcutRecorder.swift`) is deliberately **not** a focusable
-control: the active recorder is `HotKeyManager.recordingAction` state, and keys are captured by local
+The settings recorder (`Features/HotKeys/UI/ShortcutRecorder.swift`) is deliberately **not** a focusable
+control: the active recorder is `HotKeyBindings.recordingAction` state, and keys are captured by local
 NSEvent monitors while both engines are paused. It records both kinds — type a combo, or double-tap a
 modifier — by feeding its `.flagsChanged` / `.keyDown` monitors into the _same_ `DoubleTapDetector`
 the global monitor uses, so recording needs no event tap and no permission.
 
 Setting `recordingAction` is what starts and stops the capture, so there is exactly **one**
-`ShortcutCaptureSession` (`Core/HotKey/`) for the app rather than one per row — which is what lets the
+`ShortcutCaptureSession` (`Features/HotKeys/Service/`) for the app rather than one per row — which lets the
 callout above the field render the live state from outside the row that opened it. The field itself
 only ever shows the binding; the prompt, the live preview and the conflict message all live in the
 callout. See [ui.md](ui.md#the-shortcut-recorder-callout).
@@ -109,7 +103,7 @@ other. This is the same Carbon mechanism `HotKeyCenter` already uses for real bi
 recorder no new event tap and no permission prompt — a bare ⎋ still cancels through the ordinary keyDown
 path, since that one is never swallowed.
 
-One hazard the probe itself creates: it must release its own registration *before* the real one takes
+One hazard the probe itself creates: it must release its own registration _before_ the real one takes
 over the same chord. `commit` unregisters the probe right before `setBinding`/`recordingAction = nil`,
 which is what makes `HotKeyCenter` reactivate every entry including the one just captured — Carbon
 refuses a second `RegisterEventHotKey` for the identical keycode+modifiers even under a different id

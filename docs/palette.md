@@ -5,7 +5,7 @@ The command palette is a borderless floating `NSPanel` hosting SwiftUI; see
 
 ## State flow
 
-`PaletteViewModel` (mode / query / selection / `focusToken`) is the bridge between the panel and
+`PaletteState` (mode / query / selection / `focusToken`) is the bridge between the panel and
 `AppCore`. Showing the palette calls `prepare(mode:)`, which resets state and bumps `focusToken` (a
 UUID) so the SwiftUI search field re-focuses. `RootPaletteView` switches its content on `mode`:
 
@@ -75,7 +75,7 @@ This is the same class of bug as the freeze below — both come from the cell/fi
 
 ### An IME candidate is visible before `query` ever sees it
 
-SwiftUI's `TextField` binding does not update while an IME candidate is only *marked* — typing Pinyin
+SwiftUI's `TextField` binding does not update while an IME candidate is only _marked_ — typing Pinyin
 shows the romanization and, once a candidate is chosen, the character — so `vm.query` stays empty for
 the entire composing gesture and only changes on commit. A placeholder gated on `query.isEmpty` alone
 would sit on top of the marked text the whole time the user is composing, and only vanish once they'd
@@ -84,7 +84,7 @@ already picked a candidate.
 `PalettePanel.sendEvent` is the fix: it already sees every keyDown before dispatch and again lets it
 through to `super.sendEvent`, which is what drives `NSTextInputContext` and therefore the field
 editor's marked text for that keystroke. Reading `(firstResponder as? NSTextView)?.hasMarkedText()`
-right after that call catches the update synchronously and mirrors it into `PaletteViewModel.isComposing`
+right after that call catches the update synchronously and mirrors it into `PaletteState.isComposing`
 — a tracked property, unlike `menuOpen`, since this one has to drive a re-render. The placeholder checks
 `query.isEmpty && !isComposing`; a bare backspace's "empty query navigates back a screen" check gets the
 same guard in the other direction, since backspace while composing must delete from the marked text
@@ -112,7 +112,7 @@ focus stays put:
 Input is frozen instead:
 
 - `RootPaletteView` mirrors `showActions || showAppMenu || vm.mode == .aiCommand` into
-  `PaletteViewModel.searchFieldFrozen`, whose `didSet` fires `onSearchFieldFrozenChanged`.
+  `PaletteState.searchFieldFrozen`, whose `didSet` fires `onSearchFieldFrozenChanged`.
 - `PalettePanel.sendEvent` then swallows text-editing keystrokes while `searchFieldFrozen` (letting
   ⌘/⌥ chords and menu-nav keys — also needed by `.aiCommand`'s own ↵/Esc — through to SwiftUI
   `onKeyPress`).
@@ -135,7 +135,7 @@ app:
 
 Both require the Accessibility permission (`Permissions.ensureAccessibility()`).
 
-The same show also mirrors that app into `PaletteViewModel.pasteTarget` (a `PasteTarget`: localized
+The same show also mirrors that app into `PaletteState.pasteTarget` (a `PasteTarget`: localized
 name + bundle path), so Clipboard and Emoji can name it — the footer pill reads "Paste to Notes" and
 the ⌘K paste rows carry the app's icon. Resolved once per summon, never per render, and deliberately
 not cleared by `prepare` (pop-to-root resets the screen, not the target).

@@ -11,10 +11,10 @@ entries and a still-registered shortcut moves nothing.
 
 | File                                             | Imports                      | Role                                                                |
 | ------------------------------------------------ | ---------------------------- | ------------------------------------------------------------------- |
-| `Core/WindowManagement/WindowCommand.swift`      | Foundation                   | Catalog: id, name, symbol, kind, group, `cyclesOnRepeat`, `resizes` |
-| `Core/WindowManagement/WindowLayout.swift`       | Foundation + CoreGraphics    | **Pure.** Every frame the commands produce                          |
-| `Core/WindowManagement/WindowActionMemory.swift` | Foundation + CoreGraphics    | **Pure.** Per-window cycle position and restore point               |
-| `Core/WindowManagement/WindowMover.swift`        | AppKit + ApplicationServices | `@MainActor`. Every `AXUIElement` call and the coordinate flip      |
+| `Features/WindowManagement/Model/WindowCommand.swift`      | Foundation                   | Catalog: id, name, symbol, kind, group, `cyclesOnRepeat`, `resizes` |
+| `Features/WindowManagement/Model/WindowLayout.swift`       | Foundation + CoreGraphics    | **Pure.** Every frame the commands produce                          |
+| `Features/WindowManagement/Model/WindowActionMemory.swift` | Foundation + CoreGraphics    | **Pure.** Per-window cycle position and restore point               |
+| `Features/WindowManagement/Service/WindowMover.swift`      | AppKit + ApplicationServices | `@MainActor`. Every `AXUIElement` call and the coordinate flip      |
 
 The first three compile into `Tools/window-command-test.swift`, so they must not gain an AppKit,
 SwiftUI or `NSScreen` dependency, and must stay pure — `WindowActionMemory` takes `now` as a parameter
@@ -162,9 +162,8 @@ stock Electron app tiles correctly without it, delete the helper rather than kee
   `AppIndex.setWindowCommandsVisible(_:)` between the system-action and custom-command slices.
   `LauncherView.rows` mirrors that position with a "Window Management" section; the slice order is the
   flat-selection invariant, so the two must move together.
-- **`HotKeyAction.windowCommand(id:)`** — persisted under
-  `KeyboardShortcuts_windowCommandHotkey.<raw-id>`, matching the legacy prefix convention. Unlike
-  custom commands there is no bound-ID index to maintain: the catalog is fixed, so `HotKeyManager.start`
+- **`HotKeyAction.windowCommand(id:)`** — persisted under `hotkey.windowCommand.<raw-id>`. Unlike
+  custom commands there is no bound-ID index to maintain: the catalog is fixed, so `HotKeyBindings.start`
   and `conflictOwner` iterate `WindowCommand.ID.allCases` and `register` no-ops on an unbound command.
 - **`AppCore.runWindowCommand(id:)`** is the one funnel for both palette activation and the global
   hotkey, so the feature switch cannot be bypassed by either.

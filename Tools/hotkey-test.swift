@@ -52,6 +52,8 @@ struct DoubleTapDetectorTests {
 
     static func main() {
         modifierGlyphs()
+        persistenceKeys()
+        bindingRoundTrips()
         firing()
         timing()
         chords()
@@ -77,6 +79,36 @@ struct DoubleTapDetectorTests {
             DoubleTapModifier.allCases.map(\.rawValue)
                 == ["control", "option", "shift", "command"],
             "raw values are the persisted spelling and stay in canonical ⌃⌥⇧⌘ order")
+    }
+
+    static func persistenceKeys() {
+        let id = UUID(uuidString: "00000000-0000-0000-0000-000000000001")!
+        let actions: [HotKeyAction] = [
+            .togglePalette, .toggleClipboard, .toggleEmoji,
+            .app(bundleID: "com.example.app"),
+            .settingsPane(bundleID: "com.example.pane"),
+            .customCommand(id: id), .systemAction(id: .lockScreen),
+            .windowCommand(id: .leftHalf), .quicklink(id: id),
+        ]
+        let keys = actions.map(\.defaultsKey)
+        expect(Set(keys).count == actions.count, "every action has a distinct persistence key")
+        expect(keys.allSatisfy { $0.hasPrefix("hotkey.") }, "every key uses the app-owned namespace")
+    }
+
+    static func bindingRoundTrips() {
+        let bindings: [HotKeyBinding] = [
+            .combo(KeyShortcut(carbonKeyCode: 49, carbonModifiers: 256)),
+            .doubleTap(.command),
+        ]
+        for binding in bindings {
+            do {
+                let encoded = try JSONEncoder().encode(binding)
+                let decoded = try JSONDecoder().decode(HotKeyBinding.self, from: encoded)
+                expect(decoded == binding, "\(binding) survives the current Codable format")
+            } catch {
+                expect(false, "\(binding) round-trip failed: \(error)")
+            }
+        }
     }
 
     // MARK: - Firing

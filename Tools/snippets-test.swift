@@ -1129,6 +1129,25 @@ struct SnippetsTests {
             isResetKey: false,
             isDeleteBackward: false)
         check("synthetic Tinycast events are classified as ignored", syntheticInput == .ignored)
+        check(
+            "Tinycast stays outside its own automatic expansion generation",
+            SnippetKeywordPolicy.ignoresTarget(
+                bundleID: "com.tinycast.app.dev", ownBundleID: "com.tinycast.app.dev"))
+        check(
+            "another app remains eligible for automatic expansion",
+            !SnippetKeywordPolicy.ignoresTarget(
+                bundleID: "com.apple.TextEdit", ownBundleID: "com.tinycast.app.dev"))
+        check(
+            "a missing running identity never suppresses a target",
+            !SnippetKeywordPolicy.ignoresTarget(bundleID: nil, ownBundleID: nil))
+        check(
+            "the current prompt generation may cancel automatic delivery",
+            SnippetTextInjector.argumentPromptCanCancel(
+                requestedGeneration: 7, currentGeneration: 7))
+        check(
+            "a stale prompt generation cannot cancel newer automatic delivery",
+            !SnippetTextInjector.argumentPromptCanCancel(
+                requestedGeneration: 6, currentGeneration: 7))
         _ = policy.process(.text("!du"), at: base.addingTimeInterval(2))
         _ = policy.process(syntheticInput, at: base.addingTimeInterval(2.5))
         let afterSynthetic = policy.process(.text("p"), at: base.addingTimeInterval(3))
@@ -1451,7 +1470,7 @@ private final class CountingPasteboard: SnippetPasteboardAccess {
 }
 
 @MainActor
-final class ClipboardManager {
+final class ClipboardMonitor {
     static let internalType = NSPasteboard.PasteboardType("com.tinycast.internal")
     func prepareForTinycastPasteboardMutation() {}
     func synchronizeAfterTinycastPasteboardMutation(changeCount: Int) {}

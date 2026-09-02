@@ -9,13 +9,13 @@ each command picks one. The catalog and providers are authored in **Settings →
 
 ## Recognition happens at the raw query string
 
-`AICommand.firstMatch(in:query:)` (`Core/AI/AICommand.swift`) parses the palette's query the same way
+`AICommand.firstMatch(in:query:)` (`Features/AI/Model/AICommand.swift`) parses the palette's query the same way
 `CalcEngine.evaluate` parses `"5+3"` — at the raw string, before any fuzzy match runs, not by
 searching over already-ranked rows. The first whitespace-delimited word is the keyword; everything
 after the first space, trimmed, is the input. A bare keyword with no trailing space (`"trans"`, still
 being typed) matches nothing yet, because there is no text to act on and firing on every keyword-shaped
 word the user happens to type would be worse than firing on none. Matching is case-insensitive; the
-store's own validation (mirroring `Core/CustomCommand.swift`'s shape — `Codable, Hashable, Identifiable,
+store's own validation (mirroring `Features/CustomCommands/Model/CustomCommand.swift`'s shape — `Codable, Hashable, Identifiable,
 Sendable`, `add`/`update`/`remove`/`replace(with:)`) additionally enforces that a keyword contains no
 whitespace and is unique case-insensitively, so two commands can never both claim `trans`.
 
@@ -30,7 +30,7 @@ deleted) are filtered out of the active set, so they never match either.
 
 ## The intent card is a preview, not an answer
 
-`AICommandCard` (`Features/Launcher/AICommandCardView.swift`) occupies flat selection index 0 exactly
+`AICommandCard` (`Features/AI/UI/AICommandCardView.swift`) occupies flat selection index 0 exactly
 where `CalculatorCard` does, and for the same reason: `Tools/palette-selection-test.swift`'s row-order
 contract has no separate slot for a second kind of leading card, so `LauncherList` treats them as
 mutually exclusive alternatives at the one slot the flat index reserves for a "special" row (the
@@ -40,7 +40,7 @@ The difference that matters: `CalculatorCard` **is** the answer, computed synchr
 a pure Foundation engine — nothing to wait for, nothing that can fail after the fact. `AICommandCard`
 only shows intent — "use *Translate* on 'hello'" — because the real answer requires a network round
 trip that must never start while the user is still typing. Only committing the card (Enter, or a
-click) calls `AppCore.beginAICommand`, which is the one and only place a request actually goes out.
+click) calls `AICommandCoordinator.begin`, which is the one and only place a request goes out.
 
 ### The keyword-recognized-but-no-argument-yet hint
 
@@ -62,7 +62,7 @@ misleading label.
 
 ## Providers
 
-`AIProviderStore` (`Core/AI/AIProviderStore.swift`) manages multiple user-configured
+`AIProviderStore` (`Features/AI/Service/AIProviderStore.swift`) manages multiple user-configured
 OpenAI-compatible endpoints. Each `AIProvider` carries a name, base URL, and model; the API key lives
 in the Keychain keyed by provider ID. `AICommand` picks one via its `providerID` field.
 
@@ -80,11 +80,10 @@ consent flag and the user's own endpoint configurations.
   access.
 - **The dialog names what leaves the machine.** Unlike Frankfurter, there is no fixed provider name to
   cite — the endpoint is whatever the user types into Base URL — so the consent dialog says "the
-  endpoint you configure below" instead. It goes through `AppCore.confirmEnablingAIProvider`, which
-  calls `DialogController` via `AppCore.confirm` like every other confirmation in the app; this feature
-  never uses `NSAlert` or a plain SwiftUI `.sheet`, even though some older Settings panes still do.
+  endpoint you configure below" instead. `AICommandCoordinator.confirmEnablingProvider` presents it
+  through the injected app-owned dialog actions; this feature never uses a system alert.
 - **Every entry point re-checks `isEnabled` (by way of `isConfigured`).** The card's own recognizer
-  (above), `AppCore.beginAICommand` right before firing the request, and `AICommandSession`'s task both
+  (above), `AICommandCoordinator.begin` right before firing the request, and `AICommandSession`'s task
   before the network call and immediately after the `await` returns — consent can be withdrawn while a
   response is in flight, and a late answer must never be shown or become copyable.
 - **A private, cacheless `URLSession`.** `AIChatClient` uses `.ephemeral` with `urlCache = nil`, never
@@ -103,19 +102,11 @@ when consent is on and at least one provider is ready. `RootPaletteView` filters
 set to only those whose provider is configured, so a command whose provider was deleted or lacks a key
 can never match in the launcher.
 
-### Migration
-
-On first launch after upgrade, if the old single-provider keys (`aiProviderBaseURL`,
-`aiProviderModel`) exist but the new `aiProviders` key doesn't, a "Default" provider is created from
-the old configuration, the legacy API key is moved to the new per-provider Keychain entry, and the old
-keys are cleared. Existing commands that lacked a `providerID` are assigned to the migrated provider
-by the store's sanitizer (commands with a nil `providerID` are dropped).
-
 ## Why the API key lives in the Keychain
 
 Every other persisted value in Tinycast is a UserDefaults key, a plist, or a file under Application
 Support — none of them encrypted, none of them appropriate for a bearer token that grants access to a
-paid account. `Core/AI/AIKeychain.swift` is a thin `Security.framework` wrapper (`SecItemAdd` /
+paid account. `Features/AI/Service/AIKeychain.swift` is a thin `Security.framework` wrapper (`SecItemAdd` /
 `SecItemCopyMatching` / `SecItemUpdate` / `SecItemDelete`), styled like the other small utility enums
 (`AppPaths`, `Permissions`) rather than a class with state — there is nothing to hold, only a
 service/account pair to query per provider. The service string is `{bundleID}.ai-provider.{providerID}`,
@@ -146,8 +137,8 @@ state to read and no Accessibility permission this feature needs to ask for.
 
 ## The screen: loading → answer, never mid-keystroke
 
-Committing the card calls `AppCore.beginAICommand`, which starts `AICommandSession`'s request and
-flips `PaletteViewModel.mode` to `.aiCommand`. `AICommandScreen` (`Features/AI/AICommandScreen.swift`)
+Committing the card calls `AICommandCoordinator.begin`, which starts `AICommandSession`'s request and
+flips `PaletteState.mode` to `.aiCommand`. `AICommandScreen` (`Features/AI/UI/AICommandScreen.swift`)
 is a `PaletteScreen` like `UninstallScreen` and `QuicklinkArgumentsScreen` — reached only this way,
 never entered directly, never in the Tab cycle.
 
@@ -210,7 +201,7 @@ delete behind a confirmation.
 CRUD/validation, and `AICommand.firstMatch` — standalone:
 
 ```sh
-swiftc -swift-version 6 Tinycast/Core/AI/AICommand.swift Tools/ai-command-test.swift \
+swiftc -swift-version 6 Tinycast/Features/AI/Model/AICommand.swift Tools/ai-command-test.swift \
     -o /tmp/ai-command-test && /tmp/ai-command-test
 ```
 
@@ -218,6 +209,3 @@ swiftc -swift-version 6 Tinycast/Core/AI/AICommand.swift Tools/ai-command-test.s
 this harness — they touch the Keychain, the network and `Foundation`'s `Task`, none of which the other
 pure-Foundation harnesses attempt to fake, so they are covered by the app build instead, the same way
 `RaycastImportV1` (AppKit-dependent) is covered by the build rather than the Raycast harness.
-
-`AIProviderStore` handles its own migration from the old single-provider format on first init, so
-existing users with one configured endpoint keep working without any manual steps.

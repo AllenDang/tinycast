@@ -1,5 +1,8 @@
-// Standalone test for the emoji catalog + grid geometry — compiles the *real* sources (they stay AppKit/SwiftUI-free for this reason):
-// swiftc Tinycast/Core/Emoji/EmojiCatalog.swift Tinycast/Core/Emoji/EmojiGridGeometry.swift Tinycast/Core/Emoji/EmojiData.generated.swift Tools/emoji-test.swift -o /tmp/emoji-test && /tmp/emoji-test
+// Standalone test for the real AppKit/SwiftUI-free emoji catalog and geometry:
+// swiftc Tinycast/Features/Emoji/Model/EmojiCatalog.swift \
+//     Tinycast/Features/Emoji/Model/EmojiGridGeometry.swift \
+//     Tinycast/Features/Emoji/Model/EmojiData.generated.swift Tools/emoji-test.swift \
+//     -o /tmp/emoji-test && /tmp/emoji-test
 
 import Foundation
 

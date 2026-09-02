@@ -106,6 +106,54 @@ struct PaletteRowIndexTests {
         }
     }
 
+    static func expectLauncherShapes() {
+        let empty = LauncherSelectableLayout(leading: nil, functionCount: 0, appCount: 0)
+        expect(empty.slots.isEmpty, "an empty launcher has no selectable slots")
+
+        let calc = LauncherSelectableLayout(
+            leading: .calculator, functionCount: 0, appCount: 2)
+        expect(
+            calc.slots == [.leading(.calculator), .app(0), .app(1)],
+            "a calculator card leads the app results")
+
+        let aiReady = LauncherSelectableLayout(
+            leading: .aiReady, functionCount: 0, appCount: 2)
+        expect(
+            aiReady.slots == [.leading(.aiReady), .app(0), .app(1)],
+            "a ready AI card leads the app results")
+
+        let aiPending = LauncherSelectableLayout(
+            leading: .aiPending, functionCount: 0, appCount: 1)
+        expect(
+            aiPending.slots == [.leading(.aiPending), .app(0)],
+            "a pending AI hint leads the app results")
+
+        let functions = LauncherSelectableLayout(leading: nil, functionCount: 2, appCount: 2)
+        expect(
+            functions.slots == [.function(0), .function(1), .app(0), .app(1)],
+            "function suggestions lead app results when the incomplete expression has no card")
+
+        let queryResults = LauncherSelectableLayout(leading: nil, functionCount: 0, appCount: 3)
+        expect(
+            queryResults.slots == [.app(0), .app(1), .app(2)],
+            "query results preserve the ranked flat app order")
+
+        let sectionCounts = [2, 3, 1, 2, 1, 2, 1, 1, 2]
+        let sectionIndex = PaletteRowIndex(sectionCounts: sectionCounts)
+        let sectioned = LauncherSelectableLayout(
+            leading: nil, functionCount: 0, appCount: sectionIndex.count)
+        expect(
+            sectioned.slots == (0..<15).map(LauncherSelectableSlot.app),
+            "Favorites and all eight kind sections preserve the flat AppIndex order")
+        expect(
+            sectionIndex.index(section: 1, offset: 0), 2,
+            "Applications follow the two Favorites without a header index")
+        expect(
+            sectionIndex.index(section: 8, offset: 1), 14,
+            "the last Command is the last selectable launcher row")
+        expectRoundTrip(sectionIndex, "launcher nine-section shape")
+    }
+
     static func main() {
         // Empty list: nothing resolves and the clamp still yields a usable selection.
         let empty = PaletteRowIndex(sectionCounts: [])
@@ -187,6 +235,8 @@ struct PaletteRowIndexTests {
             "the last row of the last section is the last index")
         expectRoundTrip(launcher, "launcher shape")
 
+        expectLauncherShapes()
+
         // Clamping at both ends, with and without a card.
         for index in [single, withCalc, sections, launcher, gapped] {
             expect(index.clamped(-1) == 0, "a selection below zero clamps to the first row")
@@ -204,6 +254,13 @@ struct PaletteRowIndexTests {
                 index.row(at: index.clamped(Int.min)) != nil,
                 "a clamped negative selection always resolves to a row")
         }
+
+        // Linear movement clamps at both ends of the index's own row count.
+        let movable = PaletteRowIndex(sectionCounts: [3])
+        expect(movable.moved(from: 0, by: 1) == 1, "linear movement steps down one row")
+        expect(movable.moved(from: 2, by: 1) == 2, "linear movement stops at the last row")
+        expect(movable.moved(from: 0, by: -1) == 0, "linear movement stops at the first row")
+        expect(empty.moved(from: 7, by: 1) == 0, "linear movement holds at zero when empty")
 
         // Out-of-bounds inversion never invents an index.
         expect(sections.index(section: 3, offset: 0), nil, "there is no fourth section")
@@ -238,6 +295,47 @@ struct PaletteRowIndexTests {
         expect(argumentFreeText.row(at: 0), nil, "a free-text argument resolves no index")
         expect(argumentFreeText.clamped(0) == 0, "selection stays at zero with no choices")
         expect(argumentFreeText.clamped(5) == 0, "a stale selection clamps back to zero")
+
+        // The clipboard screen: a Pinned section above the date buckets, and no calculator card.
+        let clipboard = PaletteRowIndex(sectionCounts: [2, 5, 3])
+        expect(clipboard.count == 10, "the clipboard indexes pinned and dated entries alike")
+        expect(clipboard.row(at: 1), .element(section: 0, offset: 1), "the last pinned entry")
+        expect(
+            clipboard.row(at: 2), .element(section: 1, offset: 0),
+            "the first dated entry follows the Pinned section")
+        expect(clipboard.index(section: 0, offset: 0), 0, "pinning lifts a row to the list head")
+        expectRoundTrip(clipboard, "clipboard shape")
+
+        // Calculator History: the live answer card, then one section per date bucket.
+        let historyCard = PaletteRowIndex(hasCalculator: true, sectionCounts: [3, 2])
+        expect(historyCard.count == 6, "the card plus five stored entries")
+        expect(historyCard.row(at: 0), .calculator, "a typed calculation leads the history")
+        expect(
+            historyCard.row(at: 1), .element(section: 0, offset: 0),
+            "the newest stored entry follows the card")
+        expect(
+            historyCard.row(at: 4), .element(section: 1, offset: 0),
+            "crossing into the next bucket accounts for the card")
+        expect(historyCard.index(section: 1, offset: 1), 5, "the oldest entry is the last index")
+        expectRoundTrip(historyCard, "history with a card")
+
+        // ⌘⌫ resolves through this index, so only an `.element` is ever a deletion target.
+        for flat in 0..<historyCard.count {
+            expect(
+                (historyCard.row(at: flat) == .calculator) == (flat == 0),
+                "history: index \(flat) is the card only at 0")
+        }
+
+        let historyNoCard = PaletteRowIndex(sectionCounts: [3, 2])
+        expect(historyNoCard.count == 5, "without a card stored entries are the whole list")
+        expect(historyNoCard.row(at: 0), .element(section: 0, offset: 0), "the newest entry leads")
+        expectRoundTrip(historyNoCard, "history without a card")
+
+        let historyCardOnly = PaletteRowIndex(hasCalculator: true, sectionCounts: [0])
+        expect(historyCardOnly.count == 1, "a card with no stored entries is one row")
+        expect(historyCardOnly.row(at: 0), .calculator, "the card is the whole list")
+        expect(historyCardOnly.row(at: 1), nil, "nothing follows a lone card")
+        expect(historyCardOnly.clamped(4) == 0, "a stale selection clamps onto the card")
 
         // The emoji grid: sections of 8, 20 and 5 cells over 8 columns, as the picker renders them.
         let emoji = PaletteRowIndex(sectionCounts: [8, 20, 5])

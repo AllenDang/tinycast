@@ -3,7 +3,6 @@ import SwiftUI
 @main
 struct TinycastApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var delegate
-    // `@AppStorage` republishes only when the value changes, avoiding a scene ⇄ binding feedback loop.
     @AppStorage(SettingsKey.showInMenuBar) private var showInMenuBar = true
 
     // Channel-aware: "Tinycast", "Tinycast Dev", or "Tinycast Beta".
@@ -13,10 +12,14 @@ struct TinycastApp: App {
         MenuBarExtra(
             appName, systemImage: "macwindow.on.rectangle", isInserted: $showInMenuBar
         ) {
-            Button("Open \(appName)") { AppCore.shared.showPalette(mode: .launcher) }
-            Button("Clipboard History") { AppCore.shared.showPalette(mode: .clipboard) }
+            Button("Open \(appName)") {
+                AppCore.shared.paletteCoordinator.showPalette(mode: .launcher)
+            }
+            Button("Clipboard History") {
+                AppCore.shared.paletteCoordinator.showPalette(mode: .clipboard)
+            }
             Divider()
-            Button("Settings...") { AppCore.shared.showSettings() }
+            Button("Settings...") { AppCore.shared.paletteCoordinator.showSettings() }
                 .keyboardShortcut(",")
             Divider()
             Button("Quit \(appName)") { NSApp.terminate(nil) }

@@ -5,7 +5,7 @@
 313 entries indexed. Every keystroke scores ALL 313 entries via `SearchRelevance.score`.
 
 | Query | rank time | scored | bottleneck |
-|-------|-----------|--------|------------|
+| ------- | ----------- | -------- | ------------ |
 | "a" | 5.6ms | 266→200 | score loop |
 | "p" | 17.9ms | 217→200 | score loop |
 | "ar" | 14.7ms | 86 | score loop |
@@ -20,8 +20,9 @@ Each `score` call normalizes candidate strings (lowercase + strip format scalars
 Normalization is done once at scan time (already off-main), never at query time.
 
 **Changes:**
-- `Core/SearchRelevance.swift`: add `FuzzyMatch.match(_:normalizedCandidate:)` that skips normalization
-- `Core/AppIndex.swift`: store pre-normalized `SearchFields` in `AppEntry`, computed during scan
+
+- `Features/Launcher/Model/SearchRelevance.swift`: add `FuzzyMatch.match(_:normalizedCandidate:)` that skips normalization
+- `Features/Launcher/Service/AppIndex.swift`: store pre-normalized `SearchFields` in `AppEntry`, computed during scan
 - `FuzzyMatch.normalized` becomes a scan-time concern only
 
 ## Phase 2: Character Pre-filter
@@ -32,7 +33,8 @@ For "arc": 313 → ~50 candidates → 6x fewer `score` calls.
 For "p": 313 → ~200 candidates → 1.5x fewer.
 
 **Changes:**
-- `Core/AppIndex.swift`: pre-compute a character `Set<Character>` per entry at scan time
+
+- `Features/Launcher/Service/AppIndex.swift`: pre-compute a character `Set<Character>` per entry at scan time
 - `AppIndex.rank`: before `score`, check if all query characters are in the entry's char set; skip if not
 
 ## Phase 3: Single-pass Sectioning
@@ -40,14 +42,16 @@ For "p": 313 → ~200 candidates → 1.5x fewer.
 **Impact: 3ms → ~0.3ms for empty-query sectioned render.** Current code does 9 separate `filter` passes over the results array. Replace with one pass that buckets by `kind`.
 
 **Changes:**
-- `Features/Launcher/LauncherView.swift`: `computeRows` sectioned path — one loop instead of 9 filters
+
+- `Features/Launcher/UI/LauncherList.swift`: `computeRows` sectioned path — one loop instead of 9 filters
 
 ## Phase 4: Memoize computeRows
 
 **Impact: eliminates redundant row computation on SwiftUI's double-render.** Every keystroke triggers two body renders; the second one re-runs `computeRows` unnecessarily.
 
 **Changes:**
-- `Features/Launcher/LauncherView.swift`: add `Memo` keyed on `(results, favoriteCount, showSections, funcSuggestions, calc, ai, aiPending)`
+
+- `Features/Launcher/UI/LauncherList.swift`: add `Memo` keyed on `(results, favoriteCount, showSections, funcSuggestions, calc, ai, aiPending)`
 
 ## Implementation Order
 

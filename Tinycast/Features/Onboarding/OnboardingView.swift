@@ -2,21 +2,22 @@ import AppKit
 import Combine
 import SwiftUI
 
-/// First-launch wizard: set the palette shortcut, offer Accessibility + launch-at-login, offer a Raycast import, then drop into the launcher. Re-runnable from Settings. Reuses the app's own controls (`ShortcutRecorder`, `SettingsCard`, `BackupActions`) so it looks and behaves like the rest of Tinycast.
 struct OnboardingView: View {
     @State private var step = 0
     @State private var model = OnboardingModel()
-    @Bindable private var settings = AppCore.shared.settings
-    private let hotKeys = AppCore.shared.hotKeys
+    @Environment(BackupCoordinator.self) private var backupCoordinator
+    @Environment(PaletteCoordinator.self) private var paletteCoordinator
+    @Environment(AppSettings.self) private var settings
+    @Environment(HotKeyBindings.self) private var hotKeys
 
     @State private var accessibilityTrusted = Permissions.isAccessibilityTrusted()
     private let refreshTimer = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
 
     private static let lastStep = 3
-    /// Fixed content size; also the window size in `AppCore.showOnboarding()`. A hard frame keeps `NSHostingView` from sizing the window to the content's unbounded ideal height.
     static let windowSize = CGSize(width: 520, height: 400)
 
     var body: some View {
+        @Bindable var settings = settings
         VStack(spacing: Theme.Spacing.lg) {
             hero
             stepContent
@@ -31,7 +32,6 @@ struct OnboardingView: View {
                 colors: [Color.white.opacity(0.04), Color.clear],
                 startPoint: .top, endPoint: .center)
         )
-        // Extend under the transparent titlebar (top padding clears the traffic lights) so the window height equals the fixed content height.
         .ignoresSafeArea()
         // Onboarding's shortcut step has a recorder too, and it isn't inside a `SettingsPane`.
         .shortcutRecorderPopoverHost()
@@ -110,7 +110,9 @@ struct OnboardingView: View {
     }
 
     private var readyMessage: String {
-        if let caps = hotKeys.binding(for: .togglePalette)?.keycaps {
+        if let caps = hotKeys.binding(for: .togglePalette)?.keycaps(
+            hyperKey: settings.hyperKey, includesShift: settings.hyperKeyIncludesShift,
+            replacesGlyph: settings.hyperKeyReplacesGlyph) {
             return "Press \(caps.joined()) anytime to start using Tinycast."
         }
         return "Tinycast is ready. Set a shortcut in Settings to summon it."
@@ -129,7 +131,8 @@ struct OnboardingView: View {
     }
 
     private var shortcutStep: some View {
-        VStack(alignment: .leading, spacing: Theme.Spacing.md) {
+        @Bindable var settings = settings
+        return VStack(alignment: .leading, spacing: Theme.Spacing.md) {
             SettingsCard {
                 SettingsRow(
                     title: "App Launcher",
@@ -187,7 +190,7 @@ struct OnboardingView: View {
                     SecureField("Passphrase", text: $model.passphrase)
                         .textFieldStyle(.roundedBorder)
                         .frame(width: 150)
-                        .onSubmit { model.run() }
+                        .onSubmit { model.run(backupCoordinator: backupCoordinator) }
                 }
             }
             RaycastImportSelection(selection: $model.selection, format: model.format)
@@ -282,9 +285,9 @@ struct OnboardingView: View {
         case 1 where !accessibilityTrusted:
             Permissions.openAccessibilitySettings()
         case 2 where !model.didImport:
-            model.run()
+            model.run(backupCoordinator: backupCoordinator)
         case Self.lastStep:
-            AppCore.shared.finishOnboarding()
+            paletteCoordinator.finishOnboarding()
         default:
             advance()
         }
@@ -337,7 +340,6 @@ struct OnboardingView: View {
             Capsule().fill((accessibilityTrusted ? Color.green : Color.orange).opacity(0.14)))
     }
 
-    // Read the bundled .icns directly: `NSApp.applicationIconImage` is the generic placeholder until LaunchServices registers the app (it hasn't when run from `build/`).
     private static let appIcon: NSImage = {
         if let name = Bundle.main.infoDictionary?["CFBundleIconFile"] as? String,
             let url = Bundle.main.url(forResource: name, withExtension: "icns"),
@@ -348,10 +350,10 @@ struct OnboardingView: View {
     }()
 }
 
-/// Owns the Raycast import step's state and the async import call, kept off the view so lifetimes are explicit and the body stays declarative.
 @MainActor
 @Observable
 final class OnboardingModel {
+
     enum ImportStatus {
         case success(String)
         case failure(String)
@@ -384,14 +386,14 @@ final class OnboardingModel {
         status = nil
     }
 
-    func run() {
+    func run(backupCoordinator: BackupCoordinator) {
         guard canImport, let file else { return }
         importing = true
         status = nil
         Task {
             defer { importing = false }
             do {
-                let outcome = try await BackupActions.importRaycast(
+                let outcome = try await backupCoordinator.importRaycast(
                     file: file, passphrase: passphrase, options: selection)
                 var message = BackupActions.summaryText(outcome.summary)
                 if outcome.clipboardImported > 0 {

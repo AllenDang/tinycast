@@ -1,7 +1,8 @@
 // Performance benchmark for the launcher fuzzy-match pipeline.
-// Compiles the real Tinycast/Core/SearchRelevance.swift — no copy of the scorer.
+// Compiles the real Tinycast/Features/Launcher/Model/SearchRelevance.swift — no copy.
 //
-//   swiftc -swift-version 6 -O Tinycast/Core/SearchRelevance.swift Tools/perf-bench.swift \
+//   swiftc -swift-version 6 -O Tinycast/Features/Launcher/Model/SearchRelevance.swift \
+//       Tools/perf-bench.swift \
 //       -o /tmp/perf-bench && /tmp/perf-bench
 //
 // Run before and after optimizations to measure the delta.

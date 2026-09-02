@@ -1,6 +1,8 @@
-// swiftc -swift-version 6 Tinycast/Core/Uninstall/UninstallTarget.swift \
-//     Tinycast/Core/Uninstall/UninstallSearchRoot.swift Tinycast/Core/Uninstall/UninstallRules.swift \
-//     Tinycast/Core/Uninstall/UninstallProtection.swift Tinycast/Core/Uninstall/UninstallPlan.swift \
+// swiftc -swift-version 6 Tinycast/Features/Uninstall/Model/UninstallTarget.swift \
+//     Tinycast/Features/Uninstall/Model/UninstallSearchRoot.swift \
+//     Tinycast/Features/Uninstall/Model/UninstallRules.swift \
+//     Tinycast/Features/Uninstall/Model/UninstallProtection.swift \
+//     Tinycast/Features/Uninstall/Model/UninstallPlan.swift \
 //     Tools/uninstall-test.swift -o /tmp/uninstall-test && /tmp/uninstall-test
 //
 // Pure layer only: no filesystem, no temp directories. Every environment fact is injected.

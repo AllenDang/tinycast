@@ -5,28 +5,28 @@ Commands**. They appear in the launcher's Custom Commands section, share the nor
 and run from Return, a favorite slot, or an optional global shortcut.
 
 The pane carries the feature switch — off out of the box — and its launcher-visibility companion,
-both in `AppSettings` and in settings backups. Switching the feature off empties the launcher section and makes
-`AppCore.runCustomCommand` — the single funnel for palette activation and global shortcuts — refuse to
-run anything; Carbon registrations and their bindings stay put, so re-enabling restores every shortcut
-without re-registering. "Show in launcher" only hides the section; shortcuts keep working.
+both in `AppSettings` and in settings backups. Switching the feature off empties the launcher section and
+makes `CustomCommandCoordinator.runCustomCommand` — the single funnel for palette activation and global
+shortcuts — refuse to run anything; Carbon registrations and bindings stay put, so re-enabling
+restores every shortcut without re-registering. "Show in launcher" only hides the section; shortcuts keep working.
 
 ## Ownership and persistence
 
 `CustomCommandStore` is owned by `AppCore` and persists the ordered command array as JSON in
 bundle-scoped `UserDefaults`. Each command has a stable UUID. Its launcher entry id is
-`custom-command:<uuid>`, and its hotkey uses
-`KeyboardShortcuts_customCommandHotkey.<uuid>` plus the `boundCustomCommandIDs` index.
+`custom-command:<uuid>`, and its hotkey uses `hotkey.customCommand.<uuid>` plus the
+`boundCustomCommandIDs` index.
 
 Editing preserves the UUID and therefore its favorite, visibility, and hotkey references. Deleting
-goes through `AppCore`, which unregisters the hotkey and clears those references before removing the
-command. Native settings backups include both commands and bindings; import warns before accepting
+goes through `CustomCommandCoordinator`, which unregisters the hotkey and clears those references
+before removing the command. Native settings backups include both commands and bindings; import warns before accepting
 executable content.
 
 ## Launcher integration
 
 `AppIndex` owns two slices: applications/System Settings discovered off-main and custom command
 entries supplied on the main actor. It publishes the custom command slice ahead of the alphabetized
-`CommandRegistry` built-ins, each its own launcher section. This keeps the visible row order identical
+`CommandCatalog` built-ins, each its own launcher section. This keeps the visible row order identical
 to the flat palette selection while allowing edits to invalidate fuzzy results without rescanning disk.
 
 The command text is deliberately not searchable. Only the user-facing name enters fuzzy matching.
@@ -72,8 +72,8 @@ is dropped while the actual error survives.
 
 ### Needs confirmation
 
-`AppCore.runCustomCommand(id:)` is the one funnel both palette activation and the global hotkey reach,
-so the gate lives there and neither path can bypass it. The palette hides before the dialog it is a
+`CustomCommandCoordinator.runCustomCommand(id:)` is the one funnel both palette activation and the
+global hotkey reach, so the gate lives there and neither path can bypass it. The palette hides before the dialog it is a
 floating panel and would sit above it. The dialog shows the command text as well as its name; ↵ runs
 it and Escape cancels, with Cancel rendered on the left of the two buttons. It carries the `terminal`
 glyph the command's launcher row uses, and reads neutral rather than destructive — running a command the
@@ -91,8 +91,8 @@ on grepping stderr, since 127 is equally a plain typo. The command string itself
 
 ### Manual checks
 
-`requiresConfirmation` lives in `AppCore` (AppKit, `@MainActor`) and so is out of reach of the
-Foundation-only harness. Verify by hand:
+`requiresConfirmation` lives in `CustomCommandCoordinator` (AppKit, `@MainActor`) and so is out of
+reach of the Foundation-only harness. Verify by hand:
 
 1. Activating a gated command from the palette hides the palette _before_ the dialog appears.
 2. ↵ at the dialog runs the command; Escape or clicking **Cancel** cancels.

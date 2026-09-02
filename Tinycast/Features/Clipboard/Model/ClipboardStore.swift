@@ -1,0 +1,549 @@
+import Foundation
+import SQLite3
+
+// Spelled as the C macro in sqlite3.h, which isn't imported into Swift.
+private let SQLITE_TRANSIENT = unsafeBitCast(-1, to: sqlite3_destructor_type.self)
+
+struct ClipboardItem: Identifiable, Hashable, Sendable {
+    enum Kind: String, Sendable { case text, image }
+
+    let id: UUID
+    let kind: Kind
+    let text: String?
+    let imagePath: String?
+    let createdAt: Date
+    /// Bundle ID of the app frontmost when the copy was captured (see `ClipboardMonitor.poll`).
+    let sourceBundleID: String?
+    let pinnedAt: Date?
+
+    var isPinned: Bool { pinnedAt != nil }
+
+    init(text: String, sourceBundleID: String?) {
+        self.init(
+            id: UUID(), kind: .text, text: text, imagePath: nil, createdAt: Date(),
+            sourceBundleID: sourceBundleID)
+    }
+
+    init(imagePath: String, createdAt: Date = Date(), sourceBundleID: String?) {
+        self.init(
+            id: UUID(), kind: .image, text: nil, imagePath: imagePath, createdAt: createdAt,
+            sourceBundleID: sourceBundleID)
+    }
+
+    init(
+        id: UUID, kind: Kind, text: String?, imagePath: String?, createdAt: Date,
+        sourceBundleID: String?, pinnedAt: Date? = nil
+    ) {
+        self.id = id
+        self.kind = kind
+        self.text = text
+        self.imagePath = imagePath
+        self.createdAt = createdAt
+        self.sourceBundleID = sourceBundleID
+        self.pinnedAt = pinnedAt
+    }
+
+    func with(createdAt: Date? = nil, pinnedAt: Date?) -> ClipboardItem {
+        ClipboardItem(
+            id: id, kind: kind, text: text, imagePath: imagePath,
+            createdAt: createdAt ?? self.createdAt, sourceBundleID: sourceBundleID,
+            pinnedAt: pinnedAt)
+    }
+
+    func matches(_ query: String) -> Bool {
+        text?.localizedCaseInsensitiveContains(query) ?? false
+    }
+}
+
+enum ClipboardRetention: Int, CaseIterable, Identifiable, Sendable {
+    case day = 1
+    case week = 7
+    case month = 30
+    case threeMonths = 90
+    case sixMonths = 180
+    case year = 365
+    case forever = -1
+
+    var id: Int { rawValue }
+
+    var title: String {
+        switch self {
+        case .day: return "1 Day"
+        case .week: return "1 Week"
+        case .month: return "1 Month"
+        case .threeMonths: return "3 Months"
+        case .sixMonths: return "6 Months"
+        case .year: return "1 Year"
+        case .forever: return "Forever"
+        }
+    }
+
+    var maxAge: TimeInterval {
+        self == .forever ? .greatestFiniteMagnitude : TimeInterval(rawValue) * 86_400
+    }
+}
+
+@MainActor
+@Observable
+final class ClipboardStore {
+    private(set) var items: [ClipboardItem] = [] {
+        didSet {
+            searchCache = nil
+            orderedCache = nil
+        }
+    }
+    var maxAge: TimeInterval = ClipboardRetention.threeMonths.maxAge
+
+    @ObservationIgnored private var searchCache: (query: String, result: [ClipboardItem])?
+    @ObservationIgnored private var orderedCache: [ClipboardItem]?
+
+    private static let memoryWindow = 1000
+    private var insertsSinceLastPrune = 0
+
+    private static let schema = """
+        CREATE TABLE IF NOT EXISTS items(
+          id TEXT NOT NULL UNIQUE,
+          kind TEXT NOT NULL,
+          text TEXT,
+          image_path TEXT,
+          created_at REAL NOT NULL,
+          source_app TEXT,
+          pinned_at REAL
+        );
+        CREATE INDEX IF NOT EXISTS items_created_at ON items(created_at);
+        CREATE INDEX IF NOT EXISTS items_pinned_at ON items(pinned_at) WHERE pinned_at IS NOT NULL;
+        CREATE VIRTUAL TABLE IF NOT EXISTS items_fts USING fts5(
+          text, content='items', content_rowid='rowid', tokenize='trigram'
+        );
+        CREATE TRIGGER IF NOT EXISTS items_ai AFTER INSERT ON items BEGIN
+          INSERT INTO items_fts(rowid, text) VALUES(new.rowid, new.text);
+        END;
+        CREATE TRIGGER IF NOT EXISTS items_ad AFTER DELETE ON items BEGIN
+          INSERT INTO items_fts(items_fts, rowid, text) VALUES('delete', old.rowid, old.text);
+        END;
+        """
+
+    private let imagesDir: URL
+    private let dbURL: URL
+    @ObservationIgnored private var db: OpaquePointer?
+    @ObservationIgnored private var insertStmt: OpaquePointer?
+    @ObservationIgnored private var loadStmt: OpaquePointer?
+    @ObservationIgnored private var windowFloorStmt: OpaquePointer?
+    @ObservationIgnored private var searchStmt: OpaquePointer?
+    @ObservationIgnored private var deleteByIDStmt: OpaquePointer?
+    @ObservationIgnored private var pinStmt: OpaquePointer?
+    @ObservationIgnored private var staleImagesStmt: OpaquePointer?
+    @ObservationIgnored private var deleteStaleStmt: OpaquePointer?
+    @ObservationIgnored private var textExistsStmt: OpaquePointer?
+    @ObservationIgnored private var imageExistsStmt: OpaquePointer?
+
+    init(directory: URL? = nil) {
+        let base = directory ?? Self.defaultDirectory
+        imagesDir = base.appendingPathComponent("images", isDirectory: true)
+        dbURL = base.appendingPathComponent("clipboard.sqlite3")
+        try? FileManager.default.createDirectory(at: imagesDir, withIntermediateDirectories: true)
+        if !openDatabase() {
+            closeDatabase()
+            for suffix in ["", "-wal", "-shm"] {
+                try? FileManager.default.removeItem(atPath: dbURL.path + suffix)
+            }
+            if !openDatabase() { closeDatabase() }
+        }
+    }
+
+    private static var defaultDirectory: URL {
+        let bundleID = Bundle.main.bundleIdentifier ?? "com.tinycast.app"
+        return FileManager.default
+            .urls(for: .cachesDirectory, in: .userDomainMask)[0]
+            .appendingPathComponent(bundleID, isDirectory: true)
+    }
+
+    isolated deinit {
+        closeDatabase()
+    }
+
+    func load() {
+        guard let stmt = loadStmt else { return }
+        sqlite3_bind_int64(stmt, 1, windowFloor())
+        var loaded: [ClipboardItem] = []
+        while sqlite3_step(stmt) == SQLITE_ROW {
+            if let item = Self.row(stmt) { loaded.append(item) }
+        }
+        sqlite3_reset(stmt)
+        sqlite3_clear_bindings(stmt)
+        items = loaded
+        // Age passes while the app isn't running; insert-time pruning alone can't catch that.
+        enforceLimits()
+    }
+
+    /// Called on load and when the retention setting changes.
+    func enforceLimits() {
+        prune()
+    }
+
+    private func windowFloor() -> sqlite3_int64 {
+        guard let stmt = windowFloorStmt else { return 0 }
+        defer {
+            sqlite3_reset(stmt)
+            sqlite3_clear_bindings(stmt)
+        }
+        sqlite3_bind_int(stmt, 1, Int32(Self.memoryWindow - 1))
+        return sqlite3_step(stmt) == SQLITE_ROW ? sqlite3_column_int64(stmt, 0) : 0
+    }
+
+    func addText(_ text: String, sourceBundleID: String?) {
+        if items.first?.kind == .text, items.first?.text == text { return }
+        insert(ClipboardItem(text: text, sourceBundleID: sourceBundleID))
+    }
+
+    func addImage(_ data: Data, sourceBundleID: String?) {
+        let url = imagesDir.appendingPathComponent(UUID().uuidString + ".png")
+        let item = ClipboardItem(imagePath: url.path, sourceBundleID: sourceBundleID)
+        Task.detached(priority: .utility) { [weak self] in
+            guard (try? data.write(to: url, options: .atomic)) != nil else { return }
+            await self?.insert(item)
+        }
+    }
+
+    func importEntries(_ entries: [ClipboardItem]) -> Int {
+        guard let stmt = insertStmt else { return 0 }
+        var seenText = Set<String>()
+        var seenPath = Set<String>()
+        var inserted = 0
+        sqlite3_exec(db, "BEGIN", nil, nil, nil)
+        // Oldest first so newest ends up with the highest rowid (load orders by rowid DESC).
+        for item in entries.sorted(by: { $0.createdAt < $1.createdAt }) {
+            switch item.kind {
+            case .text:
+                guard let text = item.text, !seenText.contains(text), !textExists(text) else {
+                    continue
+                }
+                seenText.insert(text)
+            case .image:
+                guard let path = item.imagePath, !seenPath.contains(path), !imagePathExists(path)
+                else { continue }
+                seenPath.insert(path)
+            }
+            bindAndInsert(stmt, item)
+            inserted += 1
+        }
+        sqlite3_exec(db, "COMMIT", nil, nil, nil)
+        load()
+        return inserted
+    }
+
+    func promote(_ item: ClipboardItem) {
+        guard !item.isPinned, items.first?.id != item.id else { return }
+        reinsert(item.with(createdAt: Date(), pinnedAt: nil))
+    }
+
+    func togglePinned(_ item: ClipboardItem) {
+        if item.isPinned { unpin(item) } else { pin(item) }
+    }
+
+    func remove(_ item: ClipboardItem) {
+        if let stmt = deleteByIDStmt {
+            sqlite3_bind_text(stmt, 1, item.id.uuidString, -1, SQLITE_TRANSIENT)
+            sqlite3_step(stmt)
+            sqlite3_reset(stmt)
+            sqlite3_clear_bindings(stmt)
+        }
+        items.removeAll { $0.id == item.id }
+        deleteBlob(item)
+    }
+
+    func clearAll() {
+        if db != nil { sqlite3_exec(db, "DELETE FROM items", nil, nil, nil) }
+        try? FileManager.default.removeItem(at: imagesDir)
+        try? FileManager.default.createDirectory(at: imagesDir, withIntermediateDirectories: true)
+        items = []
+    }
+
+    func imageURL(for item: ClipboardItem) -> URL? {
+        guard let path = item.imagePath else { return nil }
+        return URL(fileURLWithPath: path)
+    }
+
+    /// Display order for `query`: pinned entries first, each block newest-first.
+    func search(_ query: String) -> [ClipboardItem] {
+        let q = query.trimmingCharacters(in: .whitespaces)
+        guard !q.isEmpty else { return orderedItems }
+        if let searchCache, searchCache.query == q { return searchCache.result }
+        let result = pinnedItems.filter { $0.matches(q) } + runSearch(q).filter { !$0.isPinned }
+        searchCache = (q, result)
+        return result
+    }
+
+    func rowIndex(of item: ClipboardItem, in query: String) -> Int? {
+        search(query).firstIndex { $0.id == item.id }
+    }
+
+    private func runSearch(_ q: String) -> [ClipboardItem] {
+        guard let stmt = searchStmt, q.count >= 3 else { return fallbackSearch(q) }
+        let match = "\"" + q.replacingOccurrences(of: "\"", with: "\"\"") + "\""
+        sqlite3_bind_text(stmt, 1, match, -1, SQLITE_TRANSIENT)
+        var results: [ClipboardItem] = []
+        var status = sqlite3_step(stmt)
+        while status == SQLITE_ROW {
+            if let item = Self.row(stmt) { results.append(item) }
+            status = sqlite3_step(stmt)
+        }
+        sqlite3_reset(stmt)
+        sqlite3_clear_bindings(stmt)
+        return status == SQLITE_DONE ? results : fallbackSearch(q)
+    }
+
+    // MARK: - Private
+
+    private func fallbackSearch(_ q: String) -> [ClipboardItem] {
+        items.filter { $0.matches(q) }
+    }
+
+    private var orderedItems: [ClipboardItem] {
+        if let orderedCache { return orderedCache }
+        let pinned = pinnedItems
+        // An unpinned history renders `items` as-is, so it never pays for the split.
+        let result = pinned.isEmpty ? items : pinned + items.filter { !$0.isPinned }
+        orderedCache = result
+        return result
+    }
+
+    private var pinnedItems: [ClipboardItem] {
+        items.filter(\.isPinned)
+            .sorted { ($0.pinnedAt ?? .distantFuture) < ($1.pinnedAt ?? .distantFuture) }
+    }
+
+    private func pin(_ item: ClipboardItem) {
+        let stamp = Date()
+        let pinned = item.with(pinnedAt: stamp)
+        if let stmt = pinStmt {
+            sqlite3_bind_double(stmt, 1, stamp.timeIntervalSince1970)
+            sqlite3_bind_text(stmt, 2, item.id.uuidString, -1, SQLITE_TRANSIENT)
+            sqlite3_step(stmt)
+            sqlite3_reset(stmt)
+            sqlite3_clear_bindings(stmt)
+        }
+        if let index = items.firstIndex(where: { $0.id == item.id }) {
+            items[index] = pinned
+        } else {
+            let index = items.firstIndex { $0.createdAt < pinned.createdAt } ?? items.count
+            items.insert(pinned, at: index)
+        }
+    }
+
+    private func unpin(_ item: ClipboardItem) {
+        reinsert(item.with(createdAt: Date(), pinnedAt: nil))
+    }
+
+    private func reinsert(_ updated: ClipboardItem) {
+        if let deleteStmt = deleteByIDStmt, let insertStmt {
+            sqlite3_exec(db, "BEGIN", nil, nil, nil)
+            sqlite3_bind_text(deleteStmt, 1, updated.id.uuidString, -1, SQLITE_TRANSIENT)
+            sqlite3_step(deleteStmt)
+            sqlite3_reset(deleteStmt)
+            sqlite3_clear_bindings(deleteStmt)
+            bindAndInsert(insertStmt, updated)
+            sqlite3_exec(db, "COMMIT", nil, nil, nil)
+        }
+        // Array ops also cover items surfaced by FTS from beyond the in-memory window.
+        items.removeAll { $0.id == updated.id }
+        items.insert(updated, at: 0)
+        trimWindow()
+    }
+
+    /// Cap the in-memory window, but never drop a pinned row: those render however old they are.
+    private func trimWindow() {
+        guard items.count > Self.memoryWindow, let index = items.lastIndex(where: { !$0.isPinned })
+        else { return }
+        items.remove(at: index)
+        // The reinsert path never calls insert(), so prune here too when the counter has built up.
+        if insertsSinceLastPrune >= 20 {
+            prune()
+            insertsSinceLastPrune = 0
+        }
+    }
+
+    private func insert(_ item: ClipboardItem) {
+        if let stmt = insertStmt { bindAndInsert(stmt, item) }
+        items.insert(item, at: 0)
+        trimWindow()
+        insertsSinceLastPrune += 1
+        if insertsSinceLastPrune >= 20 {
+            prune()
+            insertsSinceLastPrune = 0
+        }
+    }
+
+    private func bindAndInsert(_ stmt: OpaquePointer, _ item: ClipboardItem) {
+        sqlite3_bind_text(stmt, 1, item.id.uuidString, -1, SQLITE_TRANSIENT)
+        sqlite3_bind_text(stmt, 2, item.kind.rawValue, -1, SQLITE_TRANSIENT)
+        if let text = item.text {
+            sqlite3_bind_text(stmt, 3, text, -1, SQLITE_TRANSIENT)
+        } else {
+            sqlite3_bind_null(stmt, 3)
+        }
+        if let path = item.imagePath {
+            sqlite3_bind_text(stmt, 4, path, -1, SQLITE_TRANSIENT)
+        } else {
+            sqlite3_bind_null(stmt, 4)
+        }
+        sqlite3_bind_double(stmt, 5, item.createdAt.timeIntervalSince1970)
+        if let source = item.sourceBundleID {
+            sqlite3_bind_text(stmt, 6, source, -1, SQLITE_TRANSIENT)
+        } else {
+            sqlite3_bind_null(stmt, 6)
+        }
+        if let pinnedAt = item.pinnedAt {
+            sqlite3_bind_double(stmt, 7, pinnedAt.timeIntervalSince1970)
+        } else {
+            sqlite3_bind_null(stmt, 7)
+        }
+        sqlite3_step(stmt)
+        sqlite3_reset(stmt)
+        sqlite3_clear_bindings(stmt)
+    }
+
+    private func textExists(_ text: String) -> Bool {
+        guard let stmt = textExistsStmt else { return false }
+        sqlite3_bind_text(stmt, 1, text, -1, SQLITE_TRANSIENT)
+        defer { sqlite3_reset(stmt); sqlite3_clear_bindings(stmt) }
+        return sqlite3_step(stmt) == SQLITE_ROW
+    }
+    private func imagePathExists(_ path: String) -> Bool {
+        guard let stmt = imageExistsStmt else { return false }
+        sqlite3_bind_text(stmt, 1, path, -1, SQLITE_TRANSIENT)
+        defer { sqlite3_reset(stmt); sqlite3_clear_bindings(stmt) }
+        return sqlite3_step(stmt) == SQLITE_ROW
+    }
+
+    private func owns(_ path: String) -> Bool {
+        path.hasPrefix(imagesDir.path + "/")
+    }
+
+    private func prune() {
+        let cutoff = Date().addingTimeInterval(-maxAge)
+        if let imagesStmt = staleImagesStmt, let deleteStmt = deleteStaleStmt {
+            sqlite3_bind_double(imagesStmt, 1, cutoff.timeIntervalSince1970)
+            var staleOwnedPaths: [String] = []
+            while sqlite3_step(imagesStmt) == SQLITE_ROW {
+                if let path = Self.columnString(imagesStmt, 0), owns(path) {
+                    staleOwnedPaths.append(path)
+                }
+            }
+            sqlite3_reset(imagesStmt)
+            sqlite3_clear_bindings(imagesStmt)
+            sqlite3_bind_double(deleteStmt, 1, cutoff.timeIntervalSince1970)
+            sqlite3_step(deleteStmt)
+            sqlite3_reset(deleteStmt)
+            sqlite3_clear_bindings(deleteStmt)
+            if !staleOwnedPaths.isEmpty {
+                Task.detached(priority: .utility) {
+                    for path in staleOwnedPaths {
+                        try? FileManager.default.removeItem(atPath: path)
+                    }
+                }
+            }
+        }
+        if items.last(where: { !$0.isPinned }).map({ $0.createdAt < cutoff }) == true {
+            items.removeAll { $0.createdAt < cutoff && !$0.isPinned }
+        }
+    }
+
+    private func deleteBlob(_ item: ClipboardItem) {
+        guard let path = item.imagePath, owns(path) else { return }
+        try? FileManager.default.removeItem(atPath: path)
+    }
+
+    private func openDatabase() -> Bool {
+        guard
+            sqlite3_open_v2(dbURL.path, &db, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE, nil)
+                == SQLITE_OK,
+            sqlite3_exec(db, "PRAGMA journal_mode=WAL; PRAGMA synchronous=NORMAL;", nil, nil, nil)
+                == SQLITE_OK,
+            sqlite3_exec(db, Self.schema, nil, nil, nil) == SQLITE_OK
+        else { return false }
+        insertStmt = prepare(
+            """
+            INSERT INTO items(id, kind, text, image_path, created_at, source_app, pinned_at)
+            VALUES(?,?,?,?,?,?,?)
+            """
+        )
+        loadStmt = prepare(
+            """
+            SELECT id, kind, text, image_path, created_at, source_app, pinned_at FROM (
+              SELECT rowid AS rid, * FROM items WHERE rowid >= ?1
+              UNION ALL
+              SELECT rowid AS rid, * FROM items WHERE pinned_at IS NOT NULL AND rowid < ?1
+            ) ORDER BY rid DESC
+            """)
+        windowFloorStmt = prepare(
+            "SELECT rowid FROM items WHERE pinned_at IS NULL ORDER BY rowid DESC LIMIT 1 OFFSET ?")
+        searchStmt = prepare(
+            """
+            SELECT i.id, i.kind, i.text, i.image_path, i.created_at, i.source_app, i.pinned_at
+            FROM items_fts f JOIN items i ON i.rowid = f.rowid
+            WHERE items_fts MATCH ? ORDER BY f.rowid DESC LIMIT 200
+            """)
+        deleteByIDStmt = prepare("DELETE FROM items WHERE id = ?")
+        // Only ever sets a stamp: unpinning rewrites the whole row so it leads the history again.
+        pinStmt = prepare("UPDATE items SET pinned_at = ? WHERE id = ?")
+        staleImagesStmt = prepare(
+            """
+            SELECT image_path FROM items
+            WHERE created_at < ? AND pinned_at IS NULL AND image_path IS NOT NULL
+            """)
+        deleteStaleStmt = prepare("DELETE FROM items WHERE created_at < ? AND pinned_at IS NULL")
+        textExistsStmt = prepare("SELECT 1 FROM items WHERE text = ? LIMIT 1")
+        imageExistsStmt = prepare("SELECT 1 FROM items WHERE image_path = ? LIMIT 1")
+        return insertStmt != nil && loadStmt != nil && windowFloorStmt != nil && searchStmt != nil
+            && deleteByIDStmt != nil && pinStmt != nil && staleImagesStmt != nil
+            && deleteStaleStmt != nil && textExistsStmt != nil && imageExistsStmt != nil
+    }
+
+    private func prepare(_ sql: String) -> OpaquePointer? {
+        var stmt: OpaquePointer?
+        guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else { return nil }
+        return stmt
+    }
+
+    private func closeDatabase() {
+        [
+            insertStmt, loadStmt, windowFloorStmt, searchStmt, deleteByIDStmt, pinStmt,
+            staleImagesStmt, deleteStaleStmt, textExistsStmt, imageExistsStmt
+        ].forEach { sqlite3_finalize($0) }
+        insertStmt = nil
+        loadStmt = nil
+        windowFloorStmt = nil
+        searchStmt = nil
+        deleteByIDStmt = nil
+        pinStmt = nil
+        staleImagesStmt = nil
+        deleteStaleStmt = nil
+        textExistsStmt = nil
+        imageExistsStmt = nil
+        sqlite3_close_v2(db)
+        db = nil
+    }
+
+    private static func row(_ stmt: OpaquePointer?) -> ClipboardItem? {
+        guard let idString = columnString(stmt, 0), let id = UUID(uuidString: idString),
+            let kindString = columnString(stmt, 1),
+            let kind = ClipboardItem.Kind(rawValue: kindString)
+        else { return nil }
+        return ClipboardItem(
+            id: id, kind: kind, text: columnString(stmt, 2), imagePath: columnString(stmt, 3),
+            createdAt: Date(timeIntervalSince1970: sqlite3_column_double(stmt, 4)),
+            sourceBundleID: columnString(stmt, 5), pinnedAt: columnDate(stmt, 6))
+    }
+
+    private static func columnDate(_ stmt: OpaquePointer?, _ index: Int32) -> Date? {
+        guard sqlite3_column_type(stmt, index) != SQLITE_NULL else { return nil }
+        return Date(timeIntervalSince1970: sqlite3_column_double(stmt, index))
+    }
+
+    private static func columnString(_ stmt: OpaquePointer?, _ index: Int32) -> String? {
+        guard let ptr = sqlite3_column_text(stmt, index) else { return nil }
+        let count = Int(sqlite3_column_bytes(stmt, index))
+        return String(decoding: UnsafeBufferPointer(start: ptr, count: count), as: UTF8.self)
+    }
+}

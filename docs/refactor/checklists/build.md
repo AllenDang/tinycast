@@ -37,8 +37,8 @@ xcodebuild build -project Tinycast.xcodeproj -scheme Tinycast -configuration Deb
 
 ## 3 · Release build
 
-Only required for phases that touch generic code, `@inlinable` surfaces, or the `Core/Calculator/`,
-`Core/Emoji/` and `Core/Snippets/` engines — and always for the final phase of a milestone.
+Only required for phases that touch generic code, `@inlinable` surfaces, or the `Features/Calculator/Model/`,
+`Features/Emoji/Model/` and `Features/Snippets/` engines — and always for the final phase of a milestone.
 
 ```
 xcodebuild build -project Tinycast.xcodeproj -scheme Tinycast -configuration Release \

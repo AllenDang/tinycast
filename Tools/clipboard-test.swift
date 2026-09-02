@@ -1,5 +1,6 @@
 // Standalone test for the clipboard store — compiles the *real* source (no copy to sync):
-// swiftc -swift-version 6 Tinycast/Core/ClipboardStore.swift Tools/clipboard-test.swift -o /tmp/clipboard-test && /tmp/clipboard-test
+// swiftc -swift-version 6 Tinycast/Features/Clipboard/Model/ClipboardStore.swift \
+//     Tools/clipboard-test.swift -o /tmp/clipboard-test && /tmp/clipboard-test
 //
 // Every store here is built on a throwaway directory under the system temp dir, so a run can never
 // see or touch a real clipboard history.
@@ -29,7 +30,7 @@ struct ClipboardTests {
         pinsSurvivePruningAndTheWindow()
         pinsLeadFilteredSearches()
         persistence()
-        migrationFromShippedDatabase()
+        freshSchema()
 
         print("\(passes)/\(passes + failures) passed")
         if failures > 0 { exit(1) }
@@ -178,32 +179,27 @@ struct ClipboardTests {
         }
     }
 
-    /// A shipped pre-pin database migrates in place. Failing to open one is not a soft failure: the store deletes and recreates a database it can't open, taking the history with it.
-    static func migrationFromShippedDatabase() {
+    static func freshSchema() {
         let dir = scratchDirectory()
         defer { try? FileManager.default.removeItem(at: dir) }
         let db = dir.appendingPathComponent("clipboard.sqlite3")
-        seedPrePinDatabase(at: db)
-
         let store = ClipboardStore(directory: dir)
-        store.load()
-        expect(texts(store) == ["newer", "older"], "existing history survives the migration")
 
-        store.addText("after", sourceBundleID: nil)
-        store.togglePinned(item(store, "older"))
-        expect(texts(store) == ["older", "after", "newer"], "the migrated database takes pins")
-
-        let reopened = ClipboardStore(directory: dir)
-        reopened.load()
-        expect(texts(reopened) == ["older", "after", "newer"], "and keeps them across a reopen")
-
+        let columns = sqlite(db, "SELECT name FROM pragma_table_info('items')")
         expect(
-            sqlite(db, "SELECT name FROM pragma_table_info('items')").contains("pinned_at"),
-            "the pin stamp column was added")
+            columns == ["id", "kind", "text", "image_path", "created_at", "source_app", "pinned_at"],
+            "the fresh schema declares all seven item columns")
         expect(
             sqlite(db, "SELECT name FROM sqlite_master WHERE type = 'index'")
                 .contains("items_pinned_at"),
-            "and indexed")
+            "the fresh schema creates the pin index")
+
+        store.addText("captured", sourceBundleID: "com.example.source")
+        store.togglePinned(item(store, "captured"))
+        let reopened = ClipboardStore(directory: dir)
+        reopened.load()
+        expect(reopened.items.first?.sourceBundleID == "com.example.source", "source app persists")
+        expect(reopened.items.first?.isPinned == true, "pin stamp persists")
     }
 
     // MARK: - Benchmark
@@ -265,34 +261,6 @@ struct ClipboardTests {
         return dir
     }
 
-    /// Writes the schema as shipped before pinning existed: no `pinned_at`, and two rows to migrate.
-    static func seedPrePinDatabase(at url: URL) {
-        let now = Date().timeIntervalSince1970
-        sqlite(
-            url,
-            """
-            CREATE TABLE items(
-              id TEXT NOT NULL UNIQUE, kind TEXT NOT NULL, text TEXT, image_path TEXT,
-              created_at REAL NOT NULL, source_app TEXT
-            );
-            CREATE INDEX items_created_at ON items(created_at);
-            CREATE VIRTUAL TABLE items_fts USING fts5(
-              text, content='items', content_rowid='rowid', tokenize='trigram'
-            );
-            CREATE TRIGGER items_ai AFTER INSERT ON items BEGIN
-              INSERT INTO items_fts(rowid, text) VALUES(new.rowid, new.text);
-            END;
-            CREATE TRIGGER items_ad AFTER DELETE ON items BEGIN
-              INSERT INTO items_fts(items_fts, rowid, text) VALUES('delete', old.rowid, old.text);
-            END;
-            INSERT INTO items(id, kind, text, created_at)
-              VALUES('\(UUID().uuidString)', 'text', 'older', \(now - 60));
-            INSERT INTO items(id, kind, text, created_at)
-              VALUES('\(UUID().uuidString)', 'text', 'newer', \(now));
-            """)
-    }
-
-    /// Rows returned by the `sqlite3` CLI — used to write a legacy database and to read the schema back, neither of which the store exposes.
     @discardableResult
     static func sqlite(_ database: URL, _ sql: String) -> Set<String> {
         let task = Process()

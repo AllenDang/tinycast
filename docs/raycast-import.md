@@ -79,7 +79,7 @@ Notes that matter:
 `Tools/raycast-test.swift` compiles them against the real sources. The decoder's job is _shape_ — it
 returns Raycast's own values in a plain `RaycastV1Payload`; turning those into Tinycast's domain types
 (`PopToRootTimeout`, `EmojiSkinTone`, `HyperKeyPhysicalKey`, `KeyShortcut`) is `RaycastImportV1`'s job.
-That is the same pure-layer / platform-layer split `Core/WindowManagement/` uses.
+That is the same pure-layer / platform-layer split `Features/WindowManagement/` uses.
 
 `RaycastImport` itself is only the facade: `Result`, `selecting(_:)`, and the `read(file:passphrase:)`
 dispatcher. `BackupActions.importRaycast` runs it off the main actor.
