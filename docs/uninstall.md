@@ -19,14 +19,17 @@ Same split as `WindowManagement`: a pure half that decides, an impure half that 
 | `Features/Uninstall/Model/UninstallTarget.swift` | Target identity, evidence and guard rails |
 | `Features/Uninstall/Model/UninstallSearchRoot.swift` | Root table, legal styles, depth and CLI roots |
 | `Features/Uninstall/Model/UninstallRules.swift` | Attribution and candidate path validation |
+| `Features/Uninstall/Model/AdministratorTrashPolicy.swift` | Paths the signed helper may accept |
 | `Features/Uninstall/Model/UninstallProtection.swift` | `PathFacts` → `UninstallProtection` |
 | `Features/Uninstall/Model/UninstallPlan.swift` | Candidates, plan and selection |
 | `Features/Uninstall/Service/UninstallScanner.swift` | Filesystem, signing metadata, sizes and FDA probe |
-| `Features/Uninstall/Service/UninstallRunner.swift` | `trashItem`, and nothing else |
+| `Features/Uninstall/Service/UninstallRunner.swift` | Ordinary and administrator Trash orchestration |
+| `Features/Uninstall/Service/AdministratorTrashRunner.swift` | System authorization prompt and helper protocol |
+| `TinycastTrashHelper/main.swift` | Signed root helper; policy check plus `trashItem` |
 | `Features/Uninstall/Service/UninstallSession.swift` | `@MainActor` lifecycle behind the screen |
 | `Features/Uninstall/UI/UninstallView.swift` | List, row and actions menu |
 
-The first five compile standalone into `Tools/uninstall-test.swift`, so they stay Foundation-only
+The first six compile standalone into `Tools/uninstall-test.swift`, so they stay Foundation-only
 and take every environment fact as a parameter. The scanner hands the rules **child names**, never
 URLs, which is what makes "no filesystem access in the pure layer" structural rather than a promise.
 
@@ -146,25 +149,26 @@ Precedence, asserted by the harness:
    prefix
 3. `UF_IMMUTABLE` → `.userLocked` (its own case: the user can clear it in Get Info)
 4. a TCC-gated path without Full Disk Access → `.needsFullDiskAccess`
-5. parent not writable → `.parentNotWritable`
+5. parent `SF_NOUNLINK` or not writable → `.requiresAdministrator` for a policy-approved path,
+   otherwise `.parentNotWritable`
 6. sticky parent _and_ not owned by the current user → `.notOwned`
 7. → `.removable`
 
 Steps 5 and 6 are the whole ownership story, and the order is deliberate. Removing a directory entry
-is governed by write permission on the **enclosing directory**, not by who owns the item: a root-owned
-file inside a folder you can write is yours to remove. Checking ownership first — as an earlier
-revision did — grayed out rows that trash perfectly well. Ownership decides exactly one case, a
-sticky parent (`S_ISVTX`, the `/tmp` rule), where only an owner may unlink.
+is governed by the **enclosing directory**, not by who owns the item. A root-owned file in an ordinary
+writable folder needs no elevation; a parent with `SF_NOUNLINK` (the `sunlnk` flag on `/Applications`)
+or without write permission does. A path accepted by `AdministratorTrashPolicy` remains selectable
+and is marked “administrator”; every other unwritable path stays locked. Ownership decides exactly
+one case, a sticky parent (`S_ISVTX`, the `/tmp` rule), where only an owner may unlink.
 
-This is also why `/usr/local/bin/code` stays locked while `/opt/homebrew/bin/orb` does not:
-`/usr/local/bin` is `drwxr-xr-x root:wheel`, so the trash is refused outright (measured, not
-inferred), whereas Homebrew leaves `/opt/homebrew/bin` group-writable. Raycast offers the
-`/usr/local/bin` row as checked; that removal cannot succeed without an administrator password, which
-this feature never asks for.
+This is why `/usr/local/bin/code` and a root-owned App Store app in `/Applications` remain checked but
+carry the administrator label, while `/opt/homebrew/bin/orb` normally needs no elevation. The first
+set cannot be moved by the user process; the second lives in Homebrew's writable prefix.
 
-A locked candidate can never enter the checked set. That invariant lives in `UninstallSelection`,
-whose every mutation funnels through one intersection with `plan.removableIDs`, so re-scanning drops
-a row that has since become locked for free.
+A locked candidate can never enter the checked set. `.requiresAdministrator` is not locked: it is an
+explicitly selectable removal mode whose path already passed the same root/depth policy the helper
+will enforce again. Every selection mutation still funnels through `plan.removableIDs`, so re-scanning
+drops a row that has become genuinely locked.
 
 The TCC list is **measured, not assumed.** A probe that creates and then trashes a throwaway
 directory in each candidate location shows that `~/Library/Containers`, `~/Library/Group Containers`
@@ -173,6 +177,17 @@ and `~/Library/Cookies` refuse the move, while `~/Library/Application Scripts` a
 checkable while the five `Containers` rows beside them are locked. Note that _listing_ a directory is
 not the test: both container roots enumerate fine and still refuse the trash. Re-measure before
 adding an entry.
+
+**Administrator removal is narrow and one-shot.** The Tinycast confirmation states that a password
+will be needed. Immediately before invoking `/usr/bin/osascript` for the system authorization dialog,
+`AdministratorTrashRunner` validates the sealed app against the running process's designated
+requirement and hashes the embedded helper. The privileged shell copies it into a root-owned temporary
+directory and verifies that hash before execution, so the mutable app path is never executed after a
+validation race. The signed helper accepts only paths admitted by `AdministratorTrashPolicy`, rejects
+symlinked ancestors, reconstructs the invoking user's identity, calls `FileManager.trashItem`, and
+returns one JSON outcome per path. It has no arbitrary command mode and is not installed as a
+persistent daemon. Canceling authentication is a normal per-item failure; already-trashed ordinary
+items remain reported honestly.
 
 **Full Disk Access is detected, never requested.** The probe opens
 `~/Library/Application Support/com.apple.TCC/TCC.db` — TCC denies that read _silently_, with no
@@ -210,6 +225,7 @@ what stayed behind.
 ```sh
 swiftc -swift-version 6 Tinycast/Features/Uninstall/Model/UninstallTarget.swift \
     Tinycast/Features/Uninstall/Model/UninstallSearchRoot.swift Tinycast/Features/Uninstall/Model/UninstallRules.swift \
+    Tinycast/Features/Uninstall/Model/AdministratorTrashPolicy.swift \
     Tinycast/Features/Uninstall/Model/UninstallProtection.swift Tinycast/Features/Uninstall/Model/UninstallPlan.swift \
     Tools/uninstall-test.swift -o /tmp/uninstall-test && /tmp/uninstall-test
 ```

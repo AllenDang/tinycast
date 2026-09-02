@@ -56,11 +56,14 @@ final class UninstallCoordinator {
             let running = plan.isTargetRunning || runningApps.isRunning(app)
             let size = MeasuredSize(bytes: items.reduce(0) { $0 + ($1.size?.bytes ?? 0) }).formatted
             let count = items.count == 1 ? "1 item" : "\(items.count) items"
+            let authorization = items.contains { $0.requiresAdministrator }
+                ? " An administrator password will be required." : ""
             guard
                 await presentation.confirm(
                     "Uninstall “\(app.name)”?",
                     "\(count) (\(size)) will be moved to the Trash, where you can put them "
-                        + "back." + (running ? " \(app.name) will quit first." : ""),
+                        + "back." + (running ? " \(app.name) will quit first." : "")
+                        + authorization,
                     "trash", "Move to Trash", .danger, .destructive)
             else { return }
 

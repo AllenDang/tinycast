@@ -130,13 +130,16 @@ Never break these without an explicit task to do so.
   attribution tolerable — a false positive costs a drag back, not the user's data — so a
   "delete permanently" option would have to drop name matching in the same commit. The deciding half
   (`UninstallTarget.swift`, `UninstallSearchRoot.swift`, `UninstallRules.swift`,
-  `UninstallProtection.swift`, `UninstallPlan.swift`) stays Foundation-only and pure for
+  `AdministratorTrashPolicy.swift`, `UninstallProtection.swift`, `UninstallPlan.swift`) stays
+  Foundation-only and pure for
   `Tools/uninstall-test.swift`, with every environment fact injected: the scanner hands the rules
   directory **names**, never URLs, and hands the classifier a `PathFacts`. Every `FileManager`,
   `lstat` and Full Disk Access read lives in `UninstallScanner`, which **detects** FDA (a silent,
-  promptless probe) and never requests it — this feature asks for no permission and never escalates
-  privilege. `tccRelativePrefixes` is **measured, not assumed**: probe a location by creating and
-  trashing a throwaway directory there before adding it, because *listing* is not the test —
+  promptless probe) and never requests it. Administrator removal is the one explicit escalation: only
+  a selected path accepted by `AdministratorTrashPolicy` may reach the signed embedded helper, the
+  app signature is revalidated before the system password prompt, and the helper still calls
+  `FileManager.trashItem` rather than deleting. `tccRelativePrefixes` is **measured, not assumed**: probe a location by creating and
+  trashing a throwaway directory there before adding it, because _listing_ is not the test —
   `~/Library/Containers` enumerates fine and still refuses the move, while
   `~/Library/Application Scripts` allows it. A locked candidate can never enter the checked set; that invariant lives in
   `UninstallSelection`'s one intersection, not in the view. Tinycast also refuses to plan its own
@@ -153,7 +156,7 @@ Never break these without an explicit task to do so.
   the `AppIndex` slice. There is **one template engine**: quicklinks expand through
   `SnippetTemplateEngine` rather than a second parser, which is what makes `| raw` mean something —
   it opts a value out of the automatic percent-encoding a URL destination asks for. `{selectedText}`
-  is accepted as an alias for `{selection}`, but nothing ever *writes* it. See
+  is accepted as an alias for `{selection}`, but nothing ever _writes_ it. See
   [quicklinks.md](docs/quicklinks.md).
 - **`Features/Launcher/Model/SearchRelevance.swift` is Foundation-only and pure**, so `Tools/fuzz-test.swift` compiles
   the shipped scorer rather than a copy of it. It owns both `FuzzyMatch` (the tiered
@@ -161,7 +164,7 @@ Never break these without an explicit task to do so.
   separate** — display name, Spotlight alternate names, bundle id, executable name are never flattened
   into one string, because the field is what picks the band. Bands are one `bandStride` apart, an
   order of magnitude above `FuzzyMatch.maximumScore` and two above `LauncherRankingStore`'s boost cap:
-  that gap is what keeps a learned boost reordering *within* a tier and never across a tier or a
+  that gap is what keeps a learned boost reordering _within_ a tier and never across a tier or a
   field. A new searchable field means a new `Band` case and a `consider` call, in priority order.
 - **`EmojiData.generated.swift` is emitted by `node Tools/gen-emoji.js` and
   `CurrencyData.generated.swift` by `node Tools/gen-currencies.js`** — never edit either by hand.
@@ -174,7 +177,7 @@ Never break these without an explicit task to do so.
   every entry point — including on both sides of the `await` around the request, since consent can
   be withdrawn mid-flight. Consent flags live on the owning store, never in `AppSettings`
   (`SettingsBackup` mirrors that type, and an import must not grant network access). Model the gate
-  so the *safe* state is the default: `CalcEngine.evaluate`'s `currency:` parameter defaults to
+  so the _safe_ state is the default: `CalcEngine.evaluate`'s `currency:` parameter defaults to
   `.off`, so forgetting to pass one disables the feature rather than enabling it. Fetch on a private
   **cacheless** `URLSession` (`.ephemeral`, `urlCache = nil`), never `URLSession.shared` — a cacheable
   response would leave a second copy in the on-disk `URLCache` that opting out doesn't delete.
@@ -203,7 +206,7 @@ Never break these without an explicit task to do so.
   exclusion because importing it would grant keyword-expansion consent. The only fields sourced
   outside `AppSettingsKey` are `launchAtLogin` and `showInMenuBar`. Never replace this gate with
   reflection, a macro or an include-everything fallback.
-- **The two Raycast export formats share no mapper.** `RaycastFormat.detect` is the *only* branch
+- **The two Raycast export formats share no mapper.** `RaycastFormat.detect` is the _only_ branch
   between them; `RaycastImportV1` and `RaycastImportV2` own their own decrypt and their own field
   mapping, and neither is ever tried as a fallback for the other (that is what makes a wrong
   passphrase report a wrong passphrase instead of "not a Raycast export"). They meet only at
@@ -233,7 +236,7 @@ Never break these without an explicit task to do so.
   controller and continuation. **↵ runs the primary action, Escape cancels, and Cancel always renders
   leading** (the left button), matching macOS convention.
 - **A dialog has three independent axes; never let one infer another.** The **icon**
-  (`DialogRequest.symbol`, required) is always the *subject's* own glyph — the command being
+  (`DialogRequest.symbol`, required) is always the _subject's_ own glyph — the command being
   confirmed uses its `SystemAction.sfSymbol`, so the Restart dialog shows the same icon as the
   Restart row. Tone never picks an icon. The **tone** (`DialogTone`: `.neutral` / `.success` /
   `.danger`) tints only that glyph. The **button** takes its color from `DialogAction.Role`
@@ -245,13 +248,13 @@ Never break these without an explicit task to do so.
 - **A transient readout is a HUD, not a dialog.** `VolumeHUDController`'s box is volume/mute only,
   since that one needs an actual level and number; every other success/info confirmation (system
   commands, Custom Commands, Snippets) goes through `MessageHUDController`'s pill, whose trailing
-  glyph *is* its `DialogTone` — a pill has no subject to name, so the dialogs' icon rule doesn't
+  glyph _is_ its `DialogTone` — a pill has no subject to name, so the dialogs' icon rule doesn't
   apply, and the mapping stays file-scoped so nothing can reach for it when building a
   `DialogRequest`. Both are driven by `HUDPresenter`, which owns the one-at-a-time / auto-dismiss /
   fade policy; a new HUD means a new presenter, not a second shape bolted onto an existing
   controller. See [ui.md](docs/ui.md#dialogs--hud).
 - **Glass is for controls; content takes the panel recipe.** `glassEffect` needs a backdrop to lens,
-  so it only works *inside* a window that already has a `VisualEffectView` — the action capsule, the
+  so it only works _inside_ a window that already has a `VisualEffectView` — the action capsule, the
   menu circle, `PopoverMenu`, a dialog's buttons. On a bare borderless panel it falls back to an
   opaque backing and shows as a dark edge. Both HUDs therefore use `black panelDimming` →
   `VisualEffectView()` → `clipShape`, exactly like a dialog.

@@ -31,6 +31,7 @@ struct UninstallCandidate: Identifiable, Hashable, Sendable {
     var id: String { path }
     var url: URL { URL(fileURLWithPath: path) }
     var isLocked: Bool { !protection.isRemovable }
+    var requiresAdministrator: Bool { protection.requiresAdministrator }
     var lockReason: String? { protection.lockReason }
 }
 

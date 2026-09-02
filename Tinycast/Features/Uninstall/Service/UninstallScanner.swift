@@ -266,7 +266,7 @@ enum UninstallScanner {
         path: String, evidence: UninstallEvidence, environment: UninstallEnvironment,
         displayName: String? = nil, parent: ParentFacts? = nil
     ) -> UninstallCandidate? {
-        guard let scanned = inspect(path, parent: parent) else { return nil }
+        guard let scanned = inspect(path, parent: parent, home: environment.home) else { return nil }
         let protection = UninstallProtectionRules.classify(scanned.facts, environment: environment)
         guard protection != .missing else { return nil }
         // A symlink is trashed as the link, so it never costs more than its own bytes.
@@ -283,7 +283,7 @@ enum UninstallScanner {
     }
 
     /// `lstat`, never `stat`: a symlink is judged as the link, not as whatever it points at.
-    private static func inspect(_ path: String, parent: ParentFacts?)
+    private static func inspect(_ path: String, parent: ParentFacts?, home: String)
         -> (facts: PathFacts, isDirectory: Bool, byteSize: Int64)?
     {
         var info = stat()
@@ -300,7 +300,9 @@ enum UninstallScanner {
             isUserImmutable: info.st_flags & UInt32(UF_IMMUTABLE) != 0,
             isOwnedByCurrentUser: info.st_uid == geteuid(),
             parentIsWritable: parent.isWritable,
-            parentIsSticky: parent.isSticky)
+            parentIsSticky: parent.isSticky,
+            parentRequiresAdministrator: parent.requiresAdministrator,
+            allowsAdministrator: AdministratorTrashPolicy.allows(path: path, home: home))
         // `st_size`, not `st_blocks`: a 593-byte plist occupies a block and must not read as 4 kB.
         return (facts, (info.st_mode & S_IFMT) == S_IFDIR, Int64(info.st_size))
     }
@@ -308,14 +310,17 @@ enum UninstallScanner {
     /// The permission that actually governs a trash, resolved once per root.
     private static func parentFacts(of directory: String) -> ParentFacts {
         var info = stat()
-        let sticky = stat(directory, &info) == 0 && (info.st_mode & S_ISVTX) != 0
+        let found = stat(directory, &info) == 0
         return ParentFacts(
-            isWritable: FileManager.default.isWritableFile(atPath: directory), isSticky: sticky)
+            isWritable: FileManager.default.isWritableFile(atPath: directory),
+            isSticky: found && (info.st_mode & S_ISVTX) != 0,
+            requiresAdministrator: found && info.st_flags & UInt32(SF_NOUNLINK) != 0)
     }
 
     private struct ParentFacts {
         let isWritable: Bool
         let isSticky: Bool
+        let requiresAdministrator: Bool
     }
 
     /// Logical bytes, like Finder; an unreadable subtree is skipped, not abandoned.

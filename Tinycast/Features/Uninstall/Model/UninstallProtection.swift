@@ -14,6 +14,8 @@ struct PathFacts: Hashable, Sendable {
     var isOwnedByCurrentUser = true
     var parentIsWritable = true
     var parentIsSticky = false
+    var parentRequiresAdministrator = false
+    var allowsAdministrator = false
 }
 
 /// Process-wide facts, probed once per scan rather than once per candidate.
@@ -24,6 +26,7 @@ struct UninstallEnvironment: Hashable, Sendable {
 
 enum UninstallProtection: String, Hashable, Sendable, CaseIterable {
     case removable
+    case requiresAdministrator
     case systemProtected
     case userLocked
     case notOwned
@@ -31,12 +34,13 @@ enum UninstallProtection: String, Hashable, Sendable, CaseIterable {
     case parentNotWritable
     case missing
 
-    var isRemovable: Bool { self == .removable }
+    var isRemovable: Bool { self == .removable || self == .requiresAdministrator }
+    var requiresAdministrator: Bool { self == .requiresAdministrator }
 
-    /// Nil for exactly `.removable`; the row's lock icon keys off it.
+    /// Nil for selectable rows; the row's lock icon keys off it.
     var lockReason: String? {
         switch self {
-        case .removable:
+        case .removable, .requiresAdministrator:
             return nil
         case .systemProtected:
             return "Part of macOS and protected by the system."
@@ -48,8 +52,7 @@ enum UninstallProtection: String, Hashable, Sendable, CaseIterable {
             return "Needs Full Disk Access, which Tinycast doesn’t request. "
                 + "Grant it in System Settings › Privacy & Security to include this item."
         case .parentNotWritable:
-            return "Its enclosing folder isn’t writable by you, and Tinycast never asks for an "
-                + "administrator password."
+            return "Its enclosing folder isn’t writable by you."
         case .missing:
             return "No longer on disk."
         }
@@ -67,7 +70,9 @@ enum UninstallProtectionRules {
         {
             return .needsFullDiskAccess
         }
-        if !facts.parentIsWritable { return .parentNotWritable }
+        if facts.parentRequiresAdministrator || !facts.parentIsWritable {
+            return facts.allowsAdministrator ? .requiresAdministrator : .parentNotWritable
+        }
         // The one case where ownership does decide: a sticky parent lets only an owner unlink.
         if facts.parentIsSticky, !facts.isOwnedByCurrentUser { return .notOwned }
         return .removable

@@ -126,6 +126,7 @@ swiftc -swift-version 6 Tinycast/Features/WindowManagement/Model/WindowCommand.s
     -o /tmp/window-command-test && /tmp/window-command-test        # window geometry + action memory
 swiftc -swift-version 6 Tinycast/Features/Uninstall/Model/UninstallTarget.swift \
     Tinycast/Features/Uninstall/Model/UninstallSearchRoot.swift Tinycast/Features/Uninstall/Model/UninstallRules.swift \
+    Tinycast/Features/Uninstall/Model/AdministratorTrashPolicy.swift \
     Tinycast/Features/Uninstall/Model/UninstallProtection.swift Tinycast/Features/Uninstall/Model/UninstallPlan.swift \
     Tools/uninstall-test.swift -o /tmp/uninstall-test && /tmp/uninstall-test  # uninstall attribution + locking
 swiftc -swift-version 6 Tinycast/Features/Quicklinks/Model/Quicklink.swift \

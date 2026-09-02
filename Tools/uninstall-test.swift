@@ -1,6 +1,7 @@
 // swiftc -swift-version 6 Tinycast/Features/Uninstall/Model/UninstallTarget.swift \
 //     Tinycast/Features/Uninstall/Model/UninstallSearchRoot.swift \
 //     Tinycast/Features/Uninstall/Model/UninstallRules.swift \
+//     Tinycast/Features/Uninstall/Model/AdministratorTrashPolicy.swift \
 //     Tinycast/Features/Uninstall/Model/UninstallProtection.swift \
 //     Tinycast/Features/Uninstall/Model/UninstallPlan.swift \
 //     Tools/uninstall-test.swift -o /tmp/uninstall-test && /tmp/uninstall-test
@@ -464,6 +465,35 @@ struct UninstallTests {
             "a path outside home is left alone")
     }
 
+    static func testAdministratorTrashPolicy() {
+        expect(
+            AdministratorTrashPolicy.allows(
+                path: "/Applications/Elmedia Video Player.app", home: home),
+            "a direct application bundle may request administrator trash")
+        expect(
+            !AdministratorTrashPolicy.allows(
+                path: home + "/Library/Application Support/Vendor/Test App", home: home),
+            "administrator trash never enters a user-writable Library tree")
+        expect(
+            AdministratorTrashPolicy.allows(
+                path: "/Library/Application Support/Vendor/Test App", home: home),
+            "a configured system Library candidate may request administrator trash")
+        expect(
+            AdministratorTrashPolicy.allows(path: "/usr/local/bin/tool", home: home),
+            "an immediate CLI launcher may request administrator trash")
+        expect(
+            !AdministratorTrashPolicy.allows(path: home + "/Documents/Work", home: home),
+            "administrator trash never reaches user documents")
+        expect(
+            !AdministratorTrashPolicy.allows(
+                path: "/private/var/db/receipts/com.foo.pkg.bom", home: home),
+            "administrator trash never reaches package receipts")
+        expect(
+            !AdministratorTrashPolicy.allows(
+                path: "/Library/Application Support/Vendor/App/Deep", home: home),
+            "administrator trash preserves each root's depth limit")
+    }
+
     // MARK: - Protection
 
     static func testProtection() {
@@ -518,6 +548,25 @@ struct UninstallTests {
                 == .parentNotWritable,
             "trashing is a rename out of the parent, so an unwritable parent locks the row")
 
+        expect(
+            classify(
+                PathFacts(
+                    path: "/Applications/Test App.app", parentRequiresAdministrator: true,
+                    allowsAdministrator: true)) == .requiresAdministrator,
+            "SF_NOUNLINK on Applications selects the app for administrator trash")
+        expect(
+            classify(
+                PathFacts(
+                    path: "/Library/Caches/com.foo.Bar", parentIsWritable: false,
+                    allowsAdministrator: true)) == .requiresAdministrator,
+            "a safe root-owned leftover selects administrator trash")
+        expect(
+            classify(
+                PathFacts(
+                    path: "/etc/hosts", parentIsWritable: false,
+                    allowsAdministrator: false)) == .parentNotWritable,
+            "an unapproved path stays locked even when administrator access could remove it")
+
         let container = PathFacts(path: home + "/Library/Containers/com.foo.Bar")
         expect(
             classify(container) == .needsFullDiskAccess,
@@ -536,7 +585,7 @@ struct UninstallTests {
 
         expect(
             UninstallProtection.allCases.allSatisfy { ($0.lockReason == nil) == $0.isRemovable },
-            "every case except .removable carries a lock reason, and .removable carries none")
+            "every locked case carries a reason, while selectable cases carry none")
 
         expect(
             UninstallProtectionRules.isTCCProtected(
@@ -574,35 +623,44 @@ struct UninstallTests {
         let free = candidate("/a", bytes: 10)
         let locked = candidate("/b", protection: .systemProtected, bytes: 20)
         let named = candidate("/c", evidence: .displayName, bytes: 40)
+        let privileged = candidate(
+            "/admin", protection: .requiresAdministrator, bytes: 30)
         let plan = UninstallPlan(
-            target: target, candidates: [free, locked, named], isTargetRunning: false)
+            target: target, candidates: [free, locked, named, privileged], isTargetRunning: false)
 
-        expect(plan.removableIDs == ["/a", "/c"], "locked candidates are not removable")
+        expect(plan.removableIDs == ["/a", "/c", "/admin"], "administrator rows are selectable")
         expect(plan.lockedCount == 1, "the locked count counts exactly the locked rows")
-        expect(plan.totalBytes == 70, "total bytes covers every candidate")
+        expect(plan.totalBytes == 100, "total bytes covers every candidate")
 
-        let everything = UninstallSelection(plan: plan, checked: ["/a", "/b", "/c", "/nope"])
+        let everything = UninstallSelection(
+            plan: plan, checked: ["/a", "/b", "/c", "/admin", "/nope"])
         expect(
-            everything.checked == ["/a", "/c"],
+            everything.checked == ["/a", "/c", "/admin"],
             "a locked or out-of-plan id can never enter the checked set")
 
         var selection = plan.defaultSelection
         expect(
-            selection.checked == ["/a", "/c"],
-            "the default checks every removable row, name matches included")
-        expect(selection.bytes(in: plan) == 50, "selected bytes sums only checked rows")
+            selection.checked == ["/a", "/c", "/admin"],
+            "the default checks ordinary and administrator-removable rows")
+        expect(selection.bytes(in: plan) == 80, "selected bytes sums only checked rows")
         expect(
             !selection.checked.contains("/b"), "and never a locked one")
 
         selection.toggle("/b", in: plan)
-        expect(selection.checked == ["/a", "/c"], "toggling a locked row is a no-op")
+        expect(
+            selection.checked == ["/a", "/c", "/admin"],
+            "toggling a locked row is a no-op")
         selection.toggle("/b", in: plan)
-        expect(selection.checked == ["/a", "/c"], "toggling a locked row twice is still a no-op")
+        expect(
+            selection.checked == ["/a", "/c", "/admin"],
+            "toggling a locked row twice is still a no-op")
 
         selection.toggle("/c", in: plan)
-        expect(selection.checked == ["/a"], "toggling a checked row unchecks it")
+        expect(selection.checked == ["/a", "/admin"], "toggling a checked row unchecks it")
         selection.toggle("/c", in: plan)
-        expect(selection.checked == ["/a", "/c"], "toggling it again checks it back")
+        expect(
+            selection.checked == ["/a", "/c", "/admin"],
+            "toggling it again checks it back")
 
         let relocked = UninstallPlan(
             target: target,
@@ -721,6 +779,7 @@ struct UninstallTests {
         testHomeIsOutOfScope()
         testIdentityRefusal()
         testPathSafety()
+        testAdministratorTrashPolicy()
         testProtection()
         testSelection()
         testCrossIdentitySweep()

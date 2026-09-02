@@ -8,7 +8,7 @@ options:
 
 settings:
   base:
-    MARKETING_VERSION: "0.4.4"
+    MARKETING_VERSION: "0.4.5"
     CURRENT_PROJECT_VERSION: "1"
     SWIFT_VERSION: "6.0"
     DEVELOPMENT_TEAM: ""
@@ -38,6 +38,18 @@ targets:
       - path: Tinycast
     dependencies:
       - package: MarkdownUI
+      - target: TinycastTrashHelper
+        embed: false
+    postBuildScripts:
+      - name: Embed Administrator Trash Helper
+        script: |
+          set -euo pipefail
+          destination="$TARGET_BUILD_DIR/$EXECUTABLE_FOLDER_PATH/TinycastTrashHelper"
+          cp -f "$BUILT_PRODUCTS_DIR/TinycastTrashHelper" "$destination"
+        inputFiles:
+          - "$(BUILT_PRODUCTS_DIR)/TinycastTrashHelper"
+        outputFiles:
+          - "$(TARGET_BUILD_DIR)/$(EXECUTABLE_FOLDER_PATH)/TinycastTrashHelper"
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.tinycast.app
@@ -53,3 +65,16 @@ targets:
         Debug:
           PRODUCT_NAME: Tinycast Dev
           PRODUCT_BUNDLE_IDENTIFIER: com.tinycast.app.dev
+
+  TinycastTrashHelper:
+    type: tool
+    platform: macOS
+    sources:
+      - path: TinycastTrashHelper
+      - path: Tinycast/Features/Uninstall/Model/AdministratorTrashPolicy.swift
+      - path: Tinycast/Features/Uninstall/Model/UninstallSearchRoot.swift
+      - path: Tinycast/Features/Uninstall/Service/AdminTrashProtocol.swift
+    settings:
+      base:
+        PRODUCT_NAME: TinycastTrashHelper
+        SKIP_INSTALL: "YES"

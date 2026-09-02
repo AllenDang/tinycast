@@ -81,6 +81,7 @@ private struct UninstallRow: View {
 
     private var glyph: String {
         if candidate.isLocked { return "lock.fill" }
+        if candidate.requiresAdministrator { return "lock.open.fill" }
         return checked ? "checkmark.square.fill" : "square"
     }
 
@@ -92,7 +93,9 @@ private struct UninstallRow: View {
                 .contentShape(Rectangle())
                 // Only the checkbox toggles; the rest of the row selects.
                 .onTapGesture(perform: onToggle)
-                .tooltip(candidate.lockReason)
+                .tooltip(
+                    candidate.requiresAdministrator
+                        ? "An administrator password is required." : candidate.lockReason)
             Text(candidate.name)
                 .font(Theme.Typography.rowTitle)
                 .lineLimit(1)
@@ -102,6 +105,12 @@ private struct UninstallRow: View {
                 .foregroundStyle(Theme.Colors.textSecondary)
                 .lineLimit(1)
                 .truncationMode(.middle)
+            if candidate.requiresAdministrator {
+                Text("administrator")
+                    .font(Theme.Typography.rowTrailing)
+                    .foregroundStyle(Theme.Colors.textTertiary)
+                    .lineLimit(1)
+            }
             if let label = candidate.evidence.label {
                 Text(label)
                     .font(Theme.Typography.rowTrailing)
