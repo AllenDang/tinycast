@@ -30,18 +30,22 @@ final class AIProviderStore {
 
     private(set) var isEnabled: Bool
     private(set) var providers: [AIProvider]
+    private var providerIDsWithAPIKey: Set<UUID>
 
     init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
         isEnabled = defaults.bool(forKey: Self.consentKey)
-        if let data = defaults.data(forKey: Self.providersKey),
-            let decoded = try? JSONDecoder().decode([AIProvider].self, from: data)
-        {
-            providers = decoded
+        let loadedProviders: [AIProvider]?
+        if let data = defaults.data(forKey: Self.providersKey) {
+            loadedProviders = try? JSONDecoder().decode([AIProvider].self, from: data)
         } else {
-            providers = []
-            persistProviders()
+            loadedProviders = nil
         }
+        let resolvedProviders = loadedProviders ?? []
+        providers = resolvedProviders
+        providerIDsWithAPIKey = Set(
+            resolvedProviders.lazy.filter { AIKeychain.load(for: $0.id)?.isEmpty == false }.map(\.id))
+        if loadedProviders == nil { persistProviders() }
     }
 
     // MARK: - Consent
@@ -88,6 +92,7 @@ final class AIProviderStore {
         providers.remove(at: index)
         persistProviders()
         AIKeychain.delete(for: id)
+        providerIDsWithAPIKey.remove(id)
     }
 
     // MARK: - API key (Keychain-backed)
@@ -102,6 +107,11 @@ final class AIProviderStore {
         } else {
             AIKeychain.save(value, for: providerID)
         }
+        if AIKeychain.load(for: providerID)?.isEmpty == false {
+            providerIDsWithAPIKey.insert(providerID)
+        } else {
+            providerIDsWithAPIKey.remove(providerID)
+        }
     }
 
     // MARK: - Readiness
@@ -111,7 +121,7 @@ final class AIProviderStore {
         guard let provider = providers.first(where: { $0.id == providerID }) else { return false }
         return provider.baseURL != nil
             && !provider.model.trimmingCharacters(in: .whitespaces).isEmpty
-            && !apiKey(for: providerID).isEmpty
+            && providerIDsWithAPIKey.contains(providerID)
     }
 
     /// At least one provider is configured and consent is on — the feature can match keywords.

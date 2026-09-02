@@ -53,9 +53,11 @@ final class AICommandCoordinator {
             providerStore.isProviderConfigured(providerID)
         else { return }
         let model = provider.model.trimmingCharacters(in: .whitespaces)
+        let apiKey = providerStore.apiKey(for: providerID)
+        guard !apiKey.isEmpty else { return }
         session.begin(
             command: match.command, input: match.input, baseURL: baseURL, model: model,
-            apiKey: providerStore.apiKey(for: providerID),
+            apiKey: apiKey,
             isEnabled: { [weak providerStore] in providerStore?.isEnabled ?? false })
         paletteState.mode = .aiCommand
     }
