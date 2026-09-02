@@ -1,5 +1,6 @@
 import Darwin
 import Foundation
+import Security
 
 enum UninstallScanner {
     struct SizeBudget: Sendable {
@@ -21,15 +22,20 @@ enum UninstallScanner {
     /// Every candidate with directory sizes still nil; fast enough that the list can paint on it.
     nonisolated static func discover(
         target: UninstallTarget, otherAppNames: [String], otherBundleIDs: [String],
-        isTargetRunning: Bool, roots: [UninstallSearchRoot] = UninstallSearchRoot.all
+        otherAppURLs: [URL] = [], isTargetRunning: Bool, roots: [UninstallSearchRoot] = UninstallSearchRoot.all
     ) async throws -> UninstallPlan {
         try await Signposts.interval("UninstallScanner.discover") {
             let home = NSHomeDirectory()
+            let target = enrichedTarget(target)
+            let otherMetadata = otherAppURLs.map(installedMetadata)
             let environment = UninstallEnvironment(
                 home: home, hasFullDiskAccess: detectFullDiskAccess(home: home))
             guard
                 let identity = UninstallIdentity.make(
-                    target: target, otherAppNames: otherAppNames, otherBundleIDs: otherBundleIDs,
+                    target: target, otherAppNames: otherAppNames,
+                    otherBundleIDs: otherBundleIDs + otherMetadata.flatMap(\.bundleIDs),
+                    otherApplicationGroupIDs: otherMetadata.flatMap(\.applicationGroupIDs),
+                    otherExecutableNames: otherMetadata.compactMap(\.executableName),
                     ownBundleID: Bundle.main.bundleIdentifier, ownBundleURL: Bundle.main.bundleURL)
             else { throw Failure.refused }
 
@@ -97,25 +103,125 @@ enum UninstallScanner {
 
     // MARK: - Private
 
+    private struct InstalledMetadata {
+        let bundleIDs: Set<String>
+        let applicationGroupIDs: Set<String>
+        let executableName: String?
+    }
+
+    private static func installedMetadata(_ url: URL) -> InstalledMetadata {
+        let bundle = Bundle(url: url)
+        let nested = nestedBundleURLs(in: url)
+        let componentURLs = [url] + nested
+        return InstalledMetadata(
+            bundleIDs: Set(componentURLs.compactMap { Bundle(url: $0)?.bundleIdentifier }),
+            applicationGroupIDs: Set(
+                componentURLs.flatMap { signingApplicationGroups(at: $0) }),
+            executableName: bundle?.infoDictionary?["CFBundleExecutable"] as? String)
+    }
+
+    private static func enrichedTarget(_ target: UninstallTarget) -> UninstallTarget {
+        let bundle = Bundle(url: target.bundleURL)
+        let info = bundle?.infoDictionary
+        let nested = nestedBundleURLs(in: target.bundleURL)
+        var relatedBundleIDs = target.relatedBundleIDs
+        if let helpers = info?["SMPrivilegedExecutables"] as? [String: Any] {
+            relatedBundleIDs.formUnion(helpers.keys)
+        }
+        relatedBundleIDs.formUnion(nested.compactMap { Bundle(url: $0)?.bundleIdentifier })
+
+        var applicationGroupIDs = target.applicationGroupIDs
+        applicationGroupIDs.formUnion(signingApplicationGroups(at: target.bundleURL))
+        for url in nested {
+            applicationGroupIDs.formUnion(signingApplicationGroups(at: url))
+        }
+        return UninstallTarget(
+            bundleURL: target.bundleURL, bundleID: target.bundleID,
+            displayName: target.displayName, bundleName: target.bundleName,
+            relatedBundleIDs: relatedBundleIDs, applicationGroupIDs: applicationGroupIDs,
+            executableName: target.executableName ?? info?["CFBundleExecutable"] as? String)
+    }
+
+    private static func nestedBundleURLs(in bundleURL: URL) -> [URL] {
+        let relativeRoots = [
+            "Contents/PlugIns", "Contents/XPCServices", "Contents/Library/LoginItems",
+            "Contents/Library/Services"
+        ]
+        let bundleExtensions: Set<String> = ["app", "appex", "xpc", "service", "qlgenerator"]
+        var result: [URL] = []
+        for relativeRoot in relativeRoots {
+            let root = bundleURL.appendingPathComponent(relativeRoot)
+            guard
+                let enumerator = FileManager.default.enumerator(
+                    at: root, includingPropertiesForKeys: nil,
+                    options: [.skipsHiddenFiles], errorHandler: { _, _ in true })
+            else { continue }
+            for case let url as URL in enumerator {
+                let relative = url.path.dropFirst(root.path.count)
+                if relative.split(separator: "/").count > 3 {
+                    enumerator.skipDescendants()
+                    continue
+                }
+                guard bundleExtensions.contains(url.pathExtension.lowercased()) else { continue }
+                result.append(url)
+                enumerator.skipDescendants()
+            }
+        }
+        return result
+    }
+
+    private static func signingApplicationGroups(at url: URL) -> Set<String> {
+        var staticCode: SecStaticCode?
+        guard SecStaticCodeCreateWithPath(url as CFURL, [], &staticCode) == errSecSuccess,
+            let staticCode
+        else { return [] }
+        var signingInfo: CFDictionary?
+        let flags = SecCSFlags(rawValue: kSecCSSigningInformation)
+        guard SecCodeCopySigningInformation(staticCode, flags, &signingInfo) == errSecSuccess,
+            let info = signingInfo as? [String: Any],
+            let entitlements = info[kSecCodeInfoEntitlementsDict as String] as? [String: Any],
+            let groups = entitlements["com.apple.security.application-groups"] as? [String]
+        else { return [] }
+        return Set(groups)
+    }
+
     private static func rows(
         in root: UninstallSearchRoot, identity: UninstallIdentity,
         environment: UninstallEnvironment, bundlePath: String
     ) -> [UninstallCandidate] {
         let rootPath = root.path(home: environment.home)
         guard let names = childNames(of: rootPath) else { return [] }
-        // One stat per root, not per row.
-        let parent = parentFacts(of: rootPath)
-        return UninstallRules.matches(childNames: names, in: root, identity: identity)
-            .compactMap { match -> UninstallCandidate? in
-                let path = (rootPath + "/" + match.name as NSString).standardizingPath
-                guard
-                    UninstallRules.isAcceptableCandidate(
-                        path: path, rootPath: rootPath, home: environment.home,
-                        bundlePath: bundlePath)
-                else { return nil }
-                return row(
-                    path: path, evidence: match.evidence, environment: environment, parent: parent)
+        let rootParent = parentFacts(of: rootPath)
+
+        func candidate(
+            name: String, path: String, parent: ParentFacts
+        ) -> UninstallCandidate? {
+            guard let evidence = UninstallRules.evidence(for: name, in: root, identity: identity),
+                UninstallRules.isAcceptableCandidate(
+                    path: path, rootPath: rootPath, home: environment.home,
+                    bundlePath: bundlePath, maxDepth: root.maxDepth)
+            else { return nil }
+            return row(path: path, evidence: evidence, environment: environment, parent: parent)
+        }
+
+        var found: [UninstallCandidate] = []
+        for name in names {
+            let path = (rootPath + "/" + name as NSString).standardizingPath
+            if let matched = candidate(name: name, path: path, parent: rootParent) {
+                found.append(matched)
+                continue
             }
+            guard root.maxDepth > 1, isRealDirectory(path), let nested = childNames(of: path)
+            else { continue }
+            let nestedParent = parentFacts(of: path)
+            for child in nested {
+                let childPath = (path + "/" + child as NSString).standardizingPath
+                if let matched = candidate(name: child, path: childPath, parent: nestedParent) {
+                    found.append(matched)
+                }
+            }
+        }
+        return found
     }
 
     /// Serial: four directories of cheap symlink reads, and nothing here needs a walk.
@@ -144,6 +250,11 @@ enum UninstallScanner {
             }
         }
         return rows
+    }
+
+    private static func isRealDirectory(_ path: String) -> Bool {
+        var info = stat()
+        return lstat(path, &info) == 0 && (info.st_mode & S_IFMT) == S_IFDIR
     }
 
     private static func childNames(of directory: String) -> [String]? {

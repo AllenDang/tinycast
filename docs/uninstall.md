@@ -14,17 +14,17 @@ the same commit.
 
 Same split as `WindowManagement`: a pure half that decides, an impure half that touches the disk.
 
-| File                                       | Role                                                                                                                    |
-| ------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------- |
-| `Features/Uninstall/Model/UninstallTarget.swift`     | `UninstallTarget`, `UninstallEvidence`, `UninstallIdentity` — and every guard rail, applied in `UninstallIdentity.make` |
-| `Features/Uninstall/Model/UninstallSearchRoot.swift` | The root table (where to look, which styles are legal there) and `binDirectories`                                       |
-| `Features/Uninstall/Model/UninstallRules.swift`      | Matching, plus `isAcceptableCandidate`                                                                                  |
-| `Features/Uninstall/Model/UninstallProtection.swift` | `PathFacts` → `UninstallProtection`                                                                                     |
-| `Features/Uninstall/Model/UninstallPlan.swift`       | `UninstallCandidate`, `UninstallPlan`, `UninstallSelection`                                                             |
-| `Features/Uninstall/Service/UninstallScanner.swift`  | **Impure.** `contentsOfDirectory`, `lstat`, sizes, the FDA probe                                                        |
-| `Features/Uninstall/Service/UninstallRunner.swift`   | **Impure.** `trashItem`, and nothing else                                                                               |
-| `Features/Uninstall/Service/UninstallSession.swift`  | `@MainActor` lifecycle behind the screen                                                                                |
-| `Features/Uninstall/UI/UninstallView.swift`          | List, row, actions menu                                                                                                 |
+| File | Role |
+| --- | --- |
+| `Features/Uninstall/Model/UninstallTarget.swift` | Target identity, evidence and guard rails |
+| `Features/Uninstall/Model/UninstallSearchRoot.swift` | Root table, legal styles, depth and CLI roots |
+| `Features/Uninstall/Model/UninstallRules.swift` | Attribution and candidate path validation |
+| `Features/Uninstall/Model/UninstallProtection.swift` | `PathFacts` → `UninstallProtection` |
+| `Features/Uninstall/Model/UninstallPlan.swift` | Candidates, plan and selection |
+| `Features/Uninstall/Service/UninstallScanner.swift` | Filesystem, signing metadata, sizes and FDA probe |
+| `Features/Uninstall/Service/UninstallRunner.swift` | `trashItem`, and nothing else |
+| `Features/Uninstall/Service/UninstallSession.swift` | `@MainActor` lifecycle behind the screen |
+| `Features/Uninstall/UI/UninstallView.swift` | List, row and actions menu |
 
 The first five compile standalone into `Tools/uninstall-test.swift`, so they stay Foundation-only
 and take every environment fact as a parameter. The scanner hands the rules **child names**, never
@@ -32,12 +32,14 @@ URLs, which is what makes "no filesystem access in the pure layer" structural ra
 
 ## Attribution
 
-Three match styles enabled per root by the table, plus a fourth mechanism for CLI launchers. The
-first three run against
-`UninstallRules.matchableForms`, which strips `.plist`, `.savedState`, `.binarycookies`, `.lockfile`
-and friends — repeatedly, so `…​.plist.lockfile` reduces too.
+Five match styles enabled per root, plus a sixth mechanism for CLI launchers. Bundle metadata first
+expands the target identity with embedded app/appex/XPC/service IDs, `SMPrivilegedExecutables` keys,
+the main executable name and code-signing application groups. The ordinary ID/name styles then run
+against `UninstallRules.matchableForms`, which strips `.plist`, `.savedState`, `.binarycookies`,
+`.lockfile` and plug-in wrappers repeatedly, so `…​.plist.lockfile` reduces too.
 
-**`bundleID`** — exact, or a namespaced child. The boundary check is load-bearing: a plain prefix
+**`bundleID`** — exact, or a namespaced child. The primary bundle ID, embedded component IDs and
+helper IDs declared by `SMPrivilegedExecutables` all participate. The boundary check is load-bearing: a plain prefix
 makes `com.apple.SafariTechnologyPreview` a match for `com.apple.Safari` and trashes a different
 product's entire profile. Requiring the next character to be a separator means a match can only be a
 namespace _descendant_ — `com.apple.iBooksX.CacheDelete` matches `com.apple.iBooksX`,
@@ -49,14 +51,20 @@ Two further guards on that rule:
 
 - **Vendor namespaces don't prefix-match.** A two-component ID like `com.adobe` names a vendor, not a
   product, so `allowsBundleIDPrefixMatch` requires three components. `com.adobe` still matches itself.
-- **An installed sibling owns its own artifacts.** If any _other_ installed app's bundle ID is a
-  longer match for the same component, that app owns it. Without this, uninstalling `com.tinycast.app`
+- **An installed sibling owns its own artifacts.** If any _other_ installed app's bundle ID is an
+  equal or longer match for the same component, the artifact is ambiguous or belongs to that app. Without this, uninstalling `com.tinycast.app`
   would also trash `com.tinycast.app.beta` and `…​.dev` — separate products that merely share a
   namespace, which is exactly the channel-isolation invariant in reverse.
 
 **`groupContainer`** — strips a leading `group.` and/or a 10-character Team ID (uppercase
 alphanumerics only, which is what stops an arbitrary `something.com.foo.Bar` being read as a
 container), then applies the bundle-ID rule to the remainder.
+
+**`applicationGroup`** — exact evidence from the target's code-signing
+`com.apple.security.application-groups` entitlement. This catches shared containers whose authored ID
+has no textual relationship to the app's bundle ID; unlike the fallback group-container rule it never
+prefix-matches. Because groups are designed for sharing, a group claimed by any other installed app
+is excluded rather than attributed to either member.
 
 **`displayName`** — the weak one, and the only one hedged. Exact, case- and diacritic-folded equality;
 never a prefix or substring, so "Books" and "Books Reader" cannot claim each other's folders in either
@@ -72,6 +80,12 @@ A `.displayName` match **is** checked by default, and the row says "matched by n
 evidence is visible before confirming. It earns that because the match is exact, confined, and never
 claims a name another installed app answers to — and because the feature only ever moves to the
 Trash, so an unwanted row costs a drag back rather than data.
+
+**`executableArtifact`** — diagnostic reports in `Logs/{DiagnosticReports,CrashReporter}` whose
+`.ips`, `.crash`, `.hang` or `.diag` stem starts with the app executable followed by `-` or `_`. The
+separator and extension allowlist stop `Foo` claiming `FooHelper.txt`; an executable name shared by
+another installed app disables this evidence entirely. The row identifies itself as a diagnostic
+report.
 
 **`binSymlink`** — a launcher in `/usr/local/bin`, `/opt/homebrew/bin`, `~/.local/bin` or `~/bin`
 whose symlink resolves inside the app bundle. Attribution is by **link target, never by name**: `zed`
@@ -97,21 +111,26 @@ against 62 installed apps the entire root was worth one 115 kB folder, so it bou
 and carried the only catastrophic failure mode in the design. Raycast does list `~/OrbStack`; we
 deliberately don't.
 
-Immediate children only, everywhere. `Preferences/ByHost` is its own root rather than raising
-`Preferences` to depth 2, which would descend into every unrelated app's subfolder. Beyond the
-`~/Library` and `/Library` staples the table covers the plug-in wells — `QuickLook`, `Services`,
-`PreferencePanes`, `Screen Savers`, `Internet Plug-Ins`, `Spotlight`, `Automator`, `Input Methods`,
-`Audio/Plug-Ins/{HAL,Components}` — whose children are wrappers named after the product that
-installed them, which is why `strippedExtensions` also drops `.qlgenerator`, `.saver`, `.prefPane`
-and friends. `.app` is deliberately **not** in that list. Deliberately out of scope, and worth
+Most roots inspect immediate children. `Application Support`, `Caches`, `Caches/Metadata`, `Logs` and
+`Metadata` also inspect one additional level, which catches vendor-nested layouts without turning the
+scan into AppCleaner's broad Library walk. If an immediate child already matches it is emitted as one
+row and its descendants are not duplicated. The pure path gate receives the root's depth limit and
+rejects anything deeper.
+
+Beyond the `~/Library` and `/Library` staples the table covers the plug-in wells — `QuickLook`,
+`Services`, `PreferencePanes`, `Screen Savers`, `Internet Plug-Ins`, `Spotlight`, `Automator`,
+`Input Methods`, contextual menus, Mail bundles, QuickTime, Widgets, ColorPickers, PDF Services,
+keyboard layouts, scripting additions, audio VST/VST3/components/HAL and CoreMediaIO DAL. Their
+children are wrappers named after the product that installed them, which is why
+`strippedExtensions` drops their wrapper extensions. `.app` is deliberately **not** in that list. Deliberately out of scope, and worth
 keeping out: `/private/var/db/receipts` (root-owned, and deleting a receipt
 corrupts the installer's view of the system), `~/Library/Keychains`, `/Library/Extensions`, and every
 user-document location. `/usr/local` is reached **only** through `binDirectories`, and only for
 symlinks that resolve into the bundle — never by name, and never recursively.
 
-`UninstallRules.isAcceptableCandidate` is belt and braces over whatever matched: an immediate child of
-its own root, never the home directory or `/`, no relative components, and no overlap with the app
-bundle (which is emitted separately).
+`UninstallRules.isAcceptableCandidate` is belt and braces over whatever matched: within its
+root's explicit depth limit, never the home directory or `/`, no relative components, and no overlap
+with the app bundle (which is emitted separately).
 
 ## Locking
 

@@ -43,7 +43,8 @@ final class UninstallCoordinator {
         let others = appIndex.apps.filter { $0.kind == .application && $0.id != app.id }
         session.begin(
             app: app, otherAppNames: others.map(\.name),
-            otherBundleIDs: others.compactMap(\.bundleID), isRunning: runningApps.isRunning(app))
+            otherBundleIDs: others.compactMap(\.bundleID), otherAppURLs: others.map(\.url),
+            isRunning: runningApps.isRunning(app))
         palette.prepare(mode: .uninstall)
     }
 

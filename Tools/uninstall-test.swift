@@ -94,7 +94,8 @@ struct UninstallTests {
         // Sibling release channels share a namespace but are separate products.
         let channels = ["com.example.app", "com.example.app.beta", "com.example.app.dev"]
         let stable = identity(
-            bundleID: "com.example.app", name: "Example", otherBundleIDs: channels)
+            bundleID: "com.example.app", name: "Example",
+            otherBundleIDs: Array(channels.dropFirst()))
         expect(
             UninstallRules.matchesBundleID("com.example.app", identity: stable),
             "a channel still matches its own artifacts")
@@ -108,13 +109,22 @@ struct UninstallTests {
             UninstallRules.matchesBundleID("com.example.app.helper", identity: stable),
             "a namespace child that is not an installed app is still ours")
         let devChannel = identity(
-            bundleID: "com.example.app.dev", name: "Example Dev", otherBundleIDs: channels)
+            bundleID: "com.example.app.dev", name: "Example Dev",
+            otherBundleIDs: ["com.example.app", "com.example.app.beta"])
         expect(
             UninstallRules.matchesBundleID("com.example.app.dev", identity: devChannel),
             "and the sibling itself still matches its own ID")
         expect(
             !UninstallRules.matchesBundleID("com.example.app", identity: devChannel),
             "a longer-ID sibling never claims the shorter parent's artifacts either")
+
+        expect(
+            !UninstallRules.matchesBundleID(
+                "com.example.app.plist",
+                identity: identity(
+                    bundleID: "com.example.app", name: "Example",
+                    otherBundleIDs: ["com.example.app"])),
+            "a second installed copy with the same bundle ID makes ownership ambiguous")
 
         let vendor = identity(bundleID: "com.adobe", name: "Vendor App")
         expect(
@@ -176,6 +186,62 @@ struct UninstallTests {
         expect(UninstallRules.isTeamID("ABCDE12345"), "a 10-char uppercase alphanumeric is a Team ID")
         expect(!UninstallRules.isTeamID("abcde12345"), "lowercase is not a Team ID")
         expect(!UninstallRules.isTeamID("ABCDE1234"), "9 characters is not a Team ID")
+    }
+
+    static func testDeclaredMetadata() {
+        let app = identity(bundleID: "com.foo.Bar")
+        let target = UninstallTarget(
+            bundleURL: app.bundleURL, bundleID: app.bundleID, displayName: "Bar",
+            bundleName: nil, relatedBundleIDs: ["com.foo.Bar.Helper"],
+            applicationGroupIDs: ["ABCDE12345.shared.workspace"], executableName: "BarAgent")
+        let enriched = UninstallIdentity.make(
+            target: target, otherAppNames: [], ownBundleID: ownBundleID,
+            ownBundleURL: ownBundleURL)!
+
+        expect(
+            UninstallRules.matchesBundleID("com.foo.Bar.Helper.plist", identity: enriched),
+            "a declared helper bundle ID is strong ownership evidence")
+        let helperCollision = UninstallIdentity.make(
+            target: target, otherAppNames: [], otherBundleIDs: ["com.foo.Bar.Helper"],
+            ownBundleID: ownBundleID, ownBundleURL: ownBundleURL)!
+        expect(
+            !UninstallRules.matchesBundleID(
+                "com.foo.Bar.Helper.plist", identity: helperCollision),
+            "an installed app with a helper's exact ID keeps its own data")
+        expect(
+            evidence("ABCDE12345.shared.workspace", "Group Containers", enriched)
+                == .applicationGroup,
+            "a signing entitlement claims its exact application group")
+        expect(
+            evidence("ABCDE12345.shared.other", "Group Containers", enriched) == nil,
+            "an application group entitlement never prefix-matches")
+        expect(
+            evidence("BarAgent-2026-03-21-120000.ips", "Logs/DiagnosticReports", enriched)
+                == .executableArtifact,
+            "an executable claims a timestamped diagnostic report")
+        let sharedGroup = UninstallIdentity.make(
+            target: target, otherAppNames: [],
+            otherApplicationGroupIDs: ["ABCDE12345.shared.workspace"],
+            ownBundleID: ownBundleID, ownBundleURL: ownBundleURL)!
+        expect(
+            evidence("ABCDE12345.shared.workspace", "Group Containers", sharedGroup) == nil,
+            "a group used by another installed app is not owned by either member")
+
+        let duplicateExecutable = UninstallIdentity.make(
+            target: target, otherAppNames: [], otherExecutableNames: ["BarAgent"],
+            ownBundleID: ownBundleID, ownBundleURL: ownBundleURL)!
+        expect(
+            evidence(
+                "BarAgent-2026-03-21-120000.ips", "Logs/DiagnosticReports",
+                duplicateExecutable) == nil,
+            "an executable name shared by another installed app cannot claim reports")
+
+        expect(
+            evidence("BarAgentHelper-2026-03-21.ips", "Logs/DiagnosticReports", enriched) == nil,
+            "an executable report requires a dash or underscore boundary")
+        expect(
+            evidence("BarAgent-2026-03-21.txt", "Logs/DiagnosticReports", enriched) == nil,
+            "only diagnostic report extensions use executable matching")
     }
 
     // MARK: - Display names
@@ -366,8 +432,18 @@ struct UninstallTests {
         expect(!acceptable("/"), "the filesystem root is never a candidate")
         expect(!acceptable("/Applications"), "a path outside the root is rejected")
         expect(
+            UninstallRules.isAcceptableCandidate(
+                path: support + "/Vendor/TestApp", rootPath: support, home: home,
+                bundlePath: bundle, maxDepth: 2),
+            "an explicitly bounded second-level child is acceptable")
+        expect(
+            !UninstallRules.isAcceptableCandidate(
+                path: support + "/Vendor/TestApp/Deeper", rootPath: support, home: home,
+                bundlePath: bundle, maxDepth: 2),
+            "the bounded walk never accepts a third-level child")
+        expect(
             !acceptable(support + "/Nested/Deeper"),
-            "only immediate children are accepted — the walk never descends")
+            "the default remains immediate children only")
         expect(
             !acceptable(support + "/../../../etc"),
             "relative components are rejected")
@@ -623,6 +699,13 @@ struct UninstallTests {
         expect(
             roots.contains { $0.relativePath == "Application Support" && $0.styles.contains(.displayName) },
             "but it does apply in the human-named roots")
+        expect(roots.allSatisfy { (1...2).contains($0.maxDepth) }, "root depth is tightly bounded")
+        expect(
+            roots.filter { $0.maxDepth == 2 }.allSatisfy {
+                ["Application Support", "Caches", "Caches/Metadata", "Logs", "Metadata"]
+                    .contains($0.relativePath)
+            },
+            "only support, cache and log roots permit a second level")
         expect(
             !roots.contains { $0.relativePath.contains("receipts") || $0.relativePath == "Keychains" },
             "receipts and keychains stay out of scope")
@@ -632,6 +715,7 @@ struct UninstallTests {
         testBundleIDMatching()
         testExtensionStripping()
         testGroupContainers()
+        testDeclaredMetadata()
         testDisplayNames()
         testPlugInsAndSymlinks()
         testHomeIsOutOfScope()

@@ -7,6 +7,23 @@ struct UninstallTarget: Hashable, Sendable {
     let displayName: String
     /// Some apps name their support folder after `CFBundleName` rather than the display name.
     let bundleName: String?
+    let relatedBundleIDs: Set<String>
+    let applicationGroupIDs: Set<String>
+    let executableName: String?
+
+    init(
+        bundleURL: URL, bundleID: String?, displayName: String, bundleName: String?,
+        relatedBundleIDs: Set<String> = [], applicationGroupIDs: Set<String> = [],
+        executableName: String? = nil
+    ) {
+        self.bundleURL = bundleURL
+        self.bundleID = bundleID
+        self.displayName = displayName
+        self.bundleName = bundleName
+        self.relatedBundleIDs = relatedBundleIDs
+        self.applicationGroupIDs = applicationGroupIDs
+        self.executableName = executableName
+    }
 }
 
 /// How a candidate was attributed to the target.
@@ -14,15 +31,18 @@ enum UninstallEvidence: String, Hashable, Sendable, CaseIterable {
     case bundle
     case bundleID
     case groupContainer
+    case applicationGroup
     case displayName
+    case executableArtifact
     case binSymlink
 
     /// Weak evidence names itself on the row; proof-grade matches stay silent.
     var label: String? {
         switch self {
         case .displayName: return "matched by name"
+        case .executableArtifact: return "diagnostic report"
         case .binSymlink: return "command-line tool"
-        case .bundle, .bundleID, .groupContainer: return nil
+        case .bundle, .bundleID, .groupContainer, .applicationGroup: return nil
         }
     }
 }
@@ -31,9 +51,13 @@ struct UninstallIdentity: Hashable, Sendable {
     /// Case-folded bundle ID, or nil when the target has none.
     let bundleID: String?
     let allowsBundleIDPrefixMatch: Bool
+    let relatedBundleIDs: Set<String>
+    let applicationGroupIDs: Set<String>
+    let otherApplicationGroupIDs: Set<String>
     let otherBundleIDs: Set<String>
     /// Case-folded names safe enough to claim a whole directory.
     let names: [String]
+    let executableName: String?
     let bundleURL: URL
 
     static let minimumNameLength = 3
@@ -49,6 +73,7 @@ struct UninstallIdentity: Hashable, Sendable {
 
     static func make(
         target: UninstallTarget, otherAppNames: [String], otherBundleIDs: [String] = [],
+        otherApplicationGroupIDs: [String] = [], otherExecutableNames: [String] = [],
         ownBundleID: String?, ownBundleURL: URL
     ) -> UninstallIdentity? {
         if let ownBundleID, let bundleID = target.bundleID,
@@ -62,13 +87,24 @@ struct UninstallIdentity: Hashable, Sendable {
         let names = safeNames(
             displayName: target.displayName, bundleName: target.bundleName,
             otherAppNames: otherAppNames)
-        guard bundleID != nil || !names.isEmpty else { return nil }
+        guard bundleID != nil || !target.relatedBundleIDs.isEmpty
+            || !target.applicationGroupIDs.isEmpty || !names.isEmpty
+        else { return nil }
 
+        let relatedBundleIDs = Set(target.relatedBundleIDs.map(folded)).filter { !$0.isEmpty }
+        let takenExecutables = Set(otherExecutableNames.map(folded))
+        let executableName = target.executableName.map(folded).flatMap {
+            $0.isEmpty || takenExecutables.contains($0) ? nil : $0
+        }
         return UninstallIdentity(
             bundleID: bundleID,
             allowsBundleIDPrefixMatch: (bundleID?.split(separator: ".").count ?? 0) >= 3,
-            otherBundleIDs: Set(otherBundleIDs.map(folded)).subtracting([bundleID].compactMap { $0 }),
+            relatedBundleIDs: relatedBundleIDs.subtracting([bundleID].compactMap { $0 }),
+            applicationGroupIDs: Set(target.applicationGroupIDs.map(folded)).filter { !$0.isEmpty },
+            otherApplicationGroupIDs: Set(otherApplicationGroupIDs.map(folded)),
+            otherBundleIDs: Set(otherBundleIDs.map(folded)),
             names: names,
+            executableName: executableName,
             bundleURL: target.bundleURL.standardizedFileURL)
     }
 

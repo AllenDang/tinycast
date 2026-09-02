@@ -6,7 +6,8 @@ enum UninstallRules {
         "plist", "savedstate", "binarycookies", "lockfile", "lock", "sfl", "sfl2", "sfl3",
         // Plug-in wrappers, named after the product that installed them.
         "qlgenerator", "saver", "prefpane", "service", "workflow", "mdimporter", "appex",
-        "component", "wdgt", "dext", "driver"
+        "component", "wdgt", "dext", "driver", "plugin", "bundle", "mailbundle",
+        "colorpicker", "scriptingaddition", "vst", "vst3"
     ]
 
     static func matchableForms(_ name: String) -> [String] {
@@ -27,13 +28,19 @@ enum UninstallRules {
 
     /// The bundle ID itself, or a namespaced child of it.
     static func matchesBundleID(_ component: String, identity: UninstallIdentity) -> Bool {
-        guard let id = identity.bundleID else { return false }
+        let ids = [identity.bundleID].compactMap { $0 } + identity.relatedBundleIDs.sorted()
+        guard !ids.isEmpty else { return false }
         return matchableForms(component).contains { form in
             let folded = UninstallIdentity.folded(form)
-            guard owns(folded, id: id, allowingPrefix: identity.allowsBundleIDPrefixMatch)
-            else { return false }
+            let owners = ids.filter { id in
+                let allowingPrefix =
+                    id == identity.bundleID
+                    ? identity.allowsBundleIDPrefixMatch : id.split(separator: ".").count >= 3
+                return owns(folded, id: id, allowingPrefix: allowingPrefix)
+            }
+            guard let owner = owners.max(by: { $0.count < $1.count }) else { return false }
             return !identity.otherBundleIDs.contains { other in
-                other.count > id.count && owns(folded, id: other, allowingPrefix: true)
+                other.count >= owner.count && owns(folded, id: other, allowingPrefix: true)
             }
         }
     }
@@ -74,6 +81,23 @@ enum UninstallRules {
         matchesBundleID(groupContainerBase(component), identity: identity)
     }
 
+    static func matchesApplicationGroup(_ component: String, identity: UninstallIdentity) -> Bool {
+        let group = UninstallIdentity.folded(component)
+        return identity.applicationGroupIDs.contains(group)
+            && !identity.otherApplicationGroupIDs.contains(group)
+    }
+
+    static func matchesExecutableArtifact(_ component: String, identity: UninstallIdentity) -> Bool {
+        guard let executable = identity.executableName, executable.count >= 3 else { return false }
+        let name = UninstallIdentity.folded(component)
+        let ext = (name as NSString).pathExtension
+        guard ["ips", "crash", "hang", "diag"].contains(ext) else { return false }
+        let stem = (name as NSString).deletingPathExtension
+        guard stem.hasPrefix(executable), stem.count > executable.count else { return false }
+        let boundary = stem[stem.index(stem.startIndex, offsetBy: executable.count)]
+        return boundary == "-" || boundary == "_"
+    }
+
     static func matchesDisplayName(_ component: String, identity: UninstallIdentity) -> Bool {
         guard !identity.names.isEmpty else { return false }
         return matchableForms(component).contains { form in
@@ -90,32 +114,38 @@ enum UninstallRules {
         if root.styles.contains(.groupContainer), matchesGroupContainer(name, identity: identity) {
             return .groupContainer
         }
+        if root.styles.contains(.applicationGroup),
+            matchesApplicationGroup(name, identity: identity)
+        {
+            return .applicationGroup
+        }
+        if root.styles.contains(.executableArtifact),
+            matchesExecutableArtifact(name, identity: identity)
+        {
+            return .executableArtifact
+        }
         if root.styles.contains(.displayName), matchesDisplayName(name, identity: identity) {
             return .displayName
         }
         return nil
     }
 
-    static func matches(
-        childNames: [String], in root: UninstallSearchRoot, identity: UninstallIdentity
-    ) -> [(name: String, evidence: UninstallEvidence)] {
-        childNames.compactMap { name in
-            evidence(for: name, in: root, identity: identity).map { (name, $0) }
-        }
-    }
-
     /// Belt and braces on every produced path, whatever matched it.
     static func isAcceptableCandidate(
-        path: String, rootPath: String, home: String, bundlePath: String
+        path: String, rootPath: String, home: String, bundlePath: String, maxDepth: Int = 1
     ) -> Bool {
         let path = (path as NSString).standardizingPath
+        let rootPath = (rootPath as NSString).standardizingPath
         let home = (home as NSString).standardizingPath
         let bundlePath = (bundlePath as NSString).standardizingPath
         guard path.hasPrefix("/"), path != "/", path != home, path != rootPath else { return false }
         let components = path.split(separator: "/", omittingEmptySubsequences: true).map(String.init)
         guard !components.isEmpty, !components.contains("."), !components.contains("..")
         else { return false }
-        guard (path as NSString).deletingLastPathComponent == rootPath else { return false }
+        guard isDescendant(path, of: rootPath) else { return false }
+        let relative = String(path.dropFirst(rootPath.count + 1))
+        let depth = relative.split(separator: "/", omittingEmptySubsequences: true).count
+        guard depth > 0, depth <= maxDepth else { return false }
         guard path != bundlePath, !isDescendant(path, of: bundlePath),
             !isDescendant(bundlePath, of: path)
         else { return false }
