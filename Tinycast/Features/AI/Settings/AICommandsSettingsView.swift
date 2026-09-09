@@ -109,7 +109,7 @@ struct AICommandsSettingsView: View {
                             .frame(width: 6, height: 6)
                     }
                 }
-                Text("\(provider.baseURLString) — \(provider.model)")
+                Text("\(provider.baseURLString) — \(provider.models.joined(separator: ", "))")
                     .font(.caption.monospaced())
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
@@ -215,7 +215,7 @@ struct AIProviderEditorSheet: View {
     @Environment(AIProviderStore.self) private var aiProvider
     @State private var name: String
     @State private var baseURLString: String
-    @State private var model: String
+    @State private var modelsText: String
     @State private var apiKeyDraft: String
     @State private var errorMessage: String?
 
@@ -223,7 +223,7 @@ struct AIProviderEditorSheet: View {
         self.provider = provider
         _name = State(initialValue: provider?.name ?? "")
         _baseURLString = State(initialValue: provider?.baseURLString ?? "")
-        _model = State(initialValue: provider?.model ?? "")
+        _modelsText = State(initialValue: provider?.models.joined(separator: "\n") ?? "")
         _apiKeyDraft = State(initialValue: "")
     }
 
@@ -253,11 +253,12 @@ struct AIProviderEditorSheet: View {
             }
 
             VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
-                Text("Model")
+                Text("Models")
                     .font(.callout.weight(.medium))
-                TextField("gpt-4o-mini", text: $model)
+                TextField("gpt-4o-mini\ngpt-4o", text: $modelsText, axis: .vertical)
+                    .lineLimit(3...6)
                     .textFieldStyle(.roundedBorder)
-                Text("Sent as “model” in every request — whatever the endpoint expects.")
+                Text("One model ID per line. The first is the default; commands can select any model.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
@@ -287,7 +288,7 @@ struct AIProviderEditorSheet: View {
                     .disabled(
                         name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
                             || baseURLString.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-                            || model.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                            || AIProvider.normalizedModels(modelsText.components(separatedBy: .newlines)).isEmpty)
             }
         }
         .padding(Theme.Spacing.xxl)
@@ -301,7 +302,8 @@ struct AIProviderEditorSheet: View {
 
     private func save() {
         let draft = AIProvider(
-            id: provider?.id ?? UUID(), name: name, baseURLString: baseURLString, model: model)
+            id: provider?.id ?? UUID(), name: name, baseURLString: baseURLString,
+            models: modelsText.components(separatedBy: .newlines))
         do {
             if provider == nil {
                 try aiProvider.addProvider(draft)
@@ -337,7 +339,7 @@ private struct AICommandSettingsRow: View {
                         .font(.body)
                         .lineLimit(1)
                     if let providerName {
-                        Text(providerName)
+                        Text("\(providerName) / \(command.model ?? "Default")")
                             .font(.caption)
                             .foregroundStyle(.secondary)
                             .padding(.horizontal, Theme.Spacing.xs)

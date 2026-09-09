@@ -50,9 +50,9 @@ final class AICommandCoordinator {
             let providerID = match.command.providerID,
             let provider = providerStore.provider(id: providerID),
             let baseURL = provider.baseURL,
-            providerStore.isProviderConfigured(providerID)
+            providerStore.isCommandConfigured(match.command),
+            let model = provider.resolvedModel(match.command.model)
         else { return }
-        let model = provider.model.trimmingCharacters(in: .whitespaces)
         let apiKey = providerStore.apiKey(for: providerID)
         guard !apiKey.isEmpty else { return }
         session.begin(

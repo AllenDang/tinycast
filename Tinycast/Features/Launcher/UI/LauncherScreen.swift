@@ -55,10 +55,7 @@ struct LauncherScreen: PaletteScreen {
     }
 
     private var activeAICommands: [AICommand] {
-        aiCommands.commands.filter { command in
-            guard let providerID = command.providerID else { return false }
-            return aiProvider.isProviderConfigured(providerID)
-        }
+        aiCommands.commands.filter { aiProvider.isCommandConfigured($0) }
     }
 
     private var aiReady: AICommandMatch? {

@@ -128,6 +128,9 @@ swiftc -swift-version 6 Tinycast/Palette/PaletteRowIndex.swift \
     -o /tmp/palette-selection-test && /tmp/palette-selection-test  # palette flat-selection row order
 swiftc -swift-version 6 Tinycast/Features/AI/Model/AICommand.swift Tools/ai-command-test.swift \
     -o /tmp/ai-command-test && /tmp/ai-command-test               # AI command store + keyword recognizer
+swiftc -swift-version 6 Tinycast/Features/AI/Model/AIProvider.swift \
+    Tinycast/Features/AI/Model/AICommand.swift Tools/ai-provider-test.swift \
+    -o /tmp/ai-provider-test && /tmp/ai-provider-test             # AI models + legacy configuration
 swiftc -swift-version 6 Tinycast/Features/Settings/SettingsKeys.swift \
     Tinycast/Features/Backup/Model/SettingsData.swift Tools/settings-backup-test.swift \
     -o /tmp/settings-backup-test && /tmp/settings-backup-test      # settings backup completeness

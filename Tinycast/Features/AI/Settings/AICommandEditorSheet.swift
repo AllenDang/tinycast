@@ -11,6 +11,7 @@ struct AICommandEditorSheet: View {
     @State private var name: String
     @State private var promptTemplate: String
     @State private var providerID: UUID?
+    @State private var model: String?
     @State private var errorMessage: String?
 
     init(command: AICommand?) {
@@ -19,6 +20,7 @@ struct AICommandEditorSheet: View {
         _name = State(initialValue: command?.name ?? "")
         _promptTemplate = State(initialValue: command?.promptTemplate ?? "")
         _providerID = State(initialValue: command?.providerID)
+        _model = State(initialValue: command?.model)
     }
 
     var body: some View {
@@ -38,6 +40,25 @@ struct AICommandEditorSheet: View {
                         Text("Select a provider").tag(nil as UUID?)
                         ForEach(aiProvider.providers) { provider in
                             Text(provider.name).tag(provider.id as UUID?)
+                        }
+                    }
+                    .labelsHidden()
+                    .pickerStyle(.menu)
+                }
+            }
+
+            if let selectedProvider {
+                VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
+                    Text("Model")
+                        .font(.callout.weight(.medium))
+                    Picker("Model", selection: $model) {
+                        Text("Default (\(selectedProvider.models.first ?? "None"))")
+                            .tag(nil as String?)
+                        ForEach(selectedProvider.models, id: \.self) { name in
+                            Text(name).tag(name as String?)
+                        }
+                        if let model, !selectedProvider.models.contains(model) {
+                            Text("\(model) (Unavailable)").tag(model as String?)
                         }
                     }
                     .labelsHidden()
@@ -100,17 +121,24 @@ struct AICommandEditorSheet: View {
                         keyword.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
                             || name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
                             || promptTemplate.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-                            || providerID == nil)
+                            || selectedProvider?.resolvedModel(model) == nil)
             }
         }
         .padding(Theme.Spacing.xxl)
         .frame(width: Theme.Size.editorSheetWidth)
+        .onChange(of: providerID) { _, _ in model = nil }
+    }
+
+    private var selectedProvider: AIProvider? {
+        guard let providerID else { return nil }
+        return aiProvider.provider(id: providerID)
     }
 
     private func save() {
+        guard selectedProvider?.resolvedModel(model) != nil else { return }
         let draft = AICommand(
             id: command?.id ?? UUID(), keyword: keyword, name: name, promptTemplate: promptTemplate,
-            providerID: providerID)
+            providerID: providerID, model: model)
         do {
             if command == nil {
                 try store.add(draft)

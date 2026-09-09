@@ -5,7 +5,7 @@ text, recognizes it — `trans hello` — and Enter runs that text through a use
 OpenAI-compatible endpoint. What the command actually does (translate, fix grammar, summarize,
 anything else) is entirely the user's `promptTemplate`; Tinycast ships no commands and bakes in no
 provider name or URL. Multiple providers can be configured (e.g. OpenAI, Groq, a local LLM), and
-each command picks one. The catalog and providers are authored in **Settings → AI Commands**.
+each command picks a provider and one of its models. The catalog and providers are authored in **Settings → AI Commands**.
 
 ## Recognition happens at the raw query string
 
@@ -63,8 +63,15 @@ misleading label.
 ## Providers
 
 `AIProviderStore` (`Features/AI/Service/AIProviderStore.swift`) manages multiple user-configured
-OpenAI-compatible endpoints. Each `AIProvider` carries a name, base URL, and model; the API key lives
-in the Keychain keyed by provider ID. `AICommand` picks one via its `providerID` field.
+OpenAI-compatible endpoints. Each Foundation-only `AIProvider` (`Features/AI/Model/AIProvider.swift`)
+carries a name, base URL, and ordered `models` list; the API key lives in the Keychain keyed by
+provider ID and is shared by its models. `AICommand` selects a provider via `providerID` and an optional
+`model`. A nil selection uses the provider's first model (the default). An explicit selection that is
+removed or renamed becomes unavailable, never silently switching to another model.
+
+Legacy provider JSON with a single `model` decodes into a one-element list without changing the provider
+ID or Keychain association. Old commands without a model selection keep using that default. New writes
+use `models` only. Model IDs are trimmed and deduplicated, preserving order and case.
 
 ### Consent
 
@@ -96,11 +103,11 @@ consent flag and the user's own endpoint configurations.
 
 ### Provider readiness
 
-A provider is "configured" when it has a parseable base URL, a non-empty model name, and a stored
+A provider is "configured" when it has a parseable base URL, at least one model, and a stored
 API key. `isProviderConfigured(_:)` checks this per-provider. The store-level `isConfigured` is true
 when consent is on and at least one provider is ready. `RootPaletteView` filters the active command
-set to only those whose provider is configured, so a command whose provider was deleted or lacks a key
-can never match in the launcher.
+set through `isCommandConfigured(_:)`: both its provider and selected model must be available.
+A deleted provider, missing key, or removed selected model prevents matching and request dispatch.
 
 ## Why the API key lives in the Keychain
 
@@ -167,12 +174,13 @@ the screen any other way — Tab, the back chevron, a fresh summon — cancels i
 ## Settings
 
 **Settings → AI Commands** is its own tab (`SettingsTab.aiCommands`) rather than folding into
-Miscellaneous: the provider management (add/edit/delete endpoints, each with name, Base URL, Model,
+Miscellaneous: the provider management (add/edit/delete endpoints, each with name, Base URL, Models,
 API Key) plus the command catalog's own add/edit/delete list warrants its own pane.
 
 The provider section lists each configured endpoint with a green status dot when ready (all three of
-Base URL, Model and API Key are filled in) and an orange dot when incomplete. Add/Edit opens
-`AIProviderEditorSheet`; delete removes the provider and its Keychain entry. Commands that referenced
+Base URL, Models and API Key are filled in) and an orange dot when incomplete. Add/Edit opens
+`AIProviderEditorSheet`, with one model ID per line (first is the default); delete removes the provider
+and its Keychain entry. The command editor has separate provider and model pickers. Commands that referenced
 a deleted provider stay in the catalog but won't match — their provider ID no longer resolves to a
 configured endpoint.
 
@@ -196,7 +204,13 @@ CRUD/validation, and `AICommand.firstMatch` — standalone:
 ```sh
 swiftc -swift-version 6 Tinycast/Features/AI/Model/AICommand.swift Tools/ai-command-test.swift \
     -o /tmp/ai-command-test && /tmp/ai-command-test
+swiftc -swift-version 6 Tinycast/Features/AI/Model/AIProvider.swift \
+    Tinycast/Features/AI/Model/AICommand.swift Tools/ai-provider-test.swift \
+    -o /tmp/ai-provider-test && /tmp/ai-provider-test
 ```
+
+The provider harness covers legacy decoding, model normalization and resolution, and command model
+persistence using isolated preferences. It never accesses Keychain or the network.
 
 `AIKeychain`, `AIProviderStore`, `AIChatClient` and `AICommandSession` are deliberately not part of
 this harness — they touch the Keychain, the network and `Foundation`'s `Task`, none of which the other

@@ -87,6 +87,7 @@
 		613827876C48EF88F2162C10 /* NotificationToken.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1FB75182A60F65BA1FB9BA8 /* NotificationToken.swift */; };
 		633B3210268FA9058CB52530 /* WindowManagementCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBF2C056FBBCF7325EF79D2C /* WindowManagementCoordinator.swift */; };
 		633DCA2F00A274C375EB4423 /* LauncherRankingStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0EDB1EEB97CC5F6B0B81FFD6 /* LauncherRankingStore.swift */; };
+		65F2C32E7FD1023EBD1038A4 /* AIProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4F25DCD1D951BD757B97F01F /* AIProvider.swift */; };
 		67B643D55D0F8E428AD1BA51 /* CalcValue.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7592579B976CA7BCA03E2815 /* CalcValue.swift */; };
 		68537C3544E4EBC40E3ACD39 /* HUDPresenter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 31BAD6EE1BA3036C4B5A3D19 /* HUDPresenter.swift */; };
 		68FCC30764DD44ED72EFB6BA /* TinycastApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B629EC3B716FEE881BB0075 /* TinycastApp.swift */; };
@@ -261,6 +262,7 @@
 		4E556227774F073FFCCAFD7A /* PresentationActions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PresentationActions.swift; sourceTree = "<group>"; };
 		4EC84AC665CDE51071F54B0A /* AICommand.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AICommand.swift; sourceTree = "<group>"; };
 		4EF9F16C3F5567240FF03122 /* CalcQuantity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalcQuantity.swift; sourceTree = "<group>"; };
+		4F25DCD1D951BD757B97F01F /* AIProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AIProvider.swift; sourceTree = "<group>"; };
 		4FAE24CC14F7DFECD1BD7FB1 /* PopoverMenu.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PopoverMenu.swift; sourceTree = "<group>"; };
 		518429EDBFBEA0B866CCAA81 /* CalculatorCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalculatorCoordinator.swift; sourceTree = "<group>"; };
 		52998BAB1D8287CF14E46EF0 /* SettingsBackup.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsBackup.swift; sourceTree = "<group>"; };
@@ -693,6 +695,7 @@
 			children = (
 				4EC84AC665CDE51071F54B0A /* AICommand.swift */,
 				903110BF5AF96C9147981250 /* AIPromptTemplateEngine.swift */,
+				4F25DCD1D951BD757B97F01F /* AIProvider.swift */,
 			);
 			path = Model;
 			sourceTree = "<group>";
@@ -1263,6 +1266,7 @@
 				7C5A801A8536B3A639EBB675 /* AICommandsSettingsView.swift in Sources */,
 				C5335C40F4D6CFAE0CE98B7E /* AIKeychain.swift in Sources */,
 				489E7270A8B58D37E3B6C812 /* AIPromptTemplateEngine.swift in Sources */,
+				65F2C32E7FD1023EBD1038A4 /* AIProvider.swift in Sources */,
 				43869C2391B3498841512B8B /* AIProviderStore.swift in Sources */,
 				540F1433DC46BC97C9F80E06 /* AboutView.swift in Sources */,
 				A6B6322057CA901B9F5BADC4 /* AdminTrashProtocol.swift in Sources */,
@@ -1551,7 +1555,7 @@
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				MACOSX_DEPLOYMENT_TARGET = 26.0;
-				MARKETING_VERSION = 0.4.6;
+				MARKETING_VERSION = 0.4.7;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;
@@ -1617,7 +1621,7 @@
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				MACOSX_DEPLOYMENT_TARGET = 26.0;
-				MARKETING_VERSION = 0.4.6;
+				MARKETING_VERSION = 0.4.7;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
 				PRODUCT_NAME = "$(TARGET_NAME)";

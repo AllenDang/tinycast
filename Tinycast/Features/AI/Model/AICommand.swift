@@ -8,15 +8,17 @@ struct AICommand: Codable, Hashable, Identifiable, Sendable {
     var name: String
     var promptTemplate: String
     var providerID: UUID?
+    var model: String?
 
     init(id: UUID = UUID(), keyword: String, name: String, promptTemplate: String,
-         providerID: UUID? = nil)
+         providerID: UUID? = nil, model: String? = nil)
     {
         self.id = id
         self.keyword = keyword
         self.name = name
         self.promptTemplate = promptTemplate
         self.providerID = providerID
+        self.model = model
     }
 }
 
