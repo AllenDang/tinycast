@@ -78,7 +78,11 @@ app; changes always apply (fixed build path — no need to delete `build/`).
 
 ## Tests
 
-There's no XCTest target. Standalone harnesses:
+Pure model tests use standalone harnesses. The separate `TinycastUITests` XCUITest scheme exercises
+real Launcher input on an isolated, optimized app channel; see [launcher-performance.md](launcher-performance.md).
+It requires an interactive desktop and is not part of headless CI.
+
+Standalone harnesses:
 
 ```sh
 swiftc -swift-version 6 Tinycast/Features/Launcher/Model/SearchRelevance.swift Tools/fuzz-test.swift \
@@ -123,6 +127,8 @@ swiftc -swift-version 6 Tinycast/Features/Uninstall/Model/UninstallTarget.swift 
     Tinycast/Features/Uninstall/Model/AdministratorTrashPolicy.swift \
     Tinycast/Features/Uninstall/Model/UninstallProtection.swift Tinycast/Features/Uninstall/Model/UninstallPlan.swift \
     Tools/uninstall-test.swift -o /tmp/uninstall-test && /tmp/uninstall-test  # uninstall attribution + locking
+swiftc -swift-version 6 Tinycast/Platform/Memo.swift Tools/memo-test.swift \
+    -o /tmp/memo-test && /tmp/memo-test                           # reference memo semantics
 swiftc -swift-version 6 Tinycast/Palette/PaletteRowIndex.swift \
     Tools/palette-selection-test.swift \
     -o /tmp/palette-selection-test && /tmp/palette-selection-test  # palette flat-selection row order

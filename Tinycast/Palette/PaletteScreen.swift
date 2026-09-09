@@ -22,6 +22,7 @@ enum PaletteCommand: Equatable {
 
     /// False when the selection cannot be activated, which hides the primary footer action.
     func hasPrimaryAction(at selection: Int) -> Bool
+    func hasActions(at selection: Int) -> Bool
     func actions(at selection: Int) -> PopoverMenuContent?
     func activate(at selection: Int)
     /// ⌘↵. False when the selection has no secondary action, leaving the key unhandled.
@@ -35,6 +36,7 @@ enum PaletteCommand: Equatable {
 
 extension PaletteScreen {
     func hasPrimaryAction(at selection: Int) -> Bool { true }
+    func hasActions(at selection: Int) -> Bool { actions(at: selection) != nil }
     func perform(_ command: PaletteCommand, at selection: Int) -> Bool { false }
     func isRunning(at selection: Int) -> Bool { false }
     func move(_ delta: Int, axis: PaletteAxis, from selection: Int) -> Int? { nil }

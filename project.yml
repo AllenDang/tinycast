@@ -6,9 +6,29 @@ options:
   createIntermediateGroups: true
   groupSortPosition: top
 
+configs:
+  Debug: debug
+  Release: release
+  UITesting: release
+
+schemes:
+  Tinycast:
+    build:
+      targets:
+        Tinycast: all
+  TinycastUITests:
+    build:
+      targets:
+        Tinycast: all
+        TinycastUITests: [test]
+    test:
+      config: UITesting
+      targets:
+        - TinycastUITests
+
 settings:
   base:
-    MARKETING_VERSION: "0.4.7"
+    MARKETING_VERSION: "0.4.8"
     CURRENT_PROJECT_VERSION: "1"
     SWIFT_VERSION: "6.0"
     DEVELOPMENT_TEAM: ""
@@ -65,6 +85,26 @@ targets:
         Debug:
           PRODUCT_NAME: Tinycast Dev
           PRODUCT_BUNDLE_IDENTIFIER: com.tinycast.app.dev
+        UITesting:
+          PRODUCT_NAME: Tinycast UI Testing
+          PRODUCT_BUNDLE_IDENTIFIER: com.tinycast.app.uitesting
+          SWIFT_ACTIVE_COMPILATION_CONDITIONS: UI_TESTING
+          SWIFT_OPTIMIZATION_LEVEL: "-O"
+
+  TinycastUITests:
+    type: bundle.ui-testing
+    platform: macOS
+    sources:
+      - path: UITests
+    dependencies:
+      - target: Tinycast
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.tinycast.app.uitests
+        GENERATE_INFOPLIST_FILE: YES
+        TEST_TARGET_NAME: Tinycast
+        CODE_SIGN_IDENTITY: "-"
+        CODE_SIGNING_ALLOWED: YES
 
   TinycastTrashHelper:
     type: tool

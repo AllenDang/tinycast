@@ -107,9 +107,33 @@ struct FuzzTest {
         identifierFields()
         edgeCases()
         propertyLoop()
+        normalizedParity()
 
         print(failures == 0 ? "\nALL PASSED" : "\n\(failures) FAILED")
         exit(failures == 0 ? 0 : 1)
+    }
+
+    static func normalizedParity() {
+        let text = [
+            "", "a", "ar", "arc", "Safari", "Code Explorer", "Visual Studio Code",
+            "浏览器", "사파리", "Café", "Cafe\u{301}", "İstanbul", "Straße", "👩‍💻 Tools",
+            "com.apple.Safari", "ALPHA-beta", "foo_bar", "123", "\u{200B}Safari", "a\u{200D}b"
+        ]
+        var rng = Random(seed: 0x5EED_F457)
+        var mismatches = 0
+        for _ in 0..<30_000 {
+            let fields = SearchFields(
+                names: [rng.element(text), rng.element(text)],
+                alternateNames: [rng.element(text), rng.element(text)],
+                bundleID: rng.element(text), executableName: rng.element(text))
+            let raw = rng.element(text)
+            let query = FuzzyMatch.Query(raw)
+            let expected = SearchRelevance.score(query: raw, fields: fields)
+            let actual = SearchRelevance.score(query: query, normalizedFields: SearchFieldsNormalized(from: fields))
+            if expected != actual { mismatches += 1 }
+        }
+        check("normalized scoring preserves all field bands and Unicode semantics", mismatches == 0,
+              "\(mismatches) mismatches")
     }
 
     // MARK: - Display-name ranking (unchanged behavior)

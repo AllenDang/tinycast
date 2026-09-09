@@ -70,9 +70,9 @@ struct LauncherList: View {
         let favoriteCount: Int
         let showSections: Bool
         let funcSuggestions: [CalcParser.FunctionSuggestion]
-        let hasCalc: Bool
-        let hasAIIntent: Bool
-        let hasAIPending: Bool
+        let calc: CalcResult?
+        let aiIntent: AICommandMatch?
+        let aiPending: AICommand?
     }
 
     @State private var rowsMemo = Memo<RowsKey, [Row]>()
@@ -81,7 +81,7 @@ struct LauncherList: View {
         let key = RowsKey(
             results: results, favoriteCount: favoriteCount, showSections: showSections,
             funcSuggestions: funcSuggestions,
-            hasCalc: calc != nil, hasAIIntent: aiIntent != nil, hasAIPending: aiPending != nil)
+            calc: calc, aiIntent: aiIntent, aiPending: aiPending)
         return rowsMemo.value(for: key) { computeRowsUncached() }
     }
 
@@ -179,6 +179,7 @@ struct LauncherList: View {
                                                 replacesGlyph: settings.hyperKeyReplacesGlyph)
                                         }
                                     )
+                                    .equatable()
                                     .contentShape(Rectangle())
                                     .onTapGesture { onActivate(app) }
                                     .onRightClick { onActions(app) }
@@ -211,12 +212,17 @@ struct LauncherList: View {
     }
 }
 
-private struct AppRow: View {
+private struct AppRow: View, Equatable {
     let app: AppEntry
     let selected: Bool
     let running: Bool
     let shortcutCaps: [String]?
     @State private var hovered = false
+
+    nonisolated static func == (lhs: Self, rhs: Self) -> Bool {
+        lhs.app == rhs.app && lhs.selected == rhs.selected
+            && lhs.running == rhs.running && lhs.shortcutCaps == rhs.shortcutCaps
+    }
 
     /// Selection wins over hover when a row is both; otherwise hover shows its fainter layer.
     private var fill: Color {

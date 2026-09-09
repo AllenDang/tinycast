@@ -3,7 +3,7 @@ import Foundation
 @main
 struct RankingTest {
     @MainActor
-    static func main() {
+    static func main() async {
         let fileURL = FileManager.default.temporaryDirectory
             .appendingPathComponent("tinycast-ranking-\(UUID().uuidString).json")
         defer { try? FileManager.default.removeItem(at: fileURL) }
@@ -25,6 +25,22 @@ struct RankingTest {
         func boost(_ store: LauncherRankingStore, _ itemKey: String, _ query: String) -> Int {
             store.boosts(query: query)[itemKey] ?? 0
         }
+
+        let preloadURL = fileURL.appendingPathExtension("preload")
+        defer { try? FileManager.default.removeItem(at: preloadURL) }
+        let fixture = [LauncherRankingRecord(itemKey: "fixture", query: "f", count: 2, lastUsed: clock)]
+        try? JSONEncoder().encode(fixture).write(to: preloadURL)
+        let preloaded = LauncherRankingStore(fileURL: preloadURL) { clock }
+        await preloaded.preload()
+        check("preload reads persisted records", preloaded.records == fixture)
+        check("preload invalidates query caches", preloaded.revision == 1)
+        preloaded.record(itemKey: "new", query: "n")
+        await preloaded.preload()
+        check("preload never overwrites live mutations", preloaded.hasRanking(for: "new"))
+        let early = LauncherRankingStore(fileURL: preloadURL) { clock }
+        early.record(itemKey: "early", query: "e")
+        await early.preload()
+        check("synchronous first access wins over preload", early.hasRanking(for: "early"))
 
         let whatsApp = "net.whatsapp.WhatsApp"
         let wick = "com.example.wick"

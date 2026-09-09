@@ -12,8 +12,9 @@ builds with the **Xcode 26** toolchain.
 - **Channels:** Debug builds are their own channel — `Tinycast Dev.app` / `com.tinycast.app.dev` — so a
   local run never shares prefs, caches, TCC grants or login item with an installed stable/beta.
   Anything newly persisted must stay keyed by `Bundle.main.bundleIdentifier`.
-- **Tests:** no XCTest target — standalone `swiftc` harnesses in `Tools/` (see Critical Invariants and
-  `docs/development.md`).
+- **Tests:** standalone `swiftc` model harnesses in `Tools/`; isolated Launcher XCUITests in `UITests/`
+  use the optimized `UITesting` channel. See Critical Invariants, `docs/development.md` and
+  `docs/launcher-performance.md`.
 
 ## Project Philosophy
 

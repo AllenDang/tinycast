@@ -27,7 +27,7 @@ struct PerfBench {
         }
     }
 
-    /// 313 entries matching real app index size. Names drawn from actual macOS apps, tools,
+    /// Representative index entries. Names drawn from actual macOS apps, tools,
     /// and system panes. Alternate names and bundle IDs from real Spotlight output where available.
     static func buildCorpus() -> [Entry] {
         let raw: [(String, [String], String?, String?)] = [
@@ -335,7 +335,7 @@ struct PerfBench {
 
     static func benchSet(label: String, apps: [Entry], normalized: [SearchFieldsNormalized]?, count: Int) {
         let queries = ["a", "p", "ar", "arc", "k", "ke", "key", "s", "sa", "saf", "safari", "ch", "chrome", "terminal", "x", "xc", "xco", "xcod", "xcode"]
-        let header = "query      total_µs  µs/call  ms/313  matched"
+        let header = "query      total_µs  µs/call ms/index  matched"
         print(header)
         print(String(repeating: "-", count: header.count))
 
@@ -361,8 +361,8 @@ struct PerfBench {
             }
             let elapsed = (CFAbsoluteTimeGetCurrent() - start) * 1_000_000
             let perCall = elapsed / Double(iterations * count)
-            let msPer313 = perCall * 313.0 / 1000.0
-            print("\(q.padding(toLength: 10, withPad: " ", startingAt: 0)) \(String(format: "%9.0f", elapsed)) \(String(format: "%8.2f", perCall)) \(String(format: "%7.2f", msPer313)) \(String(format: "%7d", matched / iterations))")
+            let msPerIndex = elapsed / Double(iterations) / 1000.0
+            print("\(q.padding(toLength: 10, withPad: " ", startingAt: 0)) \(String(format: "%9.0f", elapsed)) \(String(format: "%8.2f", perCall)) \(String(format: "%7.2f", msPerIndex)) \(String(format: "%7d", matched / iterations))")
         }
     }
 }

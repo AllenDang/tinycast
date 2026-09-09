@@ -1,9 +1,6 @@
 name: CI
 
-# The job is a merge gate and runs on PRs and on `main`. There is no xcodebuild step: the full Debug
-# build costs minutes and the release workflow already builds before it ships, so CI keeps to the one
-# check that finishes in about a minute — the Tools/ harnesses (the test suite, since there is no
-# XCTest target; see AGENTS.md).
+# UI tests require an interactive desktop; this merge gate runs the standalone model harnesses.
 on:
   pull_request:
   push:
@@ -79,6 +76,8 @@ jobs:
               Tinycast/Features/Uninstall/Model/AdministratorTrashPolicy.swift \
               Tinycast/Features/Uninstall/Model/UninstallProtection.swift Tinycast/Features/Uninstall/Model/UninstallPlan.swift \
               Tools/uninstall-test.swift -o /tmp/uninstall-test && /tmp/uninstall-test  # uninstall attribution + locking
+          swiftc -swift-version 6 Tinycast/Platform/Memo.swift Tools/memo-test.swift \
+              -o /tmp/memo-test && /tmp/memo-test
           swiftc -swift-version 6 Tinycast/Palette/PaletteRowIndex.swift \
               Tools/palette-selection-test.swift \
               -o /tmp/palette-selection-test && /tmp/palette-selection-test  # palette flat-selection row order

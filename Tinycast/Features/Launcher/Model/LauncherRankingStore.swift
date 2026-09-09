@@ -33,12 +33,25 @@ final class LauncherRankingStore {
     private func ensureLoaded() {
         guard !isLoaded else { return }
         isLoaded = true
-        if let data = try? Data(contentsOf: self.fileURL),
-            let decoded = try? JSONDecoder().decode([LauncherRankingRecord].self, from: data) {
-            records = decoded.filter {
-                !$0.itemKey.isEmpty && !$0.query.isEmpty && $0.count > 0
-            }
-        }
+        records = Self.readRecords(from: fileURL)
+    }
+
+    func preload() async {
+        guard !isLoaded else { return }
+        let url = fileURL
+        let loaded = await Task.detached(priority: .utility) { Self.readRecords(from: url) }.value
+        // A search or mutation may have loaded newer state while the file read was in flight.
+        guard !isLoaded else { return }
+        records = loaded
+        isLoaded = true
+        revision &+= 1
+    }
+
+    nonisolated private static func readRecords(from url: URL) -> [LauncherRankingRecord] {
+        guard let data = try? Data(contentsOf: url),
+            let decoded = try? JSONDecoder().decode([LauncherRankingRecord].self, from: data)
+        else { return [] }
+        return decoded.filter { !$0.itemKey.isEmpty && !$0.query.isEmpty && $0.count > 0 }
     }
 
     var isEmpty: Bool { records.isEmpty }

@@ -90,7 +90,17 @@ Settings after `LauncherCoordinator` confirms through the app-owned dialog prese
 
 Rankings are memoized one query deep and keyed by the ranking store's revision, so a launch or reset
 invalidates the cached order. `rank` resolves the whole learned table for a query up front via
-`boosts(query:)` — one fold and one clock read per pass, not per candidate.
+`boosts(query:)` — one fold and one clock read per pass, not per candidate. Ranking data is preloaded
+in a detached startup read; an early synchronous search/mutation takes precedence over its result.
+
+Normalized fields belong to `AppIndex`, not the `AppEntry` values carried through SwiftUI. The index
+also precomputes localized name order when entries change. Stable per-query sorting compares integer
+scores, preserving the same alphabetical tie order without repeated localized comparisons.
+
+The palette caches a complete query/result/card snapshot. Action availability does not allocate a
+menu; actual menu content is built when needed. List caches include the current calculator and AI
+payloads, not merely their presence. See [launcher-performance.md](launcher-performance.md) for the
+isolated real-UI harness, measurement boundaries and before/after results.
 
 ## System actions
 

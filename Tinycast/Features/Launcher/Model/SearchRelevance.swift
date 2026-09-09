@@ -75,7 +75,9 @@ enum FuzzyMatch {
 
     static let maximumScore = 100_000
 
-    static func match(_ query: Query, normalizedCandidate: NormalizedCandidate) -> Match? {
+    static func match(
+        _ query: Query, normalizedCandidate: NormalizedCandidate, allowSubsequence: Bool = true
+    ) -> Match? {
         let q = query.text
         let c = normalizedCandidate.text
         guard !q.isEmpty else { return Match(tier: .exact, score: 0) }
@@ -90,7 +92,9 @@ enum FuzzyMatch {
                 score: (atWordStart ? 80_000 : 70_000) - c.count)
         }
 
-        guard let sub = subsequenceScore(query.characters, normalizedCandidate.characters) else {
+        guard allowSubsequence,
+            let sub = subsequenceScore(query.characters, normalizedCandidate.characters)
+        else {
             return nil
         }
         return Match(tier: .subsequence, score: sub)
@@ -186,7 +190,7 @@ enum SearchRelevance {
 
     static let bandStride = 10 * FuzzyMatch.maximumScore
 
-    /// Base relevance from the strongest matching field, or nil when no field matches.
+    // periphery:ignore - reference path exercised by Tools/fuzz-test.swift.
     static func score(query: String, fields: SearchFields) -> Int? {
         let query = FuzzyMatch.Query(query)
         guard !query.isEmpty else { return 0 }
@@ -200,7 +204,9 @@ enum SearchRelevance {
         func consider(
             _ candidate: FuzzyMatch.NormalizedCandidate, literal: Band, subsequence: Band?
         ) {
-            guard let match = FuzzyMatch.match(query, normalizedCandidate: candidate) else { return }
+            guard let match = FuzzyMatch.match(
+                query, normalizedCandidate: candidate, allowSubsequence: subsequence != nil)
+            else { return }
             guard let band = match.tier.isLiteral ? literal : subsequence else { return }
             best = max(best ?? Int.min, band.offset + match.score)
         }
@@ -208,16 +214,19 @@ enum SearchRelevance {
         for name in normalizedFields.names {
             consider(name, literal: .nameLiteral, subsequence: .nameSubsequence)
         }
+        if let best, best >= Band.nameLiteral.offset { return best }
         for alternate in normalizedFields.alternateNames {
             consider(alternate, literal: .alternateNameLiteral, subsequence: .alternateNameSubsequence)
         }
+        if let best, best >= Band.bundleID.offset + FuzzyMatch.maximumScore { return best }
         if let bundleID = normalizedFields.bundleID,
            let identifyingPart = normalizedFields.bundleIDIdentifyingPart {
             consider(identifyingPart, literal: .bundleID, subsequence: nil)
-            if let match = FuzzyMatch.match(query, normalizedCandidate: bundleID), match.tier == .exact {
-                best = max(best ?? Int.min, Band.bundleID.offset + match.score)
+            if query.text == bundleID.text {
+                best = Band.bundleID.offset + FuzzyMatch.maximumScore
             }
         }
+        if let best, best >= Band.executableName.offset + FuzzyMatch.maximumScore { return best }
         if let executableName = normalizedFields.executableName {
             consider(executableName, literal: .executableName, subsequence: nil)
         }

@@ -25,6 +25,9 @@ final class AppCore {
     let runningApps = RunningAppsMonitor()
     let palette = PaletteState()
     let uninstall = UninstallSession()
+    #if UI_TESTING
+    let launcherInputMetrics = LauncherInputMetrics()
+    #endif
 
     @ObservationIgnored private lazy var windowController = PaletteWindowController(
         settings: settings,
@@ -161,6 +164,9 @@ final class AppCore {
                 self?.paletteCoordinator.showSettings()
             }
 
+            #if UI_TESTING
+            startLauncherUITest()
+            #else
             clipboardStore.maxAge = settings.clipboardRetention.maxAge
             // Defer the SQLite read + prune off the launch path; the palette fills in later.
             Task { clipboardStore.load() }
@@ -172,6 +178,7 @@ final class AppCore {
             }
             customCommandCoordinator.applyCustomCommandsPresence()
             windowManagementCoordinator.applyPresence()
+            Task { await launcherRanking.preload() }
             Task { await appIndex.refresh() }
             currencyRates.start()
 
@@ -218,8 +225,31 @@ final class AppCore {
                 OnboardingState.markShown()
                 paletteCoordinator.showOnboarding()
             }
+            #endif
         }
     }
+
+    #if UI_TESTING
+    private func startLauncherUITest() {
+        precondition(Bundle.main.bundleIdentifier == "com.tinycast.app.uitesting")
+        let count = min(5_000, max(1, Int(ProcessInfo.processInfo.environment["TINYCAST_UI_COUNT"] ?? "300") ?? 300))
+        let names = ["Fixture Safari", "Fixture Terminal", "Fixture Chrome", "Fixture 浏览器", "Fixture Café"]
+        let fixtures = (0..<count).map { index in
+            CustomCommand(
+                name: index < names.count ? names[index] : String(format: "Fixture Application %04d", index),
+                command: ":", requiresConfirmation: true)
+        }
+        launcherRanking.resetAll()
+        launcherInputMetrics.start()
+        settings.compactMode = false
+        settings.customCommandsEnabled = true
+        customCommands.replace(with: fixtures)
+        appIndex.setCustomCommands(fixtures)
+        aiProvider.setEnabled(false)
+        palette.prepare(mode: .launcher)
+        windowController.show()
+    }
+    #endif
 
     private func makePaletteContent() -> AnyView {
         AnyView(
@@ -244,6 +274,9 @@ final class AppCore {
                 .environment(aiCommands)
                 .environment(aiProvider)
                 .environment(aiCommandSession)
+                #if UI_TESTING
+                .environment(launcherInputMetrics)
+                #endif
         )
     }
 
@@ -282,8 +315,10 @@ final class AppCore {
     }
 
     func prepareForTermination() {
+        #if !UI_TESTING
         hyperKeyTap.prepareForTermination()
         launcherRanking.flush()
+        #endif
     }
 
     // MARK: - Feature switches

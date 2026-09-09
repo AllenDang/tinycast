@@ -5,9 +5,7 @@ struct LauncherScreen: PaletteScreen {
     let appIndex: AppIndex
     let favorites: FavoritesStore
     let visibility: VisibilityStore
-    let currencyRates: CurrencyRateStore
-    let aiCommands: AICommandStore
-    let aiProvider: AIProviderStore
+    let snapshot: Snapshot
     let launcher: LauncherCoordinator
     let aiCoordinator: AICommandCoordinator
     let calculatorCoordinator: CalculatorCoordinator
@@ -35,84 +33,62 @@ struct LauncherScreen: PaletteScreen {
         }
     }
 
-    private var results: [AppEntry] {
-        appIndex.orderedResults(query: vm.query, visibility: visibility, favorites: favorites)
+    struct Input: Equatable {
+        let query: String
+        let results: [AppEntry]
+        let calc: CalcResult?
+        let aiReady: AICommandMatch?
+        let aiPending: AICommand?
     }
 
-    private var calc: CalcResult? {
-        CalcMemo.evaluate(vm.query, currency: currencyRates.source)
-    }
+    struct Snapshot {
+        let input: Input
+        let functions: [CalcParser.FunctionSuggestion]
+        let rows: [Row]
 
-    private var functionSuggestions: [CalcParser.FunctionSuggestion] {
-        let trimmed = vm.query.trimmingCharacters(in: .whitespaces)
-        guard let first = trimmed.first, first == "=" || first == "＝" else { return [] }
-        let expression = String(trimmed.dropFirst()).trimmingCharacters(in: .whitespaces)
-        let lastToken = expression.split { " +-*/^×÷%!(),".contains($0) }.last.map(String.init) ?? ""
-        guard lastToken.allSatisfy({ $0.isLetter || $0.isNumber }),
-            lastToken.first?.isLetter == true
-        else { return [] }
-        return CalcParser.FunctionSuggestion.suggestions(matching: lastToken)
-    }
-
-    private var activeAICommands: [AICommand] {
-        aiCommands.commands.filter { aiProvider.isCommandConfigured($0) }
-    }
-
-    private var aiReady: AICommandMatch? {
-        guard calc == nil, vm.aiConfigured else { return nil }
-        return AICommand.firstMatch(in: activeAICommands, query: vm.query)
-    }
-
-    private var aiPending: AICommand? {
-        guard calc == nil, aiReady == nil, vm.aiConfigured else { return nil }
-        return AICommand.pendingKeyword(in: activeAICommands, query: vm.query)
-    }
-
-    private enum LeadingValue {
-        case calc(CalcResult)
-        case aiReady(AICommandMatch)
-        case aiPending(AICommand)
-
-        var slot: LauncherLeadingSlot {
-            switch self {
-            case .calc: return .calculator
-            case .aiReady: return .aiReady
-            case .aiPending: return .aiPending
+        init(input: Input) {
+            self.input = input
+            let functions = Self.suggestions(for: input.query)
+            self.functions = functions
+            let leading: LauncherLeadingSlot? = input.calc != nil ? .calculator
+                : input.aiReady != nil ? .aiReady : input.aiPending != nil ? .aiPending : nil
+            let layout = LauncherSelectableLayout(
+                leading: leading, functionCount: functions.count, appCount: input.results.count)
+            rows = layout.slots.map { slot in
+                switch slot {
+                case .leading(.calculator):
+                    guard let result = input.calc else { preconditionFailure() }
+                    return .calc(result)
+                case .leading(.aiReady):
+                    guard let match = input.aiReady else { preconditionFailure() }
+                    return .aiReady(match)
+                case .leading(.aiPending):
+                    guard let command = input.aiPending else { preconditionFailure() }
+                    return .aiPending(command)
+                case .function(let index): return .functionSuggestion(functions[index], index)
+                case .app(let index): return .app(input.results[index])
+                }
             }
+        }
+
+        private static func suggestions(for query: String) -> [CalcParser.FunctionSuggestion] {
+            let trimmed = query.trimmingCharacters(in: .whitespaces)
+            guard let first = trimmed.first, first == "=" || first == "＝" else { return [] }
+            let expression = String(trimmed.dropFirst()).trimmingCharacters(in: .whitespaces)
+            let lastToken = expression.split { " +-*/^×÷%!(),".contains($0) }.last.map(String.init) ?? ""
+            guard lastToken.allSatisfy({ $0.isLetter || $0.isNumber }),
+                lastToken.first?.isLetter == true
+            else { return [] }
+            return CalcParser.FunctionSuggestion.suggestions(matching: lastToken)
         }
     }
 
-    private var leadingValue: LeadingValue? {
-        if let calc { return .calc(calc) }
-        if let aiReady { return .aiReady(aiReady) }
-        if let aiPending { return .aiPending(aiPending) }
-        return nil
-    }
-
-    var rows: [Row] {
-        let leading = leadingValue
-        let functions = functionSuggestions
-        let apps = results
-        let layout = LauncherSelectableLayout(
-            leading: leading?.slot, functionCount: functions.count, appCount: apps.count)
-        return layout.slots.map { slot in
-            switch slot {
-            case .leading(.calculator):
-                guard case .calc(let result) = leading else { preconditionFailure() }
-                return .calc(result)
-            case .leading(.aiReady):
-                guard case .aiReady(let match) = leading else { preconditionFailure() }
-                return .aiReady(match)
-            case .leading(.aiPending):
-                guard case .aiPending(let command) = leading else { preconditionFailure() }
-                return .aiPending(command)
-            case .function(let index):
-                return .functionSuggestion(functions[index], index)
-            case .app(let index):
-                return .app(apps[index])
-            }
-        }
-    }
+    private var results: [AppEntry] { snapshot.input.results }
+    private var calc: CalcResult? { snapshot.input.calc }
+    private var aiReady: AICommandMatch? { snapshot.input.aiReady }
+    private var aiPending: AICommand? { snapshot.input.aiPending }
+    private var functionSuggestions: [CalcParser.FunctionSuggestion] { snapshot.functions }
+    var rows: [Row] { snapshot.rows }
 
     private var clampedSelection: Int {
         PaletteRowIndex(sectionCounts: [rows.count]).clamped(vm.selection)
@@ -169,6 +145,14 @@ struct LauncherScreen: PaletteScreen {
         }
     }
 
+    func hasActions(at selection: Int) -> Bool {
+        switch row(at: selection) {
+        case .calc(let result): return result.isActionable
+        case .app: return true
+        default: return false
+        }
+    }
+
     func actions(at selection: Int) -> PopoverMenuContent? {
         switch row(at: selection) {
         case .calc(let result):
@@ -180,10 +164,11 @@ struct LauncherScreen: PaletteScreen {
                 running: running,
                 onResetRanking: {
                     launcher.resetRanking(for: app)
-                    if let index = rows.firstIndex(where: { row in
-                        if case .app(let candidate) = row { return candidate == app }
-                        return false
-                    }) { vm.selection = index }
+                    let updated = appIndex.orderedResults(
+                        query: vm.query, visibility: visibility, favorites: favorites)
+                    if let index = updated.firstIndex(where: { $0.id == app.id }) {
+                        vm.selection = rows.count - results.count + index
+                    }
                 })
         default:
             return nil

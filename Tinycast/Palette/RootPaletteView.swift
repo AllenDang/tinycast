@@ -19,18 +19,37 @@ struct RootPaletteView: View {
     @Environment(AIProviderStore.self) private var aiProvider
     @Environment(AICommandSession.self) private var aiCommandSession
     @Environment(AppSettings.self) private var settings
+    #if UI_TESTING
+    @Environment(LauncherInputMetrics.self) private var inputMetrics
+    #endif
     @FocusState private var searchFocused: Bool
     @State private var showActions = false
     @State private var showAppMenu = false
     @State private var selectionIsRunning = false
     @State private var menuSelection = 0
     @State private var scroll = ScrollIntent(kind: .top)
+    @State private var launcherMemo = Memo<LauncherScreen.Input, LauncherScreen.Snapshot>()
     private var isCollapsed: Bool { paletteCoordinator.paletteIsCollapsed }
 
     private var launcherScreen: LauncherScreen {
-        LauncherScreen(
-            appIndex: appIndex, favorites: favorites, visibility: visibility,
-            currencyRates: currencyRates, aiCommands: aiCommands, aiProvider: aiProvider,
+        let query = vm.query
+        let calc = CalcMemo.evaluate(query, currency: currencyRates.source)
+        var aiReady: AICommandMatch?
+        var aiPending: AICommand?
+        if calc == nil, vm.aiConfigured, aiProvider.isEnabled {
+            if let match = AICommand.firstMatch(in: aiCommands.commands, query: query) {
+                if aiProvider.isCommandConfigured(match.command) { aiReady = match }
+            } else if let command = AICommand.pendingKeyword(in: aiCommands.commands, query: query),
+                aiProvider.isCommandConfigured(command) {
+                aiPending = command
+            }
+        }
+        let input = LauncherScreen.Input(
+            query: query, results: appIndex.orderedResults(query: query, visibility: visibility, favorites: favorites),
+            calc: calc, aiReady: aiReady, aiPending: aiPending)
+        let snapshot = launcherMemo.value(for: input) { LauncherScreen.Snapshot(input: input) }
+        return LauncherScreen(
+            appIndex: appIndex, favorites: favorites, visibility: visibility, snapshot: snapshot,
             launcher: launcherCoordinator, aiCoordinator: aiCoordinator,
             calculatorCoordinator: calculatorCoordinator,
             paletteCoordinator: paletteCoordinator,
@@ -71,7 +90,11 @@ struct RootPaletteView: View {
 
     private var actionsContent: PopoverMenuContent? { screen.actions(at: selection) }
 
-    private var actionsMenuAvailable: Bool { actionsContent != nil }
+    private var actionsMenuAvailable: Bool {
+        let active = screen
+        let selection = PaletteRowIndex(sectionCounts: [active.rows.count]).clamped(vm.selection)
+        return active.hasActions(at: selection)
+    }
 
     /// The bottom-left app menu content (About / Settings).
     private var appMenuContent: PopoverMenuContent {
@@ -98,7 +121,7 @@ struct RootPaletteView: View {
         let showsPrimaryAction =
             count > 0
             && activeScreen.hasPrimaryAction(at: selected)
-        let showsActionsMenu = activeScreen.actions(at: selected) != nil
+        let showsActionsMenu = activeScreen.hasActions(at: selected)
 
         return Group {
             if isCollapsed {
@@ -107,6 +130,9 @@ struct RootPaletteView: View {
                 activeScreen.body(selection: selected, scroll: scroll)
             }
         }
+        #if UI_TESTING
+        .background(LauncherLayoutProbe(sequence: inputMetrics.sequence, metrics: inputMetrics))
+        #endif
         .safeAreaInset(edge: .top, spacing: 0) { header }
         .safeAreaInset(edge: .bottom, spacing: 0) {
             if !isCollapsed {
@@ -325,7 +351,19 @@ struct RootPaletteView: View {
 
     private var searchField: some View {
         @Bindable var vm = vm
-        return TextField("", text: $vm.query)
+        #if UI_TESTING
+        let query = Binding(
+            get: { vm.query },
+            set: { value in
+                guard value != vm.query else { return }
+                inputMetrics.inputChanged()
+                vm.query = value
+            })
+        #else
+        let query = $vm.query
+        #endif
+        return TextField("", text: query)
+            .accessibilityIdentifier("launcher.search")
             .textFieldStyle(.plain)
             .font(Theme.Typography.searchField)
             .tint(.white)

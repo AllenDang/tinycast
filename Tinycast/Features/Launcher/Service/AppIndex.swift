@@ -42,6 +42,7 @@ final class AppIndex {
 
     private struct MatchKey: Equatable {
         let query: String
+        let limit: Int
         let entriesRevision: Int
         let rankingRevision: Int
     }
@@ -57,6 +58,9 @@ final class AppIndex {
     /// Repeated renders for the same query reuse the ranking instead of re-matching every frame.
     @ObservationIgnored private var matchMemo = Memo<MatchKey, [AppEntry]>()
     @ObservationIgnored private var resultsMemo = Memo<ResultsKey, [AppEntry]>()
+    @ObservationIgnored private var alphabeticalIndices: [Int] = []
+    @ObservationIgnored private var normalizedSearchFields: [SearchFieldsNormalized] = []
+    @ObservationIgnored private var discoveredSearchFields: [SearchFieldsNormalized] = []
     /// Bumped whenever `apps` changes, so both memos above name the entry set they were built from.
     private var entriesRevision = 0
 
@@ -154,12 +158,14 @@ final class AppIndex {
             bundleMetaCache = result.metaCache
             guard result.entries != discoveredEntries else { continue }
             discoveredEntries = result.entries
+            discoveredSearchFields = result.searchFields
             publishEntries()
         } while refreshPending
     }
 
     private struct ScanResult: Sendable {
         let entries: [AppEntry]
+        let searchFields: [SearchFieldsNormalized]
         let cache: SpotlightNames.Cache
         let paneCache: SettingsPaneScanner.Cache?
         let metaCache: BundleMetaCache
@@ -193,27 +199,23 @@ final class AppIndex {
             }
             // Settings panes are `.appex` bundles, which carry no Spotlight alternate names.
             let (panes, panesCache) = SettingsPaneScanner.scan(cache: paneCache)
-            let entries = (apps + panes).map { entry -> AppEntry in
-                var e = entry
-                e.normalizedSearchFields = SearchFieldsNormalized(from: e.searchFields)
-                return e
-            }
-            return ScanResult(entries: entries, cache: cache, paneCache: panesCache, metaCache: metaCache)
+            let entries = apps + panes
+            let searchFields = entries.map { SearchFieldsNormalized(from: $0.searchFields) }
+            return ScanResult(
+                entries: entries, searchFields: searchFields, cache: cache,
+                paneCache: panesCache, metaCache: metaCache)
         }
     }
 
     private func publishEntries() {
-        let combined =
-            discoveredEntries + Self.systemActionEntries
-            + windowCommandEntries + customCommandEntries + CommandCatalog.all
-        let updated = combined.map { entry -> AppEntry in
-            guard entry.normalizedSearchFields == nil else { return entry }
-            var normalized = entry
-            normalized.normalizedSearchFields = SearchFieldsNormalized(from: entry.searchFields)
-            return normalized
-        }
+        let commands = Self.systemActionEntries + windowCommandEntries + customCommandEntries + CommandCatalog.all
+        let updated = discoveredEntries + commands
         guard updated != apps else { return }
+        normalizedSearchFields = discoveredSearchFields + commands.map { SearchFieldsNormalized(from: $0.searchFields) }
         apps = updated
+        alphabeticalIndices = updated.indices.sorted {
+            updated[$0].name.localizedCaseInsensitiveCompare(updated[$1].name) == .orderedAscending
+        }
         entriesRevision &+= 1
     }
 
@@ -222,7 +224,7 @@ final class AppIndex {
         let q = query.trimmingCharacters(in: .whitespaces)
         guard !q.isEmpty else { return apps }
         let key = MatchKey(
-            query: q, entriesRevision: entriesRevision, rankingRevision: ranking.revision)
+            query: q, limit: limit, entriesRevision: entriesRevision, rankingRevision: ranking.revision)
         let cached = matchMemo.value(for: key) { rank(q, limit: limit) }
         return cached
     }
@@ -248,37 +250,25 @@ final class AppIndex {
     private func rank(_ q: String, limit: Int) -> [AppEntry] {
         let learned = ranking.boosts(query: q)
         let query = FuzzyMatch.Query(q)
-        var scored: [(AppEntry, Int)] = []
+        var scored: [(index: Int, score: Int)] = []
         scored.reserveCapacity(apps.count)
-        for app in apps {
-            guard let match = scoreOne(
-                app: app, query: query, queryChars: query.characterSet, learned: learned)
+        for index in alphabeticalIndices {
+            guard let score = scoreOne(
+                app: apps[index], fields: normalizedSearchFields[index], query: query, learned: learned)
             else { continue }
-            scored.append(match)
+            scored.append((index, score))
         }
-        return
-            scored
-            .sorted {
-                $0.1 != $1.1
-                    ? $0.1 > $1.1
-                    : $0.0.name.localizedCaseInsensitiveCompare($1.0.name) == .orderedAscending
-            }
-            .prefix(limit)
-            .map(\.0)
+        // Stable sorting preserves the precomputed localized order for equal scores.
+        scored.sort { $0.score > $1.score }
+        return scored.prefix(max(0, limit)).map { apps[$0.index] }
     }
 
     private func scoreOne(
-        app: AppEntry, query: FuzzyMatch.Query, queryChars: Set<Character>,
-        learned: [String: Int]
-    ) -> (AppEntry, Int)? {
-        let baseScore: Int?
-        if let nf = app.normalizedSearchFields {
-            guard queryChars.isSubset(of: nf.characterSet) else { return nil }
-            baseScore = SearchRelevance.score(query: query, normalizedFields: nf)
-        } else {
-            baseScore = SearchRelevance.score(query: query.text, fields: app.searchFields)
-        }
-        guard let score = baseScore else { return nil }
-        return (app, score + (learned[app.preferenceKey] ?? 0))
+        app: AppEntry, fields: SearchFieldsNormalized, query: FuzzyMatch.Query, learned: [String: Int]
+    ) -> Int? {
+        guard query.characterSet.isSubset(of: fields.characterSet),
+            let score = SearchRelevance.score(query: query, normalizedFields: fields)
+        else { return nil }
+        return score + (learned[app.preferenceKey] ?? 0)
     }
 }
