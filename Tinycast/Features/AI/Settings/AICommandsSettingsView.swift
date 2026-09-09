@@ -255,9 +255,20 @@ struct AIProviderEditorSheet: View {
             VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
                 Text("Models")
                     .font(.callout.weight(.medium))
-                TextField("gpt-4o-mini\ngpt-4o", text: $modelsText, axis: .vertical)
-                    .lineLimit(3...6)
-                    .textFieldStyle(.roundedBorder)
+                TextEditor(text: $modelsText)
+                    .font(.body.monospaced())
+                    .scrollContentBackground(.hidden)
+                    .padding(Theme.Spacing.sm)
+                    .frame(height: Theme.Size.editorTextHeight)
+                    .background(
+                        RoundedRectangle(cornerRadius: Theme.Radius.row, style: .continuous)
+                            .fill(Theme.Colors.cardFill)
+                    )
+                    .overlay(
+                        RoundedRectangle(cornerRadius: Theme.Radius.row, style: .continuous)
+                            .strokeBorder(Theme.Colors.cardStroke, lineWidth: 1)
+                    )
+                    .accessibilityLabel("Models")
                 Text("One model ID per line. The first is the default; commands can select any model.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
