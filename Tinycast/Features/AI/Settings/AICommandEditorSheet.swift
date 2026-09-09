@@ -4,6 +4,11 @@ import SwiftUI
 struct AICommandEditorSheet: View {
     let command: AICommand?
 
+    private struct ModelSelection: Hashable {
+        let providerID: UUID
+        let model: String
+    }
+
     @Environment(\.dismiss) private var dismiss
     @Environment(AICommandStore.self) private var store
     @Environment(AIProviderStore.self) private var aiProvider
@@ -29,40 +34,27 @@ struct AICommandEditorSheet: View {
                 .font(.title2.weight(.bold))
 
             VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
-                Text("Provider")
+                Text("Model")
                     .font(.callout.weight(.medium))
+                Picker("Model", selection: modelSelectionBinding) {
+                    Text("Select a model").tag(nil as ModelSelection?)
+                    ForEach(aiProvider.providers) { provider in
+                        ForEach(provider.models, id: \.self) { model in
+                            Text("\(provider.name) / \(model)")
+                                .tag(ModelSelection(providerID: provider.id, model: model) as ModelSelection?)
+                        }
+                    }
+                    if let modelSelection, selectedProvider?.resolvedModel(modelSelection.model) == nil {
+                        Text("\(selectedProvider?.name ?? "Unavailable provider") / \(modelSelection.model) (Unavailable)")
+                            .tag(modelSelection as ModelSelection?)
+                    }
+                }
+                .labelsHidden()
+                .pickerStyle(.menu)
                 if aiProvider.providers.isEmpty {
-                    Text("Add a provider above first.")
+                    Text("Add a provider and its models above first.")
                         .font(.caption)
                         .foregroundStyle(.secondary)
-                } else {
-                    Picker("", selection: $providerID) {
-                        Text("Select a provider").tag(nil as UUID?)
-                        ForEach(aiProvider.providers) { provider in
-                            Text(provider.name).tag(provider.id as UUID?)
-                        }
-                    }
-                    .labelsHidden()
-                    .pickerStyle(.menu)
-                }
-            }
-
-            if let selectedProvider {
-                VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
-                    Text("Model")
-                        .font(.callout.weight(.medium))
-                    Picker("Model", selection: $model) {
-                        Text("Default (\(selectedProvider.models.first ?? "None"))")
-                            .tag(nil as String?)
-                        ForEach(selectedProvider.models, id: \.self) { name in
-                            Text(name).tag(name as String?)
-                        }
-                        if let model, !selectedProvider.models.contains(model) {
-                            Text("\(model) (Unavailable)").tag(model as String?)
-                        }
-                    }
-                    .labelsHidden()
-                    .pickerStyle(.menu)
                 }
             }
 
@@ -126,7 +118,6 @@ struct AICommandEditorSheet: View {
         }
         .padding(Theme.Spacing.xxl)
         .frame(width: Theme.Size.editorSheetWidth)
-        .onChange(of: providerID) { _, _ in model = nil }
     }
 
     private var selectedProvider: AIProvider? {
@@ -134,8 +125,22 @@ struct AICommandEditorSheet: View {
         return aiProvider.provider(id: providerID)
     }
 
+    private var modelSelection: ModelSelection? {
+        guard let providerID, let model = model ?? selectedProvider?.models.first else { return nil }
+        return ModelSelection(providerID: providerID, model: model)
+    }
+
+    private var modelSelectionBinding: Binding<ModelSelection?> {
+        Binding(
+            get: { modelSelection },
+            set: { selection in
+                providerID = selection?.providerID
+                model = selection?.model
+            })
+    }
+
     private func save() {
-        guard selectedProvider?.resolvedModel(model) != nil else { return }
+        guard let model = selectedProvider?.resolvedModel(model) else { return }
         let draft = AICommand(
             id: command?.id ?? UUID(), keyword: keyword, name: name, promptTemplate: promptTemplate,
             providerID: providerID, model: model)

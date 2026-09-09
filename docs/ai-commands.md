@@ -180,7 +180,9 @@ API Key) plus the command catalog's own add/edit/delete list warrants its own pa
 The provider section lists each configured endpoint with a green status dot when ready (all three of
 Base URL, Models and API Key are filled in) and an orange dot when incomplete. Add/Edit opens
 `AIProviderEditorSheet`, with one model ID per line (first is the default); delete removes the provider
-and its Keychain entry. The command editor has separate provider and model pickers. Commands that referenced
+and its Keychain entry. The command editor has one model picker listing every `Provider / Model` pair.
+Saving binds the command to that specific provider and model; legacy default selections initially show
+the provider's first model. Commands that referenced
 a deleted provider stay in the catalog but won't match — their provider ID no longer resolves to a
 configured endpoint.
 
@@ -193,7 +195,7 @@ from the launcher would be exactly the kind of category invented by sniffing a s
 thing actually being a category of launcher entry (see AGENTS.md's `AppEntry.Kind` invariant). Instead
 the pane mirrors `CommandsSettingsView`'s own **custom commands** section — a `SettingsCard` with one
 row per command (`AICommandSettingsRow`), each showing its provider name in a chip, an "Add…" row
-opening `AICommandEditorSheet` (styled after `CustomCommandEditorSheet`, with a provider picker), and
+opening `AICommandEditorSheet` (styled after `CustomCommandEditorSheet`, with a model picker), and
 delete behind a confirmation.
 
 ## Standalone harness
