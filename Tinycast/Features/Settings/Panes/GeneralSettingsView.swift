@@ -3,6 +3,7 @@ import SwiftUI
 struct GeneralSettingsView: View {
     @Environment(PaletteCoordinator.self) private var paletteCoordinator
     @Environment(AppSettings.self) private var settings
+    @Environment(LegacyFeatureCleanupCoordinator.self) private var legacyCleanup
     @Environment(HyperKeyTap.self) private var hyperTap
     @Environment(LauncherCoordinator.self) private var launcherCoordinator
     @AppStorage(SettingsKey.showInMenuBar) private var showInMenuBar = true
@@ -64,6 +65,23 @@ struct GeneralSettingsView: View {
                     }
                     .controlSize(.small)
                     .disabled(launcherCoordinator.rankingIsEmpty)
+                }
+            }
+
+            if legacyCleanup.isAvailable {
+                SettingsCard(header: "Retired Features") {
+                    SettingsRow(
+                        title: "Legacy feature data",
+                        subtitle: "Move this channel’s retired Emoji, Snippets and Quicklinks data to Trash.",
+                        systemImage: "trash",
+                        tint: .orange
+                    ) {
+                        Button("Clean Up…", role: .destructive) {
+                            Task { await legacyCleanup.cleanUp() }
+                        }
+                        .controlSize(.small)
+                        .disabled(legacyCleanup.isRunning)
+                    }
                 }
             }
 
@@ -234,5 +252,6 @@ struct GeneralSettingsView: View {
                 }
             }
         }
+        .onAppear { legacyCleanup.refresh() }
     }
 }

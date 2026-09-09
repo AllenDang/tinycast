@@ -6,7 +6,6 @@ import SwiftUI
 final class PaletteWindowController: NSObject, NSWindowDelegate {
     private let settings: AppSettings
     private let palette: PaletteState
-    private let quicklinkArguments: QuicklinkArgumentSession
     private let rootContent: @MainActor () -> AnyView
     var collapsed: @MainActor () -> Bool = { false }
     var showSettings: @MainActor () -> Void = {}
@@ -18,12 +17,10 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
     init(
         settings: AppSettings,
         palette: PaletteState,
-        quicklinkArguments: QuicklinkArgumentSession,
         rootContent: @escaping @MainActor () -> AnyView
     ) {
         self.settings = settings
         self.palette = palette
-        self.quicklinkArguments = quicklinkArguments
         self.rootContent = rootContent
     }
 
@@ -85,11 +82,6 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
         Paster.pasteInPlace(item, store: store, into: previousApp)
     }
 
-    /// String flavor of the above, for emoji/symbol pastes.
-    func pasteStringKeepingWindowOpen(_ text: String) {
-        Paster.pasteStringInPlace(text, into: previousApp)
-    }
-
     // MARK: - NSWindowDelegate
 
     /// Dismiss when the palette loses key status (click-away, ⌘-Tab, app switch).
@@ -113,12 +105,6 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
         panel.paletteViewModel = palette
         panel.onBareBackspace = { [weak self] in
             guard let self, palette.mode != .launcher, palette.query.isEmpty else { return false }
-            if palette.mode == .quicklinkArguments,
-                let previous = quicklinkArguments.retreat() {
-                palette.query = previous
-                palette.selection = 0
-                return true
-            }
             palette.prepare(mode: .launcher)
             return true
         }

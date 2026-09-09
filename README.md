@@ -29,8 +29,6 @@ CPU churn. Just SwiftUI + AppKit with zero dependencies. It's fast because there
 - **Custom commands** — run named shell commands through fuzzy search or their own global hotkeys.
 - **Calculator** — do math, unit and live currency conversions inline, right in the palette.
 - **Clipboard history** — text and images, searchable, pasted back into the app you were using.
-- **Snippets** — reusable Markdown templates with dynamic placeholders, arguments, nested references
-  and optional keyword expansion.
 - **Global hotkey** — one shortcut summons the palette from anywhere.
 - **Per-app hotkeys** — bind a key to an app; press it to toggle (focus/hide).
 
@@ -53,10 +51,9 @@ directly from Releases instead, clear it once: `xattr -dr com.apple.quarantine
 
 ## Permissions
 
-**Accessibility** — needed when Tinycast pastes or expands text into another app, and the only
-permission snippet keyword expansion needs. You're prompted when you first use a feature that needs
-it; grant access in **System Settings → Privacy & Security → Accessibility**. Snippets ship
-disabled, and keystrokes are matched locally, never stored and never sent anywhere.
+**Accessibility** — needed when Tinycast pastes into another app or uses accessibility-based
+hotkeys/window actions. Grant access in **System Settings → Privacy & Security → Accessibility**
+when a feature needs it.
 
 ## Using it
 
@@ -64,7 +61,10 @@ disabled, and keystrokes are matched locally, never stored and never sent anywhe
 2. Press it anywhere → the palette floats in. Type to filter, **↵** to launch.
 3. **Tab** switches between Apps and Clipboard; **↑/↓** move, **Esc** dismisses.
 4. **Settings → Shortcuts** — search an app or custom command and record a global shortcut.
-5. **Settings → Snippets** — enable the feature, then create templates with expansion keywords.
+Emoji, Snippets and Quicklinks have been retired. Old backups still import surviving fields.
+**Settings → General → Legacy feature data → Clean Up…** appears while this channel has old data;
+after confirmation it moves legacy files to Trash and clears their preferences. Nothing is cleaned
+up automatically, and other channels are never touched.
 
 ## Building from source
 

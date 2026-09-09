@@ -1,5 +1,8 @@
 # Tinycast — Architecture Review & Refactoring Blueprint
 
+> Historical record: Emoji, Snippets and Quicklinks are now retired. Feature-preservation instructions
+> here are superseded by current AGENTS.md; use docs/development.md for current build/test commands.
+
 **Scope of audit:** all 170 Swift files (35,270 lines; ~28,800 in `Tinycast/`, ~6,500 in `Tools/`),
 `project.yml`, `.github/workflows/`, and all 17 documents in `docs/`.
 **Constraints honoured throughout:** identical UI, identical UX, identical permissions model, no

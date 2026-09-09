@@ -10,7 +10,6 @@ final class PaletteCoordinator {
     private let palette: PaletteState
     private let aiProvider: AIProviderStore
     private let appIndex: AppIndex
-    private let emojiIndex: EmojiIndex
     private let settingsContent: @MainActor (SettingsTab) -> AnyView
     private let onboardingContent: @MainActor () -> AnyView
 
@@ -21,7 +20,6 @@ final class PaletteCoordinator {
         palette: PaletteState,
         aiProvider: AIProviderStore,
         appIndex: AppIndex,
-        emojiIndex: EmojiIndex,
         settingsContent: @escaping @MainActor (SettingsTab) -> AnyView,
         onboardingContent: @escaping @MainActor () -> AnyView
     ) {
@@ -31,7 +29,6 @@ final class PaletteCoordinator {
         self.palette = palette
         self.aiProvider = aiProvider
         self.appIndex = appIndex
-        self.emojiIndex = emojiIndex
         self.settingsContent = settingsContent
         self.onboardingContent = onboardingContent
     }
@@ -59,14 +56,6 @@ final class PaletteCoordinator {
         }
     }
 
-    func toggleEmoji() {
-        if controller.isVisible, palette.mode == .emoji {
-            hidePalette()
-        } else {
-            showPalette(mode: .emoji)
-        }
-    }
-
     func showPalette(mode: PaletteMode, restoreAnyMode: Bool = false) {
         let preserved = controller.consumePreservedState()
         if !(preserved && (restoreAnyMode || palette.mode == mode)) {
@@ -75,7 +64,6 @@ final class PaletteCoordinator {
         palette.aiConfigured = aiProvider.isConfigured
         controller.show()
         if palette.mode == .launcher { Task { await appIndex.refresh() } }
-        if palette.mode == .emoji, !emojiIndex.isLoaded { Task { await emojiIndex.load() } }
     }
 
     func hidePalette(restoreFocus: Bool = true) {

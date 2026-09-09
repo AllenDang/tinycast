@@ -5,11 +5,9 @@ import Foundation
 final class HotKeyBindings {
     var onTogglePalette: (() -> Void)?
     var onToggleClipboard: (() -> Void)?
-    var onToggleEmoji: (() -> Void)?
     var onRunCustomCommand: ((UUID) -> Void)?
     var onRunSystemAction: ((SystemAction.ID) -> Void)?
     var onRunWindowCommand: ((WindowCommand.ID) -> Void)?
-    var onOpenQuicklink: ((UUID) -> Void)?
     @ObservationIgnored var displayNameResolver: (HotKeyAction) -> String? = { _ in nil }
 
     var recordingAction: HotKeyAction? {
@@ -41,11 +39,9 @@ final class HotKeyBindings {
     private let boundKey = "boundAppBundleIDs"
     private let boundPaneKey = "boundPaneBundleIDs"
     private let boundCustomCommandKey = "boundCustomCommandIDs"
-    private let boundQuicklinkKey = "boundQuicklinkIDs"
 
-    func start(customCommandIDs: Set<UUID>, quicklinkIDs: Set<UUID>) {
+    func start(customCommandIDs: Set<UUID>) {
         prune(key: boundCustomCommandKey, live: customCommandIDs) { .customCommand(id: $0) }
-        prune(key: boundQuicklinkKey, live: quicklinkIDs) { .quicklink(id: $0) }
         // After the prunes, so a dropped record can't survive in memory this session.
         for action in candidateActions { bindings[action] = storedBinding(for: action) }
 
@@ -71,9 +67,6 @@ final class HotKeyBindings {
 
     /// Custom-command UUIDs with a binding, indexed separately so startup can re-register them.
     var boundCustomCommandIDs: [UUID] { boundIDs(key: boundCustomCommandKey) }
-
-    /// Quicklink UUIDs with a binding — the same index, its own namespace.
-    var boundQuicklinkIDs: [UUID] { boundIDs(key: boundQuicklinkKey) }
 
     func binding(for action: HotKeyAction) -> HotKeyBinding? { bindings[action] }
 
@@ -110,9 +103,7 @@ final class HotKeyBindings {
             UserDefaults.standard.set(Array(set), forKey: boundPaneKey)
         case .customCommand(let id):
             index(id, bound: binding != nil, key: boundCustomCommandKey)
-        case .quicklink(let id):
-            index(id, bound: binding != nil, key: boundQuicklinkKey)
-        case .togglePalette, .toggleClipboard, .toggleEmoji, .systemAction, .windowCommand:
+        case .togglePalette, .toggleClipboard, .systemAction, .windowCommand:
             break
         }
         candidateActionsCache = nil
@@ -132,11 +123,10 @@ final class HotKeyBindings {
 
     private var candidateActions: [HotKeyAction] {
         if let candidateActionsCache { return candidateActionsCache }
-        var actions: [HotKeyAction] = [.togglePalette, .toggleClipboard, .toggleEmoji]
+        var actions: [HotKeyAction] = [.togglePalette, .toggleClipboard]
         actions += boundBundleIDs.map { .app(bundleID: $0) }
         actions += boundPaneBundleIDs.map { .settingsPane(bundleID: $0) }
         actions += boundCustomCommandIDs.map { .customCommand(id: $0) }
-        actions += boundQuicklinkIDs.map { .quicklink(id: $0) }
         actions += SystemAction.ID.allCases.map { .systemAction(id: $0) }
         actions += WindowCommand.ID.allCases.map { .windowCommand(id: $0) }
         candidateActionsCache = actions
@@ -149,8 +139,6 @@ final class HotKeyBindings {
             return "App Launcher"
         case .toggleClipboard:
             return "Clipboard History"
-        case .toggleEmoji:
-            return "Emoji & Symbols"
         case .app(let bundleID):
             return displayNameResolver(action) ?? bundleID
         case .settingsPane(let bundleID):
@@ -161,8 +149,6 @@ final class HotKeyBindings {
             return SystemActionCatalog.action(id: id).name
         case .windowCommand(let id):
             return WindowCommandCatalog.command(id: id)?.name ?? "Window Command"
-        case .quicklink:
-            return displayNameResolver(action) ?? "Quicklink"
         }
     }
 
@@ -186,13 +172,11 @@ final class HotKeyBindings {
         switch action {
         case .togglePalette: onTogglePalette?()
         case .toggleClipboard: onToggleClipboard?()
-        case .toggleEmoji: onToggleEmoji?()
         case .app(let bundleID): AppLauncher.toggle(bundleID: bundleID)
         case .settingsPane(let bundleID): AppLauncher.openSettingsPane(bundleID: bundleID)
         case .customCommand(let id): onRunCustomCommand?(id)
         case .systemAction(let id): onRunSystemAction?(id)
         case .windowCommand(let id): onRunWindowCommand?(id)
-        case .quicklink(let id): onOpenQuicklink?(id)
         }
     }
 

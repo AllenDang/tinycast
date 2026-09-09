@@ -142,15 +142,10 @@ struct LauncherScreen: PaletteScreen {
             return kind.descriptor.openVerb
         case .customCommand:
             return kind.descriptor.openVerb
-        // The footer historically labels these differently from their Actions-menu verbs.
-        case .snippet:
-            return "Open Application"
         case .systemAction:
             return kind.descriptor.openVerb
         case .windowCommand:
             return "Open Application"
-        case .quicklink:
-            return kind.descriptor.openVerb
         }
     }
 

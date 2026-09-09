@@ -38,10 +38,6 @@ struct DialogView: View {
                 VolumeSlider(state: volume)
             }
 
-            if let fields = request.fields {
-                DialogFieldsView(state: fields)
-            }
-
             HStack(spacing: Theme.Spacing.md) {
                 Spacer(minLength: 0)
                 ForEach(visualOrder, id: \.self) { index in
@@ -73,45 +69,6 @@ struct DialogView: View {
         if index == request.defaultIndex { return "↵" }
         if index == request.cancelIndex { return "esc" }
         return nil
-    }
-}
-
-private struct DialogFieldsView: View {
-    let state: DialogFieldState
-    @FocusState private var focusedField: String?
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: Theme.Spacing.lg) {
-            ForEach(state.fields, id: \.name) { field in
-                VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
-                    Text(field.name)
-                        .font(.callout.weight(.medium))
-                    if field.options.isEmpty {
-                        TextField(field.name, text: binding(for: field.name))
-                            .textFieldStyle(.roundedBorder)
-                            .focused($focusedField, equals: field.name)
-                    } else {
-                        Picker("", selection: binding(for: field.name)) {
-                            ForEach(field.options, id: \.self) { option in
-                                Text(option).tag(option)
-                            }
-                        }
-                        .labelsHidden()
-                        .pickerStyle(.menu)
-                    }
-                }
-                .accessibilityElement(children: .contain)
-                .accessibilityLabel("Snippet argument \(field.name)")
-            }
-        }
-        .frame(width: Theme.Size.argumentPromptWidth, alignment: .leading)
-        .onAppear { focusedField = state.fields.first { $0.options.isEmpty }?.name }
-    }
-
-    private func binding(for name: String) -> Binding<String> {
-        Binding(
-            get: { [weak state] in state?.entries[name] ?? "" },
-            set: { [weak state] value in state?.entries[name] = value })
     }
 }
 

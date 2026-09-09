@@ -1,5 +1,8 @@
 # Tinycast Performance & Stability Improvements
 
+> Historical record: Emoji, Snippets and Quicklinks are now retired. Feature-preservation instructions
+> here are superseded by current AGENTS.md; use docs/development.md for current build/test commands.
+
 ## Overview
 
 Eight targeted improvements ordered by impact, each verified with before/after data.

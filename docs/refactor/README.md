@@ -1,5 +1,8 @@
 # Tinycast Refactor — Execution Playbook
 
+> Historical record: Emoji, Snippets and Quicklinks are now retired. Feature-preservation instructions
+> here are superseded by current AGENTS.md; use docs/development.md for current build/test commands.
+
 This directory turns [`docs/architecture-review.md`](../architecture-review.md) into something you can
 execute one small step at a time, mostly by driving Claude Code, without ever leaving the repository in
 a half-finished state.

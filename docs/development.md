@@ -46,8 +46,8 @@ run `xcodegen generate` and commit the result.
 Debug builds are a separate channel: **`Tinycast Dev.app`**, bundle id `com.tinycast.app.dev`. Since
 every persisted thing is keyed by bundle
 id — `~/Library/Preferences/<id>.plist` (settings + hotkey bindings),
-`~/Library/Caches/<id>/` (clipboard history, calculator history, exchange rates, frequent emoji),
-`~/Library/Application Support/<id>/` (the onboarding marker and snippets), the `SMAppService` login
+`~/Library/Caches/<id>/` (clipboard history, calculator history, exchange rates),
+`~/Library/Application Support/<id>/` (the onboarding marker), the `SMAppService` login
 item, and the Accessibility / Input Monitoring (TCC) grants — a build you run locally can't read or
 clobber the installed app's state, and both can run side-by-side.
 
@@ -96,15 +96,9 @@ swiftc -swift-version 6 Tinycast/Features/Backup/Model/RaycastFormat.swift \
     Tinycast/Features/Backup/Model/RaycastV1Decoder.swift Tinycast/Features/Backup/Service/Gunzip.swift \
     Tinycast/Features/Clipboard/Model/ClipboardStore.swift Tools/raycast-test.swift \
     -o /tmp/raycast-test && /tmp/raycast-test                     # raycast format detect + v1 decode
-swiftc Tinycast/Features/Emoji/Model/EmojiCatalog.swift Tinycast/Features/Emoji/Model/EmojiGridGeometry.swift \
-    Tinycast/Features/Emoji/Model/EmojiData.generated.swift Tools/emoji-test.swift \
-    -o /tmp/emoji-test && /tmp/emoji-test                         # emoji catalog + geometry
 swiftc -swift-version 6 Tinycast/Features/CustomCommands/Model/CustomCommand.swift \
     Tinycast/Features/CustomCommands/Service/ShellCommandRunner.swift Tools/custom-command-test.swift \
     -o /tmp/custom-command-test && /tmp/custom-command-test        # custom command store + runner
-swiftc -swift-version 6 Tinycast/Platform/NotificationToken.swift \
-    Tinycast/Platform/HealthTicker.swift Tinycast/Features/Snippets/Model/*.swift Tinycast/Features/Snippets/Service/*.swift \
-    Tools/snippets-test.swift -o /tmp/snippets-test && /tmp/snippets-test  # snippets
 swiftc -swift-version 6 Tinycast/Features/HotKeys/Model/DoubleTapModifier.swift \
     Tinycast/Features/HotKeys/Model/DoubleTapDetector.swift \
     Tinycast/Features/HotKeys/Model/HyperKey.swift \
@@ -129,18 +123,25 @@ swiftc -swift-version 6 Tinycast/Features/Uninstall/Model/UninstallTarget.swift 
     Tinycast/Features/Uninstall/Model/AdministratorTrashPolicy.swift \
     Tinycast/Features/Uninstall/Model/UninstallProtection.swift Tinycast/Features/Uninstall/Model/UninstallPlan.swift \
     Tools/uninstall-test.swift -o /tmp/uninstall-test && /tmp/uninstall-test  # uninstall attribution + locking
-swiftc -swift-version 6 Tinycast/Features/Quicklinks/Model/Quicklink.swift \
-    Tinycast/Features/Quicklinks/Model/QuicklinkDestination.swift \
-    Tinycast/Features/Quicklinks/Model/QuicklinkStore.swift Tinycast/Features/Quicklinks/Model/QuicklinkArchive.swift \
-    Tools/quicklink-test.swift -o /tmp/quicklink-test && /tmp/quicklink-test  # quicklink destinations + store
 swiftc -swift-version 6 Tinycast/Palette/PaletteRowIndex.swift \
-    Tinycast/Features/Emoji/Model/EmojiGridGeometry.swift Tools/palette-selection-test.swift \
+    Tools/palette-selection-test.swift \
     -o /tmp/palette-selection-test && /tmp/palette-selection-test  # palette flat-selection row order
 swiftc -swift-version 6 Tinycast/Features/AI/Model/AICommand.swift Tools/ai-command-test.swift \
     -o /tmp/ai-command-test && /tmp/ai-command-test               # AI command store + keyword recognizer
 swiftc -swift-version 6 Tinycast/Features/Settings/SettingsKeys.swift \
     Tinycast/Features/Backup/Model/SettingsData.swift Tools/settings-backup-test.swift \
     -o /tmp/settings-backup-test && /tmp/settings-backup-test      # settings backup completeness
+swiftc -swift-version 6 Tinycast/Features/AI/Model/AIPromptTemplateEngine.swift Tools/ai-prompt-template-test.swift \
+    -o /tmp/ai-prompt-template-test && /tmp/ai-prompt-template-test
+swiftc -swift-version 6 Tinycast/Features/Settings/LegacyFeatureCleanupRunner.swift \
+    Tinycast/Features/Settings/LegacyFeatureCleanupCoordinator.swift Tools/legacy-feature-cleanup-test.swift \
+    -o /tmp/legacy-feature-cleanup-test && /tmp/legacy-feature-cleanup-test
+swiftc -O -swift-version 6 Tinycast/Features/Backup/Model/{SettingsBackup,SettingsData,RetiredFeatureCompatibility,RaycastFormat,RaycastV1Decoder,RaycastImport,RaycastImportV1,RaycastImportV2}.swift \
+    Tinycast/Features/Backup/Service/{Gunzip,Scrypt}.swift Tinycast/Features/Settings/SettingsKeys.swift \
+    Tinycast/Features/Clipboard/Model/ClipboardStore.swift Tinycast/Features/CustomCommands/Model/CustomCommand.swift \
+    Tinycast/Features/HotKeys/Model/{KeyShortcut,HotKeyBinding,DoubleTapModifier,HyperKey}.swift \
+    Tinycast/Features/SystemActions/Model/SystemAction.swift Tinycast/Features/WindowManagement/Model/WindowCommand.swift \
+    Tools/backup-compatibility-test.swift -o /tmp/backup-compatibility-test && /tmp/backup-compatibility-test
 ```
 
 `Tools/fuzz-test.swift` compiles the real `Tinycast/Features/Launcher/Model/SearchRelevance.swift`, which is why that
@@ -162,25 +163,12 @@ The custom-command harness spawns **real `/bin/zsh`** processes. Its shell-envir
 the developer's own dotfiles. `/etc/zshrc` is still sourced for interactive shells, so the assertions
 are relative — the fixture's alias resolves with `-i` and not without — rather than absolute.
 
-The snippets harness compiles the real model, codec, template engine, Foundation-only repository,
-keyword/event/lifecycle policies, AppKit delivery primitives and main-actor store. Injected temporary
-roots and named pasteboards cover identity, per-channel isolation, malformed files, revision
-conflicts, watcher rearming, template determinism, delivery serialization and pasteboard restoration without touching a real snippets library or clipboard. The
-complete subsystem contract is in [snippets.md](snippets.md).
-
 The Raycast harness compiles the real format detector and v1 decoder, so both must stay Foundation +
 CommonCrypto + Carbon (no AppKit). It builds its own v1 files in-process — a small embedded gzip blob
 encrypted with `CCCrypt` — and feeds the mapper hand-written JSON, so no real `.rayconfig` is ever
 committed. Turning payload values into Tinycast's own types lives in `RaycastImportV1`, which needs
 AppKit and is covered by the app build instead. The format contract is in
 [raycast-import.md](raycast-import.md).
-
-The quicklink harness compiles the real model, destination detector, SQLite store and JSON archive,
-so those four must stay Foundation-only (plus SQLite3). Each store is rooted in a throwaway temp
-directory and every path rule is asked against an injected home, so a run can never reach a real
-library. One case deliberately corrupts a database file and asserts the store reports itself
-unavailable **and leaves the file byte-for-byte intact** — quicklinks are authored data, so unlike
-`ClipboardStore` this one never deletes and recreates.
 
 The window-command harness compiles the real catalog, geometry and action memory (Foundation +
 CoreGraphics — `CGRect`'s `Equatable` conformance lives in the CoreGraphics overlay, not Foundation).
@@ -220,12 +208,11 @@ Two tools, both configured at the repo root and both required to be at **zero** 
 - **SwiftLint** (`.swiftlint.yml`) — style and correctness. Thresholds are tuned to this codebase's
   actual scale rather than the defaults (`AppCore.swift`'s single-owner size, the house style of a
   long single-line comment over wrapping one, `{` on its own line after a wrapped condition/signature)
-  — see the comments in the config for the reasoning per rule. `EmojiData.generated.swift`,
-  `CurrencyData.generated.swift`, `ThinScrollbar.swift`, `EdgeDissolve.swift` and `Tools/` are excluded
+  — see the comments in the config for the reasoning per rule. `CurrencyData.generated.swift`, `ThinScrollbar.swift`, `EdgeDissolve.swift` and `Tools/` are excluded
   (generated, off-limits per AGENTS.md, or outside the Xcode target, respectively — the same reasons
   `.periphery.yml` excludes them below). A handful of individual lines carry a narrow
   `// swiftlint:disable:this <rule>` with a reason in an adjacent comment (e.g. the provably-safe
-  `as!` casts in `WindowMover.swift`/`SnippetTextInjector.swift`, checked by `CFGetTypeID` the line
+  `as!` casts in `WindowMover.swift`, checked by `CFGetTypeID` the line
   before) — that is the pattern for a new justified exception; don't reach for a project-wide
   `disabled_rules` entry unless the whole codebase disagrees with a rule, the way it does with
   `opening_brace` and `optional_data_string_conversion`.
@@ -261,11 +248,10 @@ hook is the enforcement point today.
 
 ## Generated data
 
-Two Swift files are emitted by scripts and must never be hand-edited. Both download their source, so
-run them online, then commit the result:
+The currency Swift data is emitted by a script and must never be hand-edited. It downloads its source;
+regenerate it online:
 
 ```sh
-node Tools/gen-emoji.js            # -> Tinycast/Features/Emoji/Model/EmojiData.generated.swift
 node Tools/gen-currencies.js       # -> Tinycast/Features/Calculator/Model/CurrencyData.generated.swift
 ```
 
@@ -348,3 +334,40 @@ Pages at `https://abue-ammar.github.io/tinycast/` on every push to `main` that t
 ```sh
 cd website && npm install && npm run dev     # local preview
 ```
+
+## Legacy cleanup
+
+Emoji, Snippets and Quicklinks are retired. Settings → General conditionally offers **Clean Up…**
+while the running channel still has their files, preferences, sidecars or a pending cleanup staging
+folder. Nothing is deleted or prompted at startup. Cancel makes no changes.
+
+After confirmation, `LegacyFeatureCleanupRunner` revalidates only these fixed targets:
+
+- `Application Support/<running-bundle-id>/Snippets/`
+- `Application Support/<running-bundle-id>/quicklinks.sqlite3` and `-wal`, `-shm`, `-journal`
+- `Caches/<running-bundle-id>/emoji-frequency.json`
+
+The runner refuses symbolic-link ancestors/targets, unexpected types and another running app with
+the same bundle identifier. It never opens or repairs the authored Quicklinks database. DB files are
+moved without overwriting into `.tinycast-retired-quicklinks`, a private sibling folder with an
+identity marker and an allowlisted complete content check, then that group is moved to Trash once.
+Grouping is not atomic: failed moves attempt rollback; rollback failures are reported and staged
+files remain discoverable for retry. A Trash failure retains the staged group. Unrecognized staging
+contents fail closed and need manual inspection rather than automatic removal.
+
+The fixed staging name is published only after its ownership marker is complete in an exclusively
+created UUID sibling setup folder. Failed initialization trashes only this invocation's verified
+metadata-only setup folder; originals and preferences remain untouched. If that Trash fails or setup
+identity/contents change, the report names the leftover path. Ordinary retry can create fresh setup;
+old UUID setup folders are never automatically claimed or trashed.
+
+Only after a feature's file cleanup succeeds are its bounded UserDefaults keys cleared. Independent
+feature successes are retained when another fails. Retried cleanup never touches another channel or
+unrelated files. No database-wide discard, permanent file deletion or completion marker is used.
+Like other path-based macOS file operations, validation cannot prevent an uncooperative process from
+renaming ancestors between validation and a filesystem call; quit other channel copies before use.
+
+`Tools/legacy-feature-cleanup-test.swift` uses isolated temporary fixture roots, a dedicated defaults
+suite and injected Trash (a fixture-local rename), never actual app data or the real Trash. UI visual
+sign-off and permission-dependent Trash behavior remain manual checks; do not run cleanup against
+real data as a development test.

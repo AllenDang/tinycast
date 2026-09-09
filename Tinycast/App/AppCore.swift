@@ -12,12 +12,8 @@ final class AppCore {
     let aiCommands = AICommandStore()
     let aiProvider = AIProviderStore()
     let aiCommandSession = AICommandSession()
-    let quicklinks = QuicklinkStore()
     let clipboardStore = ClipboardStore()
     let clipboardManager: ClipboardMonitor
-    let snippetsStore: SnippetsStore
-    let snippetListener = SnippetKeywordListener(syntheticEventTag: Paster.tinycastEventTag)
-    let snippetTextInjector: SnippetTextInjector
     let hotKeys = HotKeyBindings()
     let hyperKeyTap = HyperKeyTap()
     let windowMover = WindowMover()
@@ -26,17 +22,13 @@ final class AppCore {
     let visibility = VisibilityStore()
     let calcHistory = CalculatorHistoryStore()
     let currencyRates = CurrencyRateStore()
-    let emojiIndex = EmojiIndex()
-    let frequentEmoji = FrequentEmojiStore()
     let runningApps = RunningAppsMonitor()
     let palette = PaletteState()
     let uninstall = UninstallSession()
-    let quicklinkArguments = QuicklinkArgumentSession()
 
     @ObservationIgnored private lazy var windowController = PaletteWindowController(
         settings: settings,
         palette: palette,
-        quicklinkArguments: quicklinkArguments,
         rootContent: { [unowned self] in self.makePaletteContent() })
     @ObservationIgnored private lazy var messageHUD = MessageHUDController(settings: settings)
     @ObservationIgnored private lazy var presentation = PresentationActions(
@@ -58,38 +50,9 @@ final class AppCore {
         pickVolume: { [unowned self] current in
             await self.dialogs.pickVolume(current: current)
         })
-    @ObservationIgnored private(set) lazy var snippetCoordinator = SnippetExpansionCoordinator(
-        store: snippetsStore,
-        listener: snippetListener,
-        injector: snippetTextInjector,
-        clipboardStore: clipboardStore,
-        appIndex: appIndex,
-        settings: settings,
-        presentation: presentation,
-        promptArguments: { [unowned self] id, snippetName, arguments in
-            let fields = arguments.map { DialogField(name: $0.name, options: $0.options) }
-            return await self.dialogs.promptFields(
-                id: id, title: "Snippet: \(snippetName)", fields: fields)
-        },
-        cancelPrompt: { [unowned self] id in self.dialogs.cancel(id: id) })
-    @ObservationIgnored private(set) lazy var quicklinkCoordinator = QuicklinkCoordinator(
-        store: quicklinks,
-        argumentSession: quicklinkArguments,
-        settings: settings,
-        appIndex: appIndex,
-        injector: snippetTextInjector,
-        hotKeys: hotKeys,
-        favorites: favorites,
-        visibility: visibility,
-        ranking: launcherRanking,
-        palette: paletteCoordinator,
-        presentation: presentation,
-        clipboardHistory: { [unowned self] in
-            self.snippetCoordinator.clipboardHistoryForExpansion()
-        })
     @ObservationIgnored private(set) lazy var paletteCoordinator = PaletteCoordinator(
         controller: windowController, auxWindows: auxWindows, settings: settings,
-        palette: palette, aiProvider: aiProvider, appIndex: appIndex, emojiIndex: emojiIndex,
+        palette: palette, aiProvider: aiProvider, appIndex: appIndex,
         settingsContent: { [unowned self] tab in self.makeSettingsContent(tab: tab) },
         onboardingContent: { [unowned self] in self.makeOnboardingContent() })
     @ObservationIgnored private(set) lazy var aiCommandCoordinator = AICommandCoordinator(
@@ -100,9 +63,6 @@ final class AppCore {
     @ObservationIgnored private(set) lazy var clipboardCoordinator = ClipboardCoordinator(
         store: clipboardStore, paletteState: palette, windowController: windowController,
         palette: paletteCoordinator, presentation: presentation)
-    @ObservationIgnored private(set) lazy var emojiCoordinator = EmojiCoordinator(
-        frequency: frequentEmoji, settings: settings, windowController: windowController,
-        palette: paletteCoordinator)
     @ObservationIgnored private(set) lazy var windowManagementCoordinator =
         WindowManagementCoordinator(
             settings: settings, appIndex: appIndex, mover: windowMover,
@@ -121,15 +81,11 @@ final class AppCore {
     @ObservationIgnored private(set) lazy var backupCoordinator = BackupCoordinator(
         context: SettingsBackup.Context(
             settings: settings, clipboardStore: clipboardStore, hotKeys: hotKeys,
-            customCommands: customCommands, quicklinks: quicklinks, favorites: favorites,
+            customCommands: customCommands, favorites: favorites,
             visibility: visibility,
             replaceCustomCommands: { [unowned self] in
                 self.customCommandCoordinator.replaceCustomCommands($0)
-            },
-            replaceQuicklinks: { [unowned self] in
-                self.quicklinkCoordinator.replaceQuicklinks($0)
             }),
-        snippetsStore: snippetsStore,
         confirm: { [unowned self] title, message, symbol, confirmTitle, tone, role in
             await self.presentation.confirm(title, message, symbol, confirmTitle, tone, role)
         },
@@ -139,9 +95,44 @@ final class AppCore {
     @ObservationIgnored private(set) lazy var launcherCoordinator = LauncherCoordinator(
         ranking: launcherRanking, runningApps: runningApps, palette: paletteCoordinator,
         customCommands: customCommandCoordinator, systemActions: systemActionCoordinator,
-        windowManagement: windowManagementCoordinator, quicklinks: quicklinkCoordinator,
-        snippets: snippetCoordinator, backup: backupCoordinator, uninstall: uninstallCoordinator,
+        windowManagement: windowManagementCoordinator,
+        backup: backupCoordinator, uninstall: uninstallCoordinator,
         presentation: presentation)
+    @ObservationIgnored private(set) lazy var legacyCleanup = LegacyFeatureCleanupCoordinator(
+        makeRunner: {
+            guard let bundleID = Bundle.main.bundleIdentifier else {
+                throw CocoaError(.fileReadInvalidFileName)
+            }
+            let files = FileManager.default
+            return try LegacyFeatureCleanupRunner(
+                bundleID: bundleID,
+                supportRoot: files.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0],
+                cachesRoot: files.urls(for: .cachesDirectory, in: .userDomainMask)[0],
+                defaults: .standard,
+                channelIsIdle: {
+                    !NSWorkspace.shared.runningApplications.contains {
+                        $0.bundleIdentifier == bundleID && $0.processIdentifier != getpid()
+                    }
+                },
+                trash: { try files.trashItem(at: $0, resultingItemURL: nil) })
+        },
+        confirm: { [unowned self] in
+            await self.presentation.confirm(
+                "Clean up retired feature data?",
+                "Move this channel’s old Snippets, Quicklinks database and Emoji history to Trash, "
+                    + "then clear their preferences and shortcuts. Other channels are untouched. "
+                    + "Quit other copies of this channel first. You can restore files from Trash.",
+                "trash", "Move to Trash", .danger, .destructive)
+        },
+        report: { [unowned self] outcome in
+            let completed = outcome.completed.isEmpty ? "No data was cleaned up."
+                : "Cleaned up: " + outcome.completed.joined(separator: ", ") + "."
+            let failures = outcome.failures.isEmpty ? ""
+                : "\n\n" + outcome.failures.joined(separator: "\n") + "\nRetry from Settings → General."
+            await self.presentation.notice(
+                outcome.failures.isEmpty ? "Cleanup Complete" : "Cleanup Incomplete",
+                completed + failures, "trash", outcome.failures.isEmpty ? .success : .danger)
+        })
     private let volumeHUD = VolumeHUDController()
     private let auxWindows = AuxWindowController()
     private let dialogs = DialogController()
@@ -155,10 +146,6 @@ final class AppCore {
         appIndex = AppIndex(ranking: launcherRanking)
         let clipboardManager = ClipboardMonitor(store: clipboardStore, settings: settings)
         self.clipboardManager = clipboardManager
-        snippetsStore = SnippetsStore()
-        snippetTextInjector = SnippetTextInjector(
-            clipboardManager: clipboardManager,
-            settings: settings)
     }
 
     func start() {
@@ -185,17 +172,11 @@ final class AppCore {
             }
             customCommandCoordinator.applyCustomCommandsPresence()
             windowManagementCoordinator.applyPresence()
-            quicklinks.onChange = { [weak self] _ in
-                self?.quicklinkCoordinator.applyQuicklinksPresence()
-            }
-            quicklinks.load()
-            quicklinkCoordinator.applyQuicklinksPresence()
             Task { await appIndex.refresh() }
             currencyRates.start()
 
             hyperKeyTap.healthTicker = healthTicker
             hotKeys.doubleTapMonitor.healthTicker = healthTicker
-            snippetListener.healthTicker = healthTicker
 
             hotKeys.displayNameResolver = { [weak self] action in
                 guard let self else { return nil }
@@ -210,8 +191,6 @@ final class AppCore {
                     }?.name
                 case .customCommand(let id):
                     return self.customCommands.command(id: id)?.name
-                case .quicklink(let id):
-                    return self.quicklinks.quicklink(id: id)?.name
                 default:
                     return nil
                 }
@@ -221,7 +200,6 @@ final class AppCore {
             }
             hotKeys.onTogglePalette = { [weak self] in self?.paletteCoordinator.togglePalette() }
             hotKeys.onToggleClipboard = { [weak self] in self?.paletteCoordinator.toggleClipboard() }
-            hotKeys.onToggleEmoji = { [weak self] in self?.paletteCoordinator.toggleEmoji() }
             hotKeys.onRunCustomCommand = { [weak self] id in
                 self?.customCommandCoordinator.runCustomCommand(id: id)
             }
@@ -231,23 +209,8 @@ final class AppCore {
             hotKeys.onRunWindowCommand = { [weak self] id in
                 self?.windowManagementCoordinator.run(id: id)
             }
-            hotKeys.onOpenQuicklink = { [weak self] id in
-                self?.quicklinkCoordinator.openQuicklink(id: id)
-            }
-            hotKeys.start(
-                customCommandIDs: Set(customCommands.commands.map(\.id)),
-                quicklinkIDs: Set(quicklinks.quicklinks.map(\.id)))
+            hotKeys.start(customCommandIDs: Set(customCommands.commands.map(\.id)))
             hyperKeyTap.start(settings: settings)
-
-            snippetsStore.onSnapshot = { [weak self] snapshot in
-                guard let self else { return }
-                self.snippetCoordinator.applySnippetsLauncherPresence()
-                self.snippetListener.update(snapshot.records)
-            }
-            if settings.snippetsEnabled {
-                Task { await snippetsStore.start() }
-                snippetCoordinator.startSnippetKeywordListener()
-            }
 
             observeFeatureSwitches()
 
@@ -266,8 +229,6 @@ final class AppCore {
                 .environment(aiCommandCoordinator)
                 .environment(calculatorCoordinator)
                 .environment(clipboardCoordinator)
-                .environment(emojiCoordinator)
-                .environment(quicklinkCoordinator)
                 .environment(uninstallCoordinator)
                 .environment(settings)
                 .environment(palette)
@@ -277,13 +238,9 @@ final class AppCore {
                 .environment(visibility)
                 .environment(calcHistory)
                 .environment(currencyRates)
-                .environment(emojiIndex)
-                .environment(frequentEmoji)
                 .environment(runningApps)
                 .environment(hotKeys)
                 .environment(uninstall)
-                .environment(quicklinks)
-                .environment(quicklinkArguments)
                 .environment(aiCommands)
                 .environment(aiProvider)
                 .environment(aiCommandSession)
@@ -293,13 +250,12 @@ final class AppCore {
     private func makeSettingsContent(tab: SettingsTab) -> AnyView {
         AnyView(
             SettingsRootView(initialTab: tab)
+                .environment(legacyCleanup)
                 .environment(paletteCoordinator)
                 .environment(launcherCoordinator)
                 .environment(clipboardCoordinator)
                 .environment(customCommandCoordinator)
                 .environment(aiCommandCoordinator)
-                .environment(snippetCoordinator)
-                .environment(quicklinkCoordinator)
                 .environment(backupCoordinator)
                 .environment(settings)
                 .environment(appIndex)
@@ -307,14 +263,11 @@ final class AppCore {
                 .environment(customCommands)
                 .environment(aiCommands)
                 .environment(aiProvider)
-                .environment(snippetsStore)
-                .environment(quicklinks)
                 .environment(hotKeys)
                 .environment(hyperKeyTap)
                 .environment(clipboardStore)
                 .environment(currencyRates)
                 .environment(runningApps)
-                .environment(snippetListener)
         )
     }
 
@@ -330,9 +283,6 @@ final class AppCore {
 
     func prepareForTermination() {
         hyperKeyTap.prepareForTermination()
-        snippetTextInjector.prepareForTermination()
-        snippetListener.stop()
-        snippetsStore.stop()
         launcherRanking.flush()
     }
 
@@ -347,16 +297,6 @@ final class AppCore {
             _ = $0.customCommandsEnabled
             _ = $0.customCommandsShowInLauncher
         }, reproject: { $0.customCommandCoordinator.applyCustomCommandsPresence() })
-        track({
-            _ = $0.quicklinksEnabled
-            _ = $0.quicklinksShowInLauncher
-        }, reproject: { $0.quicklinkCoordinator.applyQuicklinksPresence() })
-        track({ _ = $0.snippetsEnabled }, reproject: {
-            $0.snippetCoordinator.applySnippetsEnabled()
-        })
-        track({ _ = $0.snippetsShowInLauncher }, reproject: {
-            $0.snippetCoordinator.applySnippetsLauncherPresence()
-        })
     }
 
     /// Fires synchronously on main before the write lands, so the task re-arms and re-reads.

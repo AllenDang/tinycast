@@ -14,6 +14,5 @@ retain_codable_properties: true
 report_exclude:
   - Tinycast/DesignSystem/Scrolling/EdgeDissolve.swift
   - Tinycast/DesignSystem/Scrolling/ThinScrollbar.swift
-  - Tinycast/Features/Emoji/Model/EmojiData.generated.swift
   - Tinycast/Features/Calculator/Model/CurrencyData.generated.swift
   - Tools

@@ -13,7 +13,6 @@ enum AppSettingsKey: String, CaseIterable {
     case hyperKeyIncludesShift
     case hyperKeyQuickPress
     case hyperKeyReplacesGlyph
-    case emojiSkinTone
     case popToRootTimeout
     case compactMode
     case showFavoritesInCompactMode
@@ -21,15 +20,25 @@ enum AppSettingsKey: String, CaseIterable {
     case openOnCursorScreen
     case customCommandsEnabled
     case customCommandsShowInLauncher
-    case snippetsEnabled
-    case snippetsShowInLauncher
     case windowManagementEnabled
     case windowManagementShowInLauncher
     case windowGap = "windowManagementGap"
     case windowCycleOnRepeat = "windowManagementCycleOnRepeat"
-    case quicklinksEnabled
-    case quicklinksShowInLauncher
-    case quicklinkOpensNewWindow
-    case quicklinkSelectionFallback
-    case quicklinkConfirmsBeforeDelete
+}
+
+enum PopToRootTimeout: Int, CaseIterable, Identifiable, Sendable {
+    case immediately = 0
+    case afterFive = 5
+    case afterFifteen = 15
+    case afterThirty = 30
+    case afterSixty = 60
+    case afterNinety = 90
+
+    var id: Int { rawValue }
+
+    var title: String {
+        self == .immediately ? "Immediately" : "After \(rawValue) seconds"
+    }
+
+    var interval: TimeInterval { TimeInterval(rawValue) }
 }

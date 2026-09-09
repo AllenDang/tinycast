@@ -6,13 +6,10 @@ final class BackupCoordinator {
     struct RaycastOutcome {
         var summary: SettingsBackup.ApplySummary
         var clipboardImported: Int
-        var snippetsImported: Int
-        var snippetsError: String?
         var missingImages: Int
     }
 
     private let context: SettingsBackup.Context
-    private let snippetsStore: SnippetsStore
     private let confirmAction: @MainActor (
         String, String, String, String, DialogTone, DialogAction.Role
     ) async -> Bool
@@ -20,14 +17,12 @@ final class BackupCoordinator {
 
     init(
         context: SettingsBackup.Context,
-        snippetsStore: SnippetsStore,
         confirm: @escaping @MainActor (
             String, String, String, String, DialogTone, DialogAction.Role
         ) async -> Bool,
         notice: @escaping @MainActor (String, String, String, DialogTone) async -> Void
     ) {
         self.context = context
-        self.snippetsStore = snippetsStore
         confirmAction = confirm
         noticeAction = notice
     }
@@ -70,17 +65,6 @@ final class BackupCoordinator {
                 try RaycastImport.read(file: file, passphrase: passphrase).selecting(options)
             }
         }.value
-        var snippetsImported = 0
-        var snippetsError: String?
-        if !result.snippets.isEmpty {
-            do {
-                if context.settings.snippetsEnabled { await snippetsStore.start() }
-                snippetsImported =
-                    try await snippetsStore.importSnippets(result.snippets).count
-            } catch {
-                snippetsError = error.localizedDescription
-            }
-        }
         let summary = result.backup.apply(to: context)
         let imported =
             result.clipboard.isEmpty
@@ -88,8 +72,6 @@ final class BackupCoordinator {
         return RaycastOutcome(
             summary: summary,
             clipboardImported: imported,
-            snippetsImported: snippetsImported,
-            snippetsError: snippetsError,
             missingImages: result.missingImages)
     }
 

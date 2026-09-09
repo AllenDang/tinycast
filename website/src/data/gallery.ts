@@ -54,14 +54,6 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     type: "image",
-    src: "emoji.png",
-    title: "Emoji & symbols",
-    caption: "Search the whole set; your most-used float to the top.",
-    width: 2106,
-    height: 1244,
-  },
-  {
-    type: "image",
     src: "per-app-hotkey.png",
     title: "Per-app hotkeys",
     caption: "Bind a key to an app: press to focus, again to hide.",
@@ -80,7 +72,7 @@ export const galleryItems: GalleryItem[] = [
     type: "image",
     src: "backup-import-settings.png",
     title: "Backup & import",
-    caption: "Export your whole setup, or bring it over from Raycast.",
+    caption: "Historical backup screen; retired Emoji, Snippets and Quicklinks fields are no longer imported.",
     width: 2098,
     height: 1600,
   },

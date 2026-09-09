@@ -134,8 +134,7 @@ final class ClipboardStore {
     @ObservationIgnored private var pinStmt: OpaquePointer?
     @ObservationIgnored private var staleImagesStmt: OpaquePointer?
     @ObservationIgnored private var deleteStaleStmt: OpaquePointer?
-    @ObservationIgnored private var textExistsStmt: OpaquePointer?
-    @ObservationIgnored private var imageExistsStmt: OpaquePointer?
+    @ObservationIgnored private var importHistoryStmt: OpaquePointer?
 
     init(directory: URL? = nil) {
         let base = directory ?? Self.defaultDirectory
@@ -206,25 +205,34 @@ final class ClipboardStore {
     }
 
     func importEntries(_ entries: [ClipboardItem]) -> Int {
-        guard let stmt = insertStmt else { return 0 }
+        guard let stmt = insertStmt, let historyStmt = importHistoryStmt else { return 0 }
         var seenText = Set<String>()
         var seenPath = Set<String>()
         var inserted = 0
-        sqlite3_exec(db, "BEGIN", nil, nil, nil)
+        guard sqlite3_exec(db, "BEGIN", nil, nil, nil) == SQLITE_OK else { return 0 }
+        guard var existing = existingImportKeys(entries, history: historyStmt) else {
+            sqlite3_exec(db, "ROLLBACK", nil, nil, nil)
+            return 0
+        }
         // Oldest first so newest ends up with the highest rowid (load orders by rowid DESC).
         for item in entries.sorted(by: { $0.createdAt < $1.createdAt }) {
             switch item.kind {
             case .text:
-                guard let text = item.text, !seenText.contains(text), !textExists(text) else {
+                guard let text = item.text, !seenText.contains(text),
+                    !existing.text.contains(Self.importKey(text)) else {
                     continue
                 }
                 seenText.insert(text)
             case .image:
-                guard let path = item.imagePath, !seenPath.contains(path), !imagePathExists(path)
+                guard let path = item.imagePath, !seenPath.contains(path),
+                    !existing.paths.contains(Self.importKey(path))
                 else { continue }
                 seenPath.insert(path)
             }
-            bindAndInsert(stmt, item)
+            if bindAndInsert(stmt, item) {
+                if let text = item.text { existing.text.insert(Self.importKey(text)) }
+                if let path = item.imagePath { existing.paths.insert(Self.importKey(path)) }
+            }
             inserted += 1
         }
         sqlite3_exec(db, "COMMIT", nil, nil, nil)
@@ -374,7 +382,8 @@ final class ClipboardStore {
         }
     }
 
-    private func bindAndInsert(_ stmt: OpaquePointer, _ item: ClipboardItem) {
+    @discardableResult
+    private func bindAndInsert(_ stmt: OpaquePointer, _ item: ClipboardItem) -> Bool {
         sqlite3_bind_text(stmt, 1, item.id.uuidString, -1, SQLITE_TRANSIENT)
         sqlite3_bind_text(stmt, 2, item.kind.rawValue, -1, SQLITE_TRANSIENT)
         if let text = item.text {
@@ -398,22 +407,47 @@ final class ClipboardStore {
         } else {
             sqlite3_bind_null(stmt, 7)
         }
-        sqlite3_step(stmt)
+        let succeeded = sqlite3_step(stmt) == SQLITE_DONE
         sqlite3_reset(stmt)
         sqlite3_clear_bindings(stmt)
+        return succeeded
     }
 
-    private func textExists(_ text: String) -> Bool {
-        guard let stmt = textExistsStmt else { return false }
-        sqlite3_bind_text(stmt, 1, text, -1, SQLITE_TRANSIENT)
-        defer { sqlite3_reset(stmt); sqlite3_clear_bindings(stmt) }
-        return sqlite3_step(stmt) == SQLITE_ROW
+    private static func importKey(_ value: String) -> Data {
+        // Matches sqlite3_bind_text(..., -1, ...), including its first-NUL truncation.
+        Data(value.utf8.prefix { $0 != 0 })
     }
-    private func imagePathExists(_ path: String) -> Bool {
-        guard let stmt = imageExistsStmt else { return false }
-        sqlite3_bind_text(stmt, 1, path, -1, SQLITE_TRANSIENT)
-        defer { sqlite3_reset(stmt); sqlite3_clear_bindings(stmt) }
-        return sqlite3_step(stmt) == SQLITE_ROW
+
+    private func existingImportKeys(
+        _ entries: [ClipboardItem], history: OpaquePointer
+    ) -> (text: Set<Data>, paths: Set<Data>)? {
+        var pendingText = Set(entries.compactMap(\.text).map(Self.importKey))
+        var pendingPaths = Set(entries.compactMap(\.imagePath).map(Self.importKey))
+        var text = Set<Data>()
+        var paths = Set<Data>()
+        defer { sqlite3_reset(history) }
+        // Only incoming keys are retained; even unlimited history is streamed once.
+        while !pendingText.isEmpty || !pendingPaths.isEmpty {
+            let status = sqlite3_step(history)
+            if status == SQLITE_DONE { break }
+            guard status == SQLITE_ROW else { return nil }
+            Self.collectImportMatch(history, column: 0, pending: &pendingText, matches: &text)
+            Self.collectImportMatch(history, column: 1, pending: &pendingPaths, matches: &paths)
+        }
+        return (text, paths)
+    }
+
+    private static func collectImportMatch(
+        _ stmt: OpaquePointer, column: Int32, pending: inout Set<Data>, matches: inout Set<Data>
+    ) {
+        guard !pending.isEmpty, sqlite3_column_type(stmt, column) == SQLITE_TEXT,
+            let bytes = sqlite3_column_text(stmt, column)
+        else { return }
+        // Borrow only for this lookup; remove returns the owned incoming key, never SQLite's buffer.
+        let key = Data(
+            bytesNoCopy: UnsafeMutableRawPointer(mutating: bytes),
+            count: Int(sqlite3_column_bytes(stmt, column)), deallocator: .none)
+        if let owned = pending.remove(key) { matches.insert(owned) }
     }
 
     private func owns(_ path: String) -> Bool {
@@ -493,11 +527,10 @@ final class ClipboardStore {
             WHERE created_at < ? AND pinned_at IS NULL AND image_path IS NOT NULL
             """)
         deleteStaleStmt = prepare("DELETE FROM items WHERE created_at < ? AND pinned_at IS NULL")
-        textExistsStmt = prepare("SELECT 1 FROM items WHERE text = ? LIMIT 1")
-        imageExistsStmt = prepare("SELECT 1 FROM items WHERE image_path = ? LIMIT 1")
+        importHistoryStmt = prepare("SELECT text, image_path FROM items")
         return insertStmt != nil && loadStmt != nil && windowFloorStmt != nil && searchStmt != nil
             && deleteByIDStmt != nil && pinStmt != nil && staleImagesStmt != nil
-            && deleteStaleStmt != nil && textExistsStmt != nil && imageExistsStmt != nil
+            && deleteStaleStmt != nil && importHistoryStmt != nil
     }
 
     private func prepare(_ sql: String) -> OpaquePointer? {
@@ -509,7 +542,7 @@ final class ClipboardStore {
     private func closeDatabase() {
         [
             insertStmt, loadStmt, windowFloorStmt, searchStmt, deleteByIDStmt, pinStmt,
-            staleImagesStmt, deleteStaleStmt, textExistsStmt, imageExistsStmt
+            staleImagesStmt, deleteStaleStmt, importHistoryStmt
         ].forEach { sqlite3_finalize($0) }
         insertStmt = nil
         loadStmt = nil
@@ -519,8 +552,7 @@ final class ClipboardStore {
         pinStmt = nil
         staleImagesStmt = nil
         deleteStaleStmt = nil
-        textExistsStmt = nil
-        imageExistsStmt = nil
+        importHistoryStmt = nil
         sqlite3_close_v2(db)
         db = nil
     }

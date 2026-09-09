@@ -1,6 +1,6 @@
 import Foundation
 
-enum SnippetTemplateEngine {
+enum AIPromptTemplateEngine {
     struct ExpansionContext: Sendable {
         let clipboardHistory: [String]
         let selection: String
@@ -11,15 +11,6 @@ enum SnippetTemplateEngine {
         let input: String
         /// Injected so `{uuid}` is reproducible under test.
         let makeUUID: @Sendable () -> String
-
-        var clipboard: String { clipboardHistory.first ?? "" }
-
-        func replacingSelection(with selection: String) -> Self {
-            Self(
-                clipboardHistory: clipboardHistory, selection: selection, now: now,
-                calendar: calendar, locale: locale, timeZone: timeZone, input: input,
-                makeUUID: makeUUID)
-        }
 
         init(
             clipboardHistory: [String],
@@ -43,129 +34,10 @@ enum SnippetTemplateEngine {
             self.makeUUID = makeUUID
         }
 
-        // periphery:ignore
-        init(
-            clipboard: String,
-            selection: String,
-            now: Date,
-            calendar: Calendar,
-            locale: Locale,
-            timeZone: TimeZone,
-            makeUUID: @escaping @Sendable () -> String = { UUID().uuidString }
-        ) {
-            self.init(
-                clipboardHistory: [clipboard],
-                selection: selection,
-                now: now,
-                calendar: calendar,
-                locale: locale,
-                timeZone: timeZone,
-                makeUUID: makeUUID)
-        }
     }
 
-    struct MissingArgument: Sendable, Equatable {
-        let name: String
-        let options: [String]
-    }
-
-    struct ExpansionResult: Sendable, Equatable {
-        let text: String
-        let cursorOffsetFromEnd: Int?
-        let missingArguments: [MissingArgument]
-    }
-
-    enum ValueEncoding: Sendable {
-        case none
-        case percentEncoding
-    }
-
-    private static let maximumReferenceDepth = 5
-    private static let comparisonLocale = Locale(identifier: "en_US_POSIX")
-
-    static func expand(
-        _ record: StoredSnippet,
-        snippets: [StoredSnippet],
-        context: ExpansionContext,
-        userArguments: [String: String] = [:]
-    ) -> ExpansionResult {
-        result(
-            of: expandText(
-                record.snippet.text,
-                snippets: snippets.sorted { $0.id < $1.id },
-                context: context,
-                userArguments: userArguments,
-                encoding: .none,
-                depth: 0,
-                visitedIDs: [record.id]
-            ))
-    }
-
-    static func expand(
-        text: String,
-        context: ExpansionContext,
-        userArguments: [String: String] = [:],
-        encoding: ValueEncoding = .none
-    ) -> ExpansionResult {
-        result(
-            of: expandText(
-                text,
-                snippets: [],
-                context: context,
-                userArguments: userArguments,
-                encoding: encoding,
-                depth: 0,
-                visitedIDs: []
-            ))
-    }
-
-    static func usesSelection(_ text: String) -> Bool {
-        parseSegments(text).contains { segment in
-            if case .selection = segment { return true }
-            return false
-        }
-    }
-
-    private static func result(of expansion: Expansion) -> ExpansionResult {
-        ExpansionResult(
-            text: expansion.text,
-            cursorOffsetFromEnd: expansion.cursorCharacterOffset.map { expansion.text.count - $0 },
-            missingArguments: expansion.missingArguments
-        )
-    }
-
-    private struct Expansion {
-        var text = ""
-        var cursorCharacterOffset: Int?
-        var missingArguments: [MissingArgument] = []
-        var missingArgumentNames = Set<String>()
-
-        mutating func append(_ value: String) {
-            text += value
-        }
-
-        mutating func append(_ nested: Expansion) {
-            let insertionOffset = text.count
-            if cursorCharacterOffset == nil, let nestedCursor = nested.cursorCharacterOffset {
-                cursorCharacterOffset = insertionOffset + nestedCursor
-            }
-            text += nested.text
-            for argument in nested.missingArguments {
-                addMissingArgument(argument)
-            }
-        }
-
-        mutating func markCursor() {
-            if cursorCharacterOffset == nil {
-                cursorCharacterOffset = text.count
-            }
-        }
-
-        mutating func addMissingArgument(_ argument: MissingArgument) {
-            if missingArgumentNames.insert(argument.name).inserted {
-                missingArguments.append(argument)
-            }
-        }
+    static func expand(text: String, context: ExpansionContext) -> String {
+        expandText(text, context: context)
     }
 
     // MARK: - Tokens
@@ -179,7 +51,6 @@ enum SnippetTemplateEngine {
         case uuid(modifiers: [Modifier])
         case argument(ArgumentToken, source: String, modifiers: [Modifier])
         case cursor
-        case snippetReference(key: String, source: String)
     }
 
     private struct DateTimeToken {
@@ -203,8 +74,6 @@ enum SnippetTemplateEngine {
     }
 
     private struct ArgumentToken {
-        let name: String
-        let options: [String]
         let defaultValue: String?
     }
 
@@ -222,14 +91,9 @@ enum SnippetTemplateEngine {
 
     private static func expandText(
         _ text: String,
-        snippets: [StoredSnippet],
-        context: ExpansionContext,
-        userArguments: [String: String],
-        encoding: ValueEncoding,
-        depth: Int,
-        visitedIDs: Set<StoredSnippet.ID>
-    ) -> Expansion {
-        var result = Expansion()
+        context: ExpansionContext
+    ) -> String {
+        var result = ""
         for segment in parseSegments(text) {
             switch segment {
             case .literal(let value):
@@ -237,52 +101,31 @@ enum SnippetTemplateEngine {
             case .clipboard(let offset, let modifiers):
                 let value = offset < context.clipboardHistory.count
                     ? context.clipboardHistory[offset] : ""
-                result.append(apply(modifiers, to: value, encoding: encoding))
+                result.append(apply(modifiers, to: value))
             case .selection(let modifiers):
-                result.append(apply(modifiers, to: context.selection, encoding: encoding))
+                result.append(apply(modifiers, to: context.selection))
             case .input(let modifiers):
-                result.append(apply(modifiers, to: context.input, encoding: encoding))
+                result.append(apply(modifiers, to: context.input))
             case .dateTime(let token, let modifiers):
                 result.append(
-                    apply(modifiers, to: format(token, context: context), encoding: encoding))
+                    apply(modifiers, to: format(token, context: context)))
             case .uuid(let modifiers):
-                result.append(apply(modifiers, to: context.makeUUID(), encoding: encoding))
+                result.append(apply(modifiers, to: context.makeUUID()))
             case .argument(let token, let source, let modifiers):
-                if let value = userArguments[token.name] ?? token.defaultValue {
-                    result.append(apply(modifiers, to: value, encoding: encoding))
+                if let value = token.defaultValue {
+                    result.append(apply(modifiers, to: value))
                 } else {
                     result.append(source)
-                    result.addMissingArgument(
-                        MissingArgument(name: token.name, options: token.options))
                 }
             case .cursor:
-                result.markCursor()
-            case .snippetReference(let key, let source):
-                guard depth < maximumReferenceDepth,
-                    let target = resolveReference(key, snippets: snippets),
-                    !visitedIDs.contains(target.id)
-                else {
-                    result.append(source)
-                    continue
-                }
-                var nestedVisited = visitedIDs
-                nestedVisited.insert(target.id)
-                result.append(expandText(
-                    target.snippet.text,
-                    snippets: snippets,
-                    context: context,
-                    userArguments: userArguments,
-                    encoding: encoding,
-                    depth: depth + 1,
-                    visitedIDs: nestedVisited
-                ))
+                break
             }
         }
         return result
     }
 
     private static func apply(
-        _ modifiers: [Modifier], to value: String, encoding: ValueEncoding
+        _ modifiers: [Modifier], to value: String
     ) -> String {
         let modified = modifiers.reduce(value) { partial, modifier in
             switch modifier {
@@ -294,10 +137,7 @@ enum SnippetTemplateEngine {
             case .raw: return partial
             }
         }
-        guard encoding == .percentEncoding,
-            !modifiers.contains(.raw), !modifiers.contains(.percentEncode)
-        else { return modified }
-        return percentEncoded(modified)
+        return modified
     }
 
     private static func percentEncoded(_ value: String) -> String {
@@ -374,7 +214,7 @@ enum SnippetTemplateEngine {
         if head.hasPrefix("snippet:") {
             let key = head.dropFirst("snippet:".count).trimmingCharacters(in: .whitespaces)
             guard !key.isEmpty, modifiers.isEmpty else { return nil }
-            return .snippetReference(key: key, source: source)
+            return .literal(source)
         }
 
         guard let token = parseToken(head) else { return nil }
@@ -404,7 +244,7 @@ enum SnippetTemplateEngine {
             guard let name = token.parameters["name"]?.trimmingCharacters(in: .whitespaces),
                 !name.isEmpty, token.hasOnly(["name"]), modifiers.isEmpty
             else { return nil }
-            return .snippetReference(key: name, source: source)
+            return .literal(source)
         default:
             return nil
         }
@@ -471,8 +311,7 @@ enum SnippetTemplateEngine {
             .map { $0.trimmingCharacters(in: .whitespaces) }
             .filter { !$0.isEmpty }
         if token.parameters["options"] != nil, options.isEmpty { return nil }
-        return ArgumentToken(
-            name: name, options: options, defaultValue: token.parameters["default"])
+        return ArgumentToken(defaultValue: token.parameters["default"])
     }
 
     private static func format(_ token: DateTimeToken, context: ExpansionContext) -> String {
@@ -620,26 +459,4 @@ enum SnippetTemplateEngine {
         return nil
     }
 
-    // MARK: - References
-
-    private static func resolveReference(
-        _ key: String,
-        snippets: [StoredSnippet]
-    ) -> StoredSnippet? {
-        let normalizedKey = normalizeReference(key)
-        let candidates = snippets.filter { $0.snippet.isEnabled }
-        if let nameMatch = candidates.first(where: {
-            normalizeReference($0.snippet.name) == normalizedKey
-        }) {
-            return nameMatch
-        }
-        return candidates.first(where: {
-            guard let keyword = $0.snippet.keyword else { return false }
-            return normalizeReference(keyword) == normalizedKey
-        })
-    }
-
-    private static func normalizeReference(_ value: String) -> String {
-        value.folding(options: [.caseInsensitive], locale: comparisonLocale)
-    }
 }

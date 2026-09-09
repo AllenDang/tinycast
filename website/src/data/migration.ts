@@ -5,7 +5,7 @@
 
 export const migration = {
   eyebrow: "Coming from Raycast?",
-  title: "Bring everything over in one click.",
+  title: "Bring your essentials from Raycast.",
   intro:
     "Tinycast reads a Raycast export directly. Point it at your .rayconfig file, type your passphrase, and your setup comes across — no redoing shortcuts by hand.",
   steps: [
@@ -22,12 +22,11 @@ export const migration = {
       body: "Keep it all or just the parts you want — then you're set up.",
     },
   ],
-  // Must match RaycastImportOptions in RaycastImport.swift.
+  // Must match RaycastImportOptions in RaycastFormat.swift.
   transfers: [
     "Shortcuts",
     "Favorites",
     "Clipboard history",
-    "Emoji skin tone",
     "Launch at login",
     "Menu-bar preference",
   ],

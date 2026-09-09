@@ -44,6 +44,7 @@ enum FuzzyMatch {
         }
     }
 
+    // periphery:ignore - exercised by Tools/fuzz-test.swift.
     static func match(query: String, candidate: String) -> Match? {
         match(Query(query), candidate: candidate)
     }
@@ -67,7 +68,7 @@ enum FuzzyMatch {
         return Match(tier: .subsequence, score: sub)
     }
 
-    /// Score-only form, for callers that rank one field and don't band by match strength.
+    // periphery:ignore - exercised by Tools/fuzz-test.swift.
     static func score(query: String, candidate: String) -> Int? {
         match(query: query, candidate: candidate)?.score
     }

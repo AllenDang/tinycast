@@ -40,8 +40,6 @@ struct BundleMetaCache: Sendable {
 final class AppIndex {
     private(set) var apps: [AppEntry] = []
 
-    private var snippetEntries: [AppEntry] = []
-
     private struct MatchKey: Equatable {
         let query: String
         let entriesRevision: Int
@@ -83,9 +81,6 @@ final class AppIndex {
     private var discoveredEntries: [AppEntry] = []
     private var customCommandEntries: [AppEntry] = []
     private var windowCommandEntries: [AppEntry] = []
-    private var quicklinkEntries: [AppEntry] = []
-    /// Built-in commands minus the quicklink ones while the feature is off.
-    private var commandEntries: [AppEntry] = CommandCatalog.all
     private var alternateNameCache = SpotlightNames.Cache()
     private var paneCache: SettingsPaneScanner.Cache?
     private var bundleMetaCache = BundleMetaCache()
@@ -111,51 +106,10 @@ final class AppIndex {
         publishEntries()
     }
 
-    func setQuicklinks(_ quicklinks: [Quicklink], commandsVisible: Bool) {
-        let entries = quicklinks
-            .filter(\.showsInRootSearch)
-            .sorted(by: Quicklink.precedes)
-            .map { quicklink in
-                AppEntry(
-                    id: quicklink.entryID, name: quicklink.name,
-                    url: URL(string: "tinycast://quicklink/" + quicklink.id.uuidString)!,
-                    bundleID: nil, kind: .quicklink,
-                    symbolName: quicklink.iconSymbol
-                        ?? QuicklinkDestination.detect(quicklink.link)?.defaultSymbol)
-            }
-        let commands = commandsVisible
-            ? CommandCatalog.all
-            : CommandCatalog.all.filter { entry in
-                CommandCatalog.command(for: entry).map { !$0.isQuicklinkCommand } ?? true
-            }
-        guard entries != quicklinkEntries || commands != commandEntries else { return }
-        quicklinkEntries = entries
-        commandEntries = commands
-        publishEntries()
-    }
-
     func setWindowCommandsVisible(_ visible: Bool) {
         let entries = visible ? Self.allWindowCommandEntries : []
         guard entries != windowCommandEntries else { return }
         windowCommandEntries = entries
-        publishEntries()
-    }
-
-    func updateSnippets(_ records: [StoredSnippet]) {
-        let entries = records
-            .filter { $0.snippet.isEnabled }
-            .map { record in
-                AppEntry(
-                    id: "snippet:\(record.id)",
-                    name: record.snippet.name,
-                    url: record.fileURL,
-                    bundleID: nil,
-                    kind: .snippet,
-                    matchAliases: [record.snippet.keyword].compactMap { $0 })
-            }
-            .sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
-        guard entries != snippetEntries else { return }
-        snippetEntries = entries
         publishEntries()
     }
 
@@ -250,8 +204,8 @@ final class AppIndex {
 
     private func publishEntries() {
         let combined =
-            discoveredEntries + quicklinkEntries + snippetEntries + Self.systemActionEntries
-            + windowCommandEntries + customCommandEntries + commandEntries
+            discoveredEntries + Self.systemActionEntries
+            + windowCommandEntries + customCommandEntries + CommandCatalog.all
         let updated = combined.map { entry -> AppEntry in
             guard entry.normalizedSearchFields == nil else { return entry }
             var normalized = entry

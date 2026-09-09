@@ -1,26 +1,5 @@
 import Foundation
 
-struct DialogField: Equatable, Sendable {
-    let name: String
-    let options: [String]
-}
-
-@MainActor
-@Observable
-final class DialogFieldState {
-    let fields: [DialogField]
-    var entries: [String: String]
-
-    init(fields: [DialogField]) {
-        self.fields = fields
-        entries = fields.reduce(into: [:]) { values, field in
-            values[field.name] = field.options.first ?? ""
-        }
-    }
-
-    var collected: [String: String] { entries }
-}
-
 struct DialogAction {
     enum Role {
         case standard
@@ -50,5 +29,4 @@ struct DialogRequest {
     var cancelIndex: Int
     /// Set only by the Set Volume prompt; the slider binds to it and the caller reads the result.
     var volume: VolumeState?
-    var fields: DialogFieldState?
 }

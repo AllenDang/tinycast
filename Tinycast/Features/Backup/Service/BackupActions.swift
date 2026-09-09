@@ -4,7 +4,6 @@ import UniformTypeIdentifiers
 /// Stateless file panels, Raycast detection and summary formatting shared by backup UI flows.
 @MainActor
 enum BackupActions {
-    /// The JSON save panel, shared with the quicklinks archive.
     static func chooseSaveLocation(named base: String) -> URL? {
         let panel = NSSavePanel()
         panel.allowedContentTypes = [.json]
@@ -65,7 +64,6 @@ enum BackupActions {
         if summary.customCommands > 0 {
             parts.append("\(summary.customCommands) custom commands")
         }
-        if summary.quicklinks > 0 { parts.append("\(summary.quicklinks) quicklinks") }
         guard !parts.isEmpty else { return nil }
         return "Applied " + parts.joined(separator: ", ") + "."
     }

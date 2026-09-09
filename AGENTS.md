@@ -1,7 +1,7 @@
 ## Project
 
 Tinycast is a native macOS menu-bar launcher (a minimal Raycast): fuzzy app launcher, global +
-per-app hotkeys, a text/image clipboard history, an inline calculator, and an emoji picker. SwiftUI +
+per-app hotkeys, a text/image clipboard history, an inline calculator, and AI commands. SwiftUI +
 AppKit, runs as an accessory (no Dock icon, `LSUIElement`). Targets **macOS 26+** (Liquid Glass) and
 builds with the **Xcode 26** toolchain.
 
@@ -45,11 +45,9 @@ code — come from the global `CLAUDE.md` and are not repeated here. Tinycast ad
 | `…Controller` | Owns an AppKit window or panel lifecycle. |
 | `…Coordinator` | Orchestrates one feature's multi-step flow across collaborators. |
 
-Retire `Manager`, public `Registry` and `ViewModel`. A private `Registry` may guard an internal identity
-map, as in `SnippetRepository`. `Launcher` is reserved for `NSWorkspace.open` wrappers
-(`AppLauncher`, `QuicklinkLauncher`), while `SnippetRepository` keeps its name for revision-checked,
-conflict-detecting file semantics. Domain terms `Injector`, `Mover` and `Tap` remain when they name the
-platform mechanism directly.
+Retire `Manager`, public `Registry` and `ViewModel`. `Launcher` is reserved for `NSWorkspace.open`
+wrappers (`AppLauncher`). Domain terms `Mover` and `Tap` remain when they name the platform mechanism
+directly.
 
 ## Architecture
 
@@ -63,11 +61,24 @@ Full detail: [`docs/architecture.md`](docs/architecture.md).
   `AuxWindowController`. SwiftUI `Settings` / `Window` scenes are deliberately avoided (unreliable for
   accessory apps).
 - **Subsystems:** [palette](docs/palette.md) · [launcher & fuzzy match](docs/launcher.md) ·
-  [calculator](docs/calculator.md) · [clipboard](docs/clipboard.md) · [emoji](docs/emoji.md) ·
-  [snippets](docs/snippets.md) · [quicklinks](docs/quicklinks.md) · [AI commands](docs/ai-commands.md) ·
+  [calculator](docs/calculator.md) · [clipboard](docs/clipboard.md) · [AI commands](docs/ai-commands.md) ·
   [window management](docs/window-management.md) ·
   [hotkeys](docs/hotkeys.md) · [uninstall](docs/uninstall.md) ·
   [Raycast import](docs/raycast-import.md) · [UI & design system](docs/ui.md).
+
+## Intentional feature retirement
+
+Emoji, Snippets and Quicklinks are retired end-to-end. Do not restore their product routes or stores.
+Only bounded backup compatibility and explicit legacy cleanup identification remain. AI owns its pure
+`AIPromptTemplateEngine`; its existing prompt outputs are preserved without snippet storage, text
+injection or Quicklinks URL expansion. `Tools/ai-prompt-template-test.swift` tests the shipped engine.
+
+Legacy cleanup is an explicit Settings → General gesture through the AppCore-owned coordinator and
+DialogController, never a startup prompt or deletion. Only the running bundle identifier is targeted;
+files go to Trash, preferences clear only after successful relevant cleanup, and failures remain
+retryable. Never open/discard a legacy Quicklinks database to clean it up. DB and sidecars are grouped
+in a validated private sibling folder before Trash; staging/rollback is not an atomic transaction.
+Tests inject Trash and use isolated fixtures. See [development.md](docs/development.md#legacy-cleanup).
 
 ## Critical Invariants
 
@@ -96,19 +107,14 @@ Never break these without an explicit task to do so.
 - **`Features/Calculator/Model/` (incl. `CalcDateTime`) must stay Foundation-only and pure** — no
   AppKit / SwiftUI imports, no clock or network reads. `Tools/calc-test.swift` compiles the real
   engine sources. Both externally-sourced inputs are injected: the clock via `now`/`calendar`, the
-  FX table via `rates` (`CurrencyRateStore` owns the fetch). Likewise `Features/Emoji/Model/`
-  (`EmojiCatalog`, `EmojiGridGeometry`) stays AppKit/SwiftUI-free for `Tools/emoji-test.swift`, and
-  `Features/Clipboard/Model/ClipboardStore.swift` stays Foundation + SQLite3 with no other app source
+  FX table via `rates` (`CurrencyRateStore` owns the fetch). Likewise `Features/Clipboard/Model/ClipboardStore.swift` stays Foundation + SQLite3 with no other app source
   for `Tools/clipboard-test.swift`. `Features/Launcher/Model/LauncherRankingStore.swift` is the same
   deal for `Tools/ranking-test.swift` — Foundation only, with the clock injected via `now` and the
   store path via `fileURL`, as is `Features/Launcher/Model/SearchScopes.swift` for
   `Tools/scopes-test.swift`. `Features/CustomCommands/Model/CustomCommand.swift` and
   `Features/CustomCommands/Service/ShellCommandRunner.swift` likewise stay free of AppKit / SwiftUI
   (Foundation plus Darwin for `mkstemp`) for `Tools/custom-command-test.swift`; the confirmation gate
-  therefore lives outside the runner. `Features/Snippets/Model/` and `Features/Snippets/Service/`
-  compile into `Tools/snippets-test.swift`, so the model, Markdown serializer, template engine,
-  repository and keyword policies stay Foundation-only, and the AppKit files keep dependencies the
-  harness can stub. `Features/SystemActions/Model/SystemAction.swift` is Foundation-only for
+  therefore lives outside the runner. `Features/SystemActions/Model/SystemAction.swift` is Foundation-only for
   `Tools/system-action-test.swift`; platform effects belong in `SystemActionRunner`, while
   confirmation and failure UI stay outside the runner. `Features/SystemActions/Model/VolumeLevel.swift`
   is the same split for `Tools/volume-test.swift`: the 5% grid and percentage string are pure
@@ -145,19 +151,6 @@ Never break these without an explicit task to do so.
   `UninstallSelection`'s one intersection, not in the view. Tinycast also refuses to plan its own
   uninstall, compared against the **running** identity so the Dev channel refuses itself too.
   See [uninstall.md](docs/uninstall.md).
-- **Quicklinks are authored data, and their store never deletes.** `Features/Quicklinks/` splits like
-  `Features/Uninstall/`: `Quicklink.swift`, `QuicklinkDestination.swift`, `QuicklinkStore.swift` and
-  `QuicklinkArchive.swift` stay Foundation-only (plus SQLite3) and pure for
-  `Tools/quicklink-test.swift` — the home directory is injected, never read — while `QuicklinkLauncher`
-  owns every `NSWorkspace` call and `QuicklinkArgumentSession` the prompt state. The database lives in
-  **Application Support**, not Caches, and a database that won't open is **reported, never discarded**:
-  `ClipboardStore`'s delete-and-recreate is only sound because history is regenerable, and a link
-  library is not. `Quicklink.precedes` is the one display order, sorted through by both the store and
-  the `AppIndex` slice. There is **one template engine**: quicklinks expand through
-  `SnippetTemplateEngine` rather than a second parser, which is what makes `| raw` mean something —
-  it opts a value out of the automatic percent-encoding a URL destination asks for. `{selectedText}`
-  is accepted as an alias for `{selection}`, but nothing ever _writes_ it. See
-  [quicklinks.md](docs/quicklinks.md).
 - **`Features/Launcher/Model/SearchRelevance.swift` is Foundation-only and pure**, so `Tools/fuzz-test.swift` compiles
   the shipped scorer rather than a copy of it. It owns both `FuzzyMatch` (the tiered
   exact/prefix/word-start/substring/subsequence scorer) and the field bands. **Searchable fields stay
@@ -166,8 +159,7 @@ Never break these without an explicit task to do so.
   order of magnitude above `FuzzyMatch.maximumScore` and two above `LauncherRankingStore`'s boost cap:
   that gap is what keeps a learned boost reordering _within_ a tier and never across a tier or a
   field. A new searchable field means a new `Band` case and a `consider` call, in priority order.
-- **`EmojiData.generated.swift` is emitted by `node Tools/gen-emoji.js` and
-  `CurrencyData.generated.swift` by `node Tools/gen-currencies.js`** — never edit either by hand.
+- **`CurrencyData.generated.swift` is emitted by `node Tools/gen-currencies.js`** — never edit it by hand.
   Currency names, signs and uncontested nouns are generated (Frankfurter × CLDR); the only
   hand-maintained currency data is `CalcCurrency.contested`, the nouns several currencies share
   (`dollars`, `pounds`). Don't add slang or synonyms there — no source of truth, so they rot.
@@ -192,18 +184,11 @@ Never break these without an explicit task to do so.
   `Bundle.main.bundleIdentifier` like every other channel-isolated store) instead of `UserDefaults` or
   a settings file; the base URL and model aren't secrets and stay in plain `UserDefaults` beside the
   consent flag. See [ai-commands.md](docs/ai-commands.md).
-- **Snippets are channel-isolated and path-identified.** Persist them under
-  `~/Library/Application Support/<bundle-id>/Snippets/`; `StoredSnippet.ID` is the standardized source
-  path, and external rename is delete + create. The feature ships off and its enable switch doubles as
-  keyword-expansion consent: `snippetsEnabled` is excluded from settings backups, and Accessibility —
-  the only permission, since the listen-only tap needs nothing more — may be requested only from that
-  explicit Settings gesture, never from startup, callbacks, watchers or health checks.
-  See [snippets.md](docs/snippets.md).
 - **Settings backups stay an explicit hand-written mirror.**
   `Features/Settings/SettingsKeys.swift` and `Features/Backup/Model/SettingsData.swift` stay
   Foundation-only for `Tools/settings-backup-test.swift`. Every `AppSettingsKey` must map to one
-  `SettingsData.CodingKeys` case or carry a named exclusion reason; `snippetsEnabled` is the sole
-  exclusion because importing it would grant keyword-expansion consent. The only fields sourced
+  `SettingsData.CodingKeys` case or carry a named exclusion reason. Every current key is mirrored;
+  consent for network features remains outside AppSettings. The only fields sourced
   outside `AppSettingsKey` are `launchAtLogin` and `showInMenuBar`. Never replace this gate with
   reflection, a macro or an include-everything fallback.
 - **The two Raycast export formats share no mapper.** `RaycastFormat.detect` is the _only_ branch
@@ -213,7 +198,7 @@ Never break these without an explicit task to do so.
   `RaycastImport.Result`. `RaycastFormat.swift` and `RaycastV1Decoder.swift` stay Foundation +
   CommonCrypto + Carbon so `Tools/raycast-test.swift` compiles them standalone, which is why the
   decoder returns Raycast's own values and `RaycastImportV1` — not the decoder — validates them
-  against `PopToRootTimeout` / `EmojiSkinTone` / `HyperKeyPhysicalKey` / `KeyShortcut`. Never commit a
+  against `PopToRootTimeout` / `HyperKeyPhysicalKey` / `KeyShortcut`. Never commit a
   real `.rayconfig` as a fixture: the harness builds its own. See
   [raycast-import.md](docs/raycast-import.md).
 - **Swift 6 language mode: data-race violations are hard errors.** Almost everything is `@MainActor`;
@@ -232,8 +217,7 @@ Never break these without an explicit task to do so.
   confirmation, failure report and value prompt goes through `DialogController` (`Windows/Dialog/`,
   owned by `AppCore`; feature coordinators receive narrow presentation closures). Presentation is
   `async`, so there is no nested run loop, and the presenter refuses a second dialog while one is up
-  — that, not a flag, is what stops a held hotkey stacking dialogs. Argument forms use the same
-  controller and continuation. **↵ runs the primary action, Escape cancels, and Cancel always renders
+  — that, not a flag, is what stops a held hotkey stacking dialogs. **↵ runs the primary action, Escape cancels, and Cancel always renders
   leading** (the left button), matching macOS convention.
 - **A dialog has three independent axes; never let one infer another.** The **icon**
   (`DialogRequest.symbol`, required) is always the _subject's_ own glyph — the command being
@@ -247,7 +231,7 @@ Never break these without an explicit task to do so.
   (`DesignSystem/Tooltip.swift`) instead, styled like the palette's own keycap chips.
 - **A transient readout is a HUD, not a dialog.** `VolumeHUDController`'s box is volume/mute only,
   since that one needs an actual level and number; every other success/info confirmation (system
-  commands, Custom Commands, Snippets) goes through `MessageHUDController`'s pill, whose trailing
+  commands, Custom Commands) goes through `MessageHUDController`'s pill, whose trailing
   glyph _is_ its `DialogTone` — a pill has no subject to name, so the dialogs' icon rule doesn't
   apply, and the mapping stays file-scoped so nothing can reach for it when building a
   `DialogRequest`. Both are driven by `HUDPresenter`, which owns the one-at-a-time / auto-dismiss /
@@ -277,5 +261,5 @@ Never break these without an explicit task to do so.
   protocol. `Palette/PaletteRowIndex.swift` remains the Foundation-only selection map.
 - `Tinycast/Windows/` holds dialogs, HUDs, About and the shared auxiliary-window controller.
 - `Tinycast/App/` contains `AppCore`, the `@main` app and its delegate.
-- `Tools/` — standalone test harnesses and the emoji generator.
+- `Tools/` — standalone test harnesses and the currency generator.
 - `.github/workflows/release.yml` — the entire release pipeline (see `docs/development.md`).

@@ -26,10 +26,10 @@ final class AICommandSession {
         self.input = input
         state = .loading
 
-        let context = SnippetTemplateEngine.ExpansionContext(
+        let context = AIPromptTemplateEngine.ExpansionContext(
             clipboardHistory: [], selection: "", now: Date(), calendar: .current,
             locale: .current, timeZone: .current, input: input)
-        let prompt = SnippetTemplateEngine.expand(text: command.promptTemplate, context: context).text
+        let prompt = AIPromptTemplateEngine.expand(text: command.promptTemplate, context: context)
 
         task = Task { [weak self] in
             guard isEnabled() else {

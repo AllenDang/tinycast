@@ -4,7 +4,6 @@ enum RaycastImport {
     struct Result {
         var backup: SettingsBackup
         var clipboard: [ClipboardItem]
-        var snippets: [Snippet]
         var missingImages: Int
 
         func selecting(_ options: RaycastImportOptions) -> Result {
@@ -14,10 +13,6 @@ enum RaycastImport {
 
             var settings = SettingsData()
             var hasSettings = false
-            if options.contains(.emojiSkinTone), let tone = backup.settings?.emojiSkinTone {
-                settings.emojiSkinTone = tone
-                hasSettings = true
-            }
             if options.contains(.launchAtLogin), let launch = backup.settings?.launchAtLogin {
                 settings.launchAtLogin = launch
                 hasSettings = true
@@ -66,7 +61,6 @@ enum RaycastImport {
             return Result(
                 backup: trimmed,
                 clipboard: keepClipboard ? clipboard : [],
-                snippets: options.contains(.snippets) ? snippets : [],
                 missingImages: keepClipboard ? missingImages : 0)
         }
     }

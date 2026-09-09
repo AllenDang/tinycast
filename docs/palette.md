@@ -13,19 +13,10 @@ UUID) so the SwiftUI search field re-focuses. `RootPaletteView` switches its con
 - `.clipboard` → `ClipboardList` + preview
 - `.calculatorHistory` → `CalculatorHistoryList`
 - `.uninstall` → `UninstallList` (see [uninstall.md](uninstall.md))
-- `.quicklinks` → `QuicklinkList`
-- `.quicklinkArguments` → `QuicklinkArgumentsView` (see [quicklinks.md](quicklinks.md#the-argument-prompt))
+- `.aiCommand` → `AICommandScreen`
 
-Clipboard and Calculator History are sub-screens reached from the launcher (Tab, a command, or a
-hotkey) and back out to it. Uninstall is one too, but reached only from a launcher app's Actions menu
-and scoped to that app; like Calculator History it stays out of the Tab cycle. So do both Quicklinks
-screens.
-
-The argument screen is the one mode where the search field is not a search field: it _is_ the current
-argument's input, so its placeholder names that argument and ↵ submits rather than activating a row.
-Its own state lives on `AppCore.quicklinkArguments`, the way `.uninstall`'s target lives on
-`UninstallSession`, and leaving the mode cancels the pending open. A bare backspace steps back an
-argument before it falls through to the usual exit-to-launcher.
+Clipboard and Calculator History are sub-screens reached from the launcher. Uninstall and AI
+commands are entered only from their own flows and remain outside the Tab cycle.
 
 The flat `selection` index is the single source of truth for highlight / activation and **must always
 match the visible row order**, including the inline calculator card at index 0 when present (see
@@ -136,6 +127,6 @@ app:
 Both require the Accessibility permission (`Permissions.ensureAccessibility()`).
 
 The same show also mirrors that app into `PaletteState.pasteTarget` (a `PasteTarget`: localized
-name + bundle path), so Clipboard and Emoji can name it — the footer pill reads "Paste to Notes" and
+name + bundle path), so Clipboard can name it — the footer pill reads "Paste to Notes" and
 the ⌘K paste rows carry the app's icon. Resolved once per summon, never per render, and deliberately
 not cleared by `prepare` (pop-to-root resets the screen, not the target).

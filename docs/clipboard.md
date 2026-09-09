@@ -53,3 +53,58 @@ partial index on `pinned_at` (`Tools/clipboard-test.swift` covers the shape). Th
 `pinned_at IS NOT NULL OR rowid >= ?` form reads better but cannot be driven from an index while
 holding row order, so it scans the whole table — ~12ms against ~1ms at 200k rows, on the main actor
 at launch.
+
+## Bulk import deduplication
+
+Import retains only the incoming UTF-8 keys and streams existing history once through
+`SELECT text, image_path FROM items`. Borrowed SQLite buffers are used only during a lookup; retained
+matches come from owned incoming keys. Memory therefore scales with incoming payloads, not unlimited
+history. No persistent equality index, schema migration or extra on-disk copy of long text is added.
+
+Historical equality remains SQLite BINARY text equality. Incoming lookup keys mirror the current
+`sqlite3_bind_text(..., -1, ...)` first-NUL truncation, whereas existing database values are compared
+at their full byte length. The original within-batch `Set<String>` deliberately still uses Swift
+canonical Unicode equality. Successful inserts update both text and image-path lookup sets, including
+records carrying both fields. Oldest-first insertion, pin/source metadata and load order are unchanged.
+
+A failed BEGIN returns without touching another transaction. A history-scan failure resets its
+statement, rolls back the owned transaction and returns zero without inserting or reloading. The
+existing API's count quirk is retained: it counts attempted inserts even when a UUID constraint
+rejects one, and its within-batch seen set still suppresses a later identical attempt. Regression
+tests pin this behavior rather than changing import semantics as part of a performance optimization.
+
+### Reproduce the isolated benchmark
+
+```sh
+swiftc -O -swift-version 6 Tinycast/Features/Clipboard/Model/ClipboardStore.swift \
+    Tools/clipboard-import-benchmark.swift -o /tmp/clipboard-import-benchmark
+/tmp/clipboard-import-benchmark 20000 2000 50
+/tmp/clipboard-import-benchmark 50000 5000 10
+/tmp/clipboard-import-benchmark 50000 5000 90
+```
+
+Arguments are existing rows, incoming base rows, and the percentage matching existing history. An
+additional within-batch duplicate is appended every ten incoming rows. Fixtures use 10% image paths
+and 5% long text (about 16.5 KiB each); all database/filesystem effects stay in fresh temporary roots.
+The timed interval is `importEntries`, including inserts, FTS maintenance, commit, load and pruning;
+fixture setup is excluded. These are synthetic store measurements, **not UI latency**.
+
+Measured with Xcode 26.6, optimized Swift 6 builds on the development Mac:
+
+| Existing | Incoming including repeats | Existing duplicates | Inserted | Before | After |
+| ---: | ---: | ---: | ---: | ---: | ---: |
+| 20,000 | 2,200 | 50% | 1,000 | 7.022 s | 0.917 s |
+| 50,000 | 5,500 | 10% | 4,500 | 63.434 s | 2.676 s |
+| 50,000 | 5,500 | 90% | 500 | 30.272 s | 2.224 s |
+
+A separate instrumented 20,000/2,200 run measured `SQLITE_STMTSTATUS_FULLSCAN_STEP` across import
+lookups: **31,467,000 → 19,999**. Equality EXPLAIN still says `SCAN items`, because no equality index
+was added; those repeated equality statements are no longer used by import.
+
+Process peak RSS was about 51.9 MiB for the first fixture and 94.3 MiB for both larger fixtures, for
+both implementations. The fixture-setup high-water mark was not exceeded during import, so these
+figures do not isolate transient key-allocation overhead. Key retention is bounded by incoming bytes
+plus hash-table entries; SQLite streams historical pages rather than retaining every historical text.
+Database sizes after import remained about 41.4 / 106.5 / 99.1 MiB respectively. Small differences
+between runs reflect fresh UUID/B-tree layout, not a new index. A full-history set or permanent
+long-text index would retain another history-sized representation; neither is necessary here.

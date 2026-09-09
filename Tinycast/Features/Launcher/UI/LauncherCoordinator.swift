@@ -9,8 +9,6 @@ final class LauncherCoordinator {
     private let customCommands: CustomCommandCoordinator
     private let systemActions: SystemActionCoordinator
     private let windowManagement: WindowManagementCoordinator
-    private let quicklinks: QuicklinkCoordinator
-    private let snippets: SnippetExpansionCoordinator
     private let backup: BackupCoordinator
     private let uninstall: UninstallCoordinator
     private let presentation: PresentationActions
@@ -22,8 +20,6 @@ final class LauncherCoordinator {
         customCommands: CustomCommandCoordinator,
         systemActions: SystemActionCoordinator,
         windowManagement: WindowManagementCoordinator,
-        quicklinks: QuicklinkCoordinator,
-        snippets: SnippetExpansionCoordinator,
         backup: BackupCoordinator,
         uninstall: UninstallCoordinator,
         presentation: PresentationActions
@@ -34,8 +30,6 @@ final class LauncherCoordinator {
         self.customCommands = customCommands
         self.systemActions = systemActions
         self.windowManagement = windowManagement
-        self.quicklinks = quicklinks
-        self.snippets = snippets
         self.backup = backup
         self.uninstall = uninstall
         self.presentation = presentation
@@ -69,11 +63,7 @@ final class LauncherCoordinator {
         case .windowCommand:
             guard let command = WindowCommandCatalog.command(forEntryID: app.id) else { return }
             windowManagement.run(id: command.id)
-        case .quicklink:
-            guard let id = Quicklink.id(fromEntryID: app.id) else { return }
-            quicklinks.openQuicklink(id: id)
-        case .application, .systemSettings, .snippet:
-            let previous = palette.previousApp
+        case .application, .systemSettings:
             palette.hidePalette(restoreFocus: false)
             switch app.kind {
             case .application:
@@ -81,10 +71,7 @@ final class LauncherCoordinator {
             case .systemSettings:
                 guard let bundleID = app.bundleID else { return }
                 AppLauncher.openSettingsPane(bundleID: bundleID)
-            case .snippet:
-                let snippetID = String(app.id.dropFirst("snippet:".count))
-                snippets.expandSnippet(id: snippetID, targetApp: previous)
-            case .command, .customCommand, .systemAction, .windowCommand, .quicklink:
+            case .command, .customCommand, .systemAction, .windowCommand:
                 break
             }
         }
@@ -124,19 +111,6 @@ final class LauncherCoordinator {
             palette.showPalette(mode: .calculatorHistory)
         case .clipboardHistory:
             palette.showPalette(mode: .clipboard)
-        case .searchEmoji:
-            palette.showPalette(mode: .emoji)
-        case .searchQuicklinks:
-            palette.showPalette(mode: .quicklinks)
-        case .createQuicklink:
-            palette.hidePalette(restoreFocus: false)
-            quicklinks.editQuicklink(nil)
-        case .importQuicklinks:
-            palette.hidePalette(restoreFocus: false)
-            Task { await quicklinks.importQuicklinks() }
-        case .exportQuicklinks:
-            palette.hidePalette(restoreFocus: false)
-            Task { await quicklinks.exportQuicklinks() }
         case .exportSettings:
             palette.hidePalette(restoreFocus: false)
             Task { await backup.exportSettings() }

@@ -44,7 +44,7 @@ enum RaycastTests {
         hotkeyParsing()
         preferenceMapping()
         clipboardMapping()
-        favoritesAndSnippets()
+        favorites()
         gunzipSlices()
 
         print("\(passes) passed, \(failures) failed")
@@ -243,7 +243,6 @@ enum RaycastTests {
         }
 
         expect(parsed.popToRootTimeout == 90, "popToRootTimeout")
-        expect(parsed.emojiSkinTone == "medium", "emojiSkinTone")
         expect(parsed.useHyperKeyIcon == true, "useHyperKeyIcon")
         expect(parsed.hyperKey?.enabled == true, "hyper key enabled")
         expect(parsed.hyperKey?.keyCode == 57, "hyper key is a Carbon code, not a name")
@@ -259,7 +258,6 @@ enum RaycastTests {
             parsed.appHotkeys["net.freemacsoft.AppCleaner"]?.carbonModifiers == 6912,
             "app hotkey modifiers")
         expect(parsed.toggleClipboard?.carbonKeyCode == 9, "clipboard command hotkey")
-        expect(parsed.toggleEmoji?.carbonKeyCode == 49, "emoji command hotkey")
 
         // A v1 export has no global palette hotkey and no launch-at-login flag to find.
         let empty = payload("""
@@ -277,7 +275,6 @@ enum RaycastTests {
                 "raycast_hyperKey_state": {"enabled": true}}}}
             """)
         expect(wrongTypes?.popToRootTimeout == nil, "a string timeout is ignored")
-        expect(wrongTypes?.emojiSkinTone == nil, "a numeric skin tone is ignored")
         expect(wrongTypes?.hyperKey == nil, "a hyper key without a key code is ignored")
 
         let disabledHyper = payload("""
@@ -361,9 +358,9 @@ enum RaycastTests {
         expect(payload("{}")?.clipboard.isEmpty == true, "no clipboard provider means no clips")
     }
 
-    // MARK: - Favorites and snippets
+    // MARK: - Favorites
 
-    static func favoritesAndSnippets() {
+    static func favorites() {
         let favorites = payload("""
             {"builtin_package_navigation": {"pinnedMenuItems": [
                 {"key": "org.alacritty"},
@@ -379,18 +376,6 @@ enum RaycastTests {
             "app favorites keep their order; commands and junk are dropped")
         expect(payload("{}")?.favorites.isEmpty == true, "no navigation provider means no favorites")
 
-        let snippets = payload("""
-            {"builtin_package_snippets": {"snippets": [
-                {"name": "Sig", "text": "Best,\\nAB", "keyword": ";sig"},
-                {"name": "  Padded  ", "text": "x", "keyword": "   "},
-                {"name": "   ", "text": "no name"},
-                {"name": "No text"}
-            ]}}
-            """)
-        expect(snippets?.snippets.count == 2, "unnamed and text-less snippets are dropped")
-        expect(snippets?.snippets.first?.keyword == ";sig", "keyword carries over")
-        expect(snippets?.snippets.last?.name == "Padded", "names are trimmed")
-        expect(snippets?.snippets.last?.keyword == nil, "a blank keyword becomes nil")
     }
 
     // MARK: - Gunzip

@@ -42,7 +42,7 @@ strongest one becomes the entry's base relevance:
 
 | Band | Field                                   | Match strength                                    |
 | ---- | --------------------------------------- | ------------------------------------------------- |
-| 5    | display name (plus a snippet's keyword) | literal — exact / prefix / word-start / substring |
+| 5    | display name | literal — exact / prefix / word-start / substring |
 | 4    | Spotlight alternate names               | literal                                           |
 | 3    | display name                            | subsequence                                       |
 | 2    | Spotlight alternate names               | subsequence                                       |
@@ -103,7 +103,7 @@ permission-aware failures. With the palette closed it targets the frontmost app,
 Quit All act on the same window a palette launch would have.
 
 System actions occupy their own launcher section and their own Settings pane. The empty-query publication
-order is applications, System Settings, quicklinks, snippets, system actions, window commands, custom
+order is applications, System Settings, system actions, window commands, custom
 commands, then built-in commands; the sectioned view filters in that same order so the visible rows remain
 identical to the flat selection index.
 Search, favorites, visibility and learned ranking work through the normal `AppEntry` path, and every
@@ -127,7 +127,7 @@ its own for real media keys. Volume Up/Down walk a 5% grid (`VolumeLevel.stepped
 up lands on 40% and down on 35%, and repeated presses stay on round numbers.
 
 An action whose effect is invisible reports back through a pill (`MessageHUDController`, the same one
-Custom Commands and Snippets confirm through) rather than finishing silently:
+Custom Commands confirm through) rather than finishing silently:
 `SystemActionRunner.run` returns a `SystemActionFeedback` naming the state it landed in
 (`Trash Emptied`, `Hidden Files Shown`, `Dark Appearance`, `Bluetooth Off`, `3 Disks Ejected`), and
 `AppCore` shows it with a `DialogTone` derived from the feedback's `isNoOp` flag: `.success` when
@@ -155,18 +155,8 @@ dismissal matches Accessibility subroles rather than English labels.
 `AppIndex.setWindowCommandsVisible(_:)` and shown under a "Window Management" section. Like system
 actions they carry dedicated global hotkeys (`AppEntry.hotKeyAction` returns `.windowCommand(id:)`),
 so launcher rows render keycaps for them. Their per-command shortcut and visibility controls live in
-Settings › Window Management rather than a launcher-category pane of their own — the same call already
-made for snippets. The feature ships off. See
+Settings › Window Management rather than a launcher-category pane of their own. The feature ships off. See
 [window-management.md](window-management.md).
-
-## Quicklinks
-
-`QuicklinkStore` supplies its slice the same way custom commands do, sorted pinned-first then
-alphabetically by `Quicklink.precedes`. Only the name is indexed — a URL is a subsequence of nearly
-any query — and a per-item "show in root search" flag filters the slice before it is published. The
-four Quicklinks commands are dropped from the built-in slice in the same publish while the feature is
-off, so a toggle can't leave the section and its commands out of step. See
-[quicklinks.md](quicklinks.md).
 
 ## Custom commands
 

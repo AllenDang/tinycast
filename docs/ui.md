@@ -143,7 +143,7 @@ All lists share one row grammar so launcher and clipboard look identical:
 
 ### Section headers
 
-All five palette lists (App Launcher, Clipboard, Emoji, Calculator History, Uninstall) render category labels
+All four palette lists (App Launcher, Clipboard, Calculator History, Uninstall) render category labels
 through one shared **`SectionHeader`** (`.subheadline.medium`, secondary — `Features/Launcher/UI/LauncherList.swift`).
 The launcher shows a single "Results" header over search matches, and per-kind sections
 (Favorites / Applications / System Settings / Commands) for the empty query; clipboard/history use
@@ -211,9 +211,8 @@ sole owner rule) and is the only presenter, so every confirmation in the app loo
   back to an opaque backing that shows as a dark edge outside the shape, which is exactly what the
   pill did before it moved to the recipe.
 - **Layout.** Leading glyph (`dialogIcon 32`), title (`.headline`) + wrapped secondary message,
-  optional volume slider or argument form, then buttons at the trailing edge with **Cancel rendered
-  leading** among them, matching macOS convention. Argument forms use text fields or option pickers,
-  initialize each picker to its first choice, and focus the first free-text field. `DialogView.visualOrder`
+  optional volume slider, then buttons at the trailing edge with **Cancel rendered
+  leading** among them, matching macOS convention. `DialogView.visualOrder`
   reorders only the display; `onChoose(index)` still dispatches against `DialogRequest.actions`' original
   order, so a caller never has to think about layout position when it builds a request.
 - **Keys.** `DialogPanel.sendEvent` intercepts Esc and ↵ directly instead of relying on SwiftUI
@@ -225,16 +224,13 @@ sole owner rule) and is the only presenter, so every confirmation in the app loo
   Arrow keys walk the volume slider along the same 5% grid the volume commands use (`DialogPanel`
   reports `.increment` / `.decrement` and `DialogController` applies `VolumeLevel.stepped`, so the
   panel never learns what a volume step is). Without a volume slider, arrows pass through to the
-  focused text field or picker; click-away resolves as a dismissal.
+  focused view; click-away resolves as a dismissal.
 - **Async, not modal.** Presentation is `async` (`withCheckedContinuation`), so there is no nested run
   loop. A held hotkey can't stack dialogs: while one is up, a second request resolves immediately as a
-  dismissal — including a second snippet argument form — which is why the old `isConfirmingCommand`
-  re-entrancy flag is gone. The guard is keyed on the live continuation, not on the panel, so a dialog
-  still fading out can't swallow the next one. Every presentation has a request UUID; feature shutdown
-  may cancel only its matching argument request, so a rejected or completed form cannot close another
-  dialog that appeared later.
-- **Settings confirmations use the same presenter.** Clipboard history, launcher ranking, snippets,
-  AI commands, custom commands and quicklinks all ask through their owning coordinator; Settings views
+  dismissal. The guard is keyed on the live continuation, not on the panel, so a dialog
+  still fading out cannot swallow the next one.
+- **Settings confirmations use the same presenter.** Clipboard history, launcher ranking, legacy cleanup,
+  AI commands and custom commands all ask through their owning coordinator; Settings views
   hold no alert state and never create a system confirmation surface.
 - **Entrance and exit — `DesignSystem/Interaction/PanelTransition.swift`.** Every borderless surface arrives the same
   way, so dialogs and HUDs read as one gesture. `NSWindow.fadeIn` animates the _window's_ alpha over
@@ -272,7 +268,7 @@ sole owner rule) and is the only presenter, so every confirmation in the app loo
   `HUDPresenter.extend()`, so the bar slides to its new value in place instead of replaying the
   entrance.
 - **`MessageHUDController`'s pill** is every _other_ transient
-  confirmation: Custom Commands and Snippets confirming a run, and every system action whose effect
+  confirmation: Custom Commands confirming a run, and every system action whose effect
   is invisible (`Trash Emptied`, `Hidden Files Shown`, `Bluetooth Off`). One capsule shape, sized to
   its message (`hudMaxWidth 420` ceiling), clipped to a `Capsule()`, with the message first and a
   filled glyph trailing it: `checkmark.circle.fill` green for `.success`, `exclamationmark.circle.fill`
@@ -301,7 +297,7 @@ Custom thin overlay scrollbar (the native one flashes and reserves a gutter insi
 style; `.thinScrollbar()` on the scroll view draws a hairline thumb (`Color.primary` alpha 0.30 rest →
 0.42 hover → 0.5 drag) that fattens on hover, with a faint rail revealed only while hovering/dragging.
 
-Routing: the palette lists (App Launcher, Clipboard history, Emoji, Calculator history) use
+Routing: the palette lists (App Launcher, Clipboard history, Calculator history) use
 `.thinScrollbar()` + `.hideNativeScrollers()`; the Clipboard preview (right pane) and every Settings
 pane use the native `.overlayScroller()`. Don't reintroduce native scrollers on the palette lists.
 

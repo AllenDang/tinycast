@@ -18,7 +18,7 @@ export const compareRows: CompareRow[] = [
   { label: "App launcher", tinycast: true, raycast: true },
   { label: "Clipboard history", tinycast: true, raycast: true },
   { label: "Calculator, unit & currency conversion", tinycast: true, raycast: true },
-  { label: "Emoji & symbol picker", tinycast: true, raycast: true },
+  { label: "Emoji & symbol picker", tinycast: false, raycast: true },
   { label: "Global & per-app hotkeys", tinycast: true, raycast: true },
   { label: "Hyper key", tinycast: true, raycast: true },
   {

@@ -1,8 +1,8 @@
 import SwiftUI
 
 enum SettingsTab: Int, CaseIterable, Identifiable {
-    case general, applications, systemSettings, systemActions, commands, quicklinks, snippets,
-        aiCommands, windowManagement, clipboard, emoji, permissions, backup, miscellaneous, about
+    case general, applications, systemSettings, systemActions, commands,
+        aiCommands, windowManagement, clipboard, permissions, backup, miscellaneous, about
     var id: Int { rawValue }
 
     var title: String {
@@ -12,12 +12,9 @@ enum SettingsTab: Int, CaseIterable, Identifiable {
         case .systemSettings: return "System Settings"
         case .systemActions: return "System Actions"
         case .commands: return "Commands"
-        case .quicklinks: return "Quicklinks"
-        case .snippets: return "Snippets"
         case .aiCommands: return "AI Commands"
         case .windowManagement: return "Window Management"
         case .clipboard: return "Clipboard"
-        case .emoji: return "Emoji & Symbols"
         case .permissions: return "Permissions"
         case .backup: return "Backup"
         case .miscellaneous: return "Miscellaneous"
@@ -32,12 +29,9 @@ enum SettingsTab: Int, CaseIterable, Identifiable {
         case .systemSettings: return "gearshape"
         case .systemActions: return "bolt"
         case .commands: return "terminal"
-        case .quicklinks: return "link"
-        case .snippets: return "curlybraces"
         case .aiCommands: return AICommand.sfSymbol
         case .windowManagement: return "macwindow"
         case .clipboard: return "doc.on.clipboard"
-        case .emoji: return "face.smiling"
         case .permissions: return "lock.shield"
         case .backup: return "arrow.up.arrow.down.circle"
         case .miscellaneous: return "ellipsis.circle"
@@ -53,12 +47,9 @@ enum SettingsTab: Int, CaseIterable, Identifiable {
         case .systemSettings: return .indigo
         case .systemActions: return .orange
         case .commands: return .green
-        case .quicklinks: return .cyan
-        case .snippets: return .green
         case .aiCommands: return .mint
         case .windowManagement: return .blue
         case .clipboard: return .orange
-        case .emoji: return .yellow
         case .permissions: return .blue
         case .backup: return .teal
         case .miscellaneous: return .purple

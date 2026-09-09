@@ -3,7 +3,7 @@
 Tinycast uses a feature-first expression of a pure-core / effect-shell architecture. See the subsystem
 documents for details: [palette](palette.md), [launcher](launcher.md),
 [calculator](calculator.md), [clipboard](clipboard.md), [custom commands](custom-commands.md),
-[snippets](snippets.md), [quicklinks](quicklinks.md), [hotkeys](hotkeys.md), and [UI](ui.md).
+[hotkeys](hotkeys.md), and [UI](ui.md).
 
 ## Dependency direction
 
@@ -40,7 +40,7 @@ store, index, monitor, session and coordinator once, then wires callbacks in `st
 Feature coordinators own orchestration that crosses several collaborators:
 
 - `PaletteCoordinator` — palette modes and auxiliary windows.
-- `QuicklinkCoordinator` and `SnippetExpansionCoordinator` — template and argument flows.
+- `LegacyFeatureCleanupCoordinator` — explicit, channel-scoped retired-data cleanup.
 - `SystemActionCoordinator`, `UninstallCoordinator` and `CustomCommandCoordinator` — guarded effects.
 - `BackupCoordinator` — Tinycast backup and Raycast import orchestration.
 

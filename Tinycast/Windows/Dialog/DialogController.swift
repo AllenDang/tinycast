@@ -5,8 +5,6 @@ import SwiftUI
 final class DialogController: NSObject, NSWindowDelegate {
     private var panel: DialogPanel?
     private var continuation: CheckedContinuation<Int, Never>?
-    private var currentCancelIndex: Int?
-    private var currentRequestID: UUID?
 
     func confirm(
         title: String, message: String?, symbol: String, tone: DialogTone, confirmTitle: String,
@@ -55,35 +53,10 @@ final class DialogController: NSObject, NSWindowDelegate {
         return Float32(volume.level)
     }
 
-    func promptFields(
-        id: UUID, title: String, fields: [DialogField]
-    ) async -> [String: String]? {
-        guard !fields.isEmpty else { return [:] }
-        let state = DialogFieldState(fields: fields)
-        let request = DialogRequest(
-            title: title, message: "Fill in the template fields:", symbol: "curlybraces",
-            tone: .neutral,
-            actions: [
-                DialogAction(title: "Expand"),
-                DialogAction(title: "Cancel", role: .cancel)
-            ],
-            defaultIndex: 0, cancelIndex: 1, fields: state)
-        guard await present(request, id: id) == 0 else { return nil }
-        return state.collected
-    }
-
-    func cancel(id: UUID) {
-        guard currentRequestID == id, let currentCancelIndex else { return }
-        finish(currentCancelIndex)
-    }
-
-    private func present(_ request: DialogRequest, id: UUID = UUID()) async -> Int {
+    private func present(_ request: DialogRequest) async -> Int {
         guard continuation == nil else { return request.cancelIndex }
-        if request.fields != nil { NSApp.activate(ignoringOtherApps: true) }
         return await withCheckedContinuation { continuation in
             self.continuation = continuation
-            currentCancelIndex = request.cancelIndex
-            currentRequestID = id
             let content = hostingView(
                 DialogView(request: request, onChoose: { [weak self] index in self?.finish(index) }),
                 width: Theme.Size.dialogWidth, minHeight: 0)
@@ -116,8 +89,6 @@ final class DialogController: NSObject, NSWindowDelegate {
     private func finish(_ index: Int) {
         guard let continuation else { return }
         self.continuation = nil
-        currentCancelIndex = nil
-        currentRequestID = nil
         let closing = panel
         panel = nil
         closing?.delegate = nil

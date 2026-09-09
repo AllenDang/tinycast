@@ -28,11 +28,6 @@ export const features: Feature[] = [
     body: "Type math, unit or live currency conversions right in the palette, read the answer as you go, and revisit past results from history.",
   },
   {
-    icon: "emoji",
-    title: "Emoji & symbols",
-    body: "Search the full emoji and symbol set, tune the skin tone, and your most-used ones float to the top.",
-  },
-  {
     icon: "globe",
     title: "Global hotkey",
     body: "One shortcut summons the palette from anywhere — over any app, full-screen or not.",

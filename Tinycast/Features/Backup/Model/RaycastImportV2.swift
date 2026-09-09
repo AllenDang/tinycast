@@ -48,12 +48,9 @@ enum RaycastImportV2 {
         backup.hotkeys = mapHotkeys(json)
         backup.favoriteApps = mapFavorites(json)
         let (clipboard, missing) = mapClipboard(json)
-        let snippets = RaycastSnippetImport.parse(
-            (json["builtin_package_snippets"] as? [String: Any])?["snippets"])
         return RaycastImport.Result(
             backup: backup,
             clipboard: clipboard,
-            snippets: snippets,
             missingImages: missing)
     }
 
@@ -89,10 +86,6 @@ enum RaycastImportV2 {
             data.showInMenuBar = showInMenuBar
             mapped = true
         }
-        if let tone = mapSkinTone(json) {
-            data.emojiSkinTone = tone
-            mapped = true
-        }
         if let secs = general?["popToRootTimeout"] as? Int,
             let timeout = PopToRootTimeout(rawValue: secs) {
             data.popToRootSeconds = timeout.rawValue
@@ -126,9 +119,6 @@ enum RaycastImportV2 {
             switch command["extensionId"] as? String {
             case "e:r:clipboard-history":
                 hotkeys.toggleClipboard = binding
-                mapped = true
-            case "e:r:emoji-picker":
-                hotkeys.toggleEmoji = binding
                 mapped = true
             case "e:r:applications":
                 if let path = appPath(fromCommandID: command["id"] as? String),
@@ -191,12 +181,6 @@ enum RaycastImportV2 {
         return path.isEmpty ? nil : path
     }
 
-    private static func mapSkinTone(_ json: [String: Any]) -> String? {
-        guard let raw = firstValue(forKey: "skinTone", in: json) as? String else { return nil }
-        if raw == "default" { return EmojiSkinTone.none.rawValue }
-        return EmojiSkinTone(rawValue: raw)?.rawValue
-    }
-
     // MARK: - Clipboard
 
     private static func mapClipboard(_ json: [String: Any]) -> (items: [ClipboardItem], missing: Int) {
@@ -248,20 +232,6 @@ enum RaycastImportV2 {
         return parser.date(from: string) ?? ISO8601DateFormatter().date(from: string)
     }
 
-    /// First value stored under `key` anywhere in a nested JSON object/array tree.
-    private static func firstValue(forKey key: String, in object: Any) -> Any? {
-        if let dict = object as? [String: Any] {
-            if let hit = dict[key] { return hit }
-            for value in dict.values {
-                if let hit = firstValue(forKey: key, in: value) { return hit }
-            }
-        } else if let array = object as? [Any] {
-            for value in array {
-                if let hit = firstValue(forKey: key, in: value) { return hit }
-            }
-        }
-        return nil
-    }
 }
 
 extension Data {

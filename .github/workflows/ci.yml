@@ -37,97 +37,64 @@ jobs:
       - name: Run Tools/ harnesses
         run: |
           set -euo pipefail
-          swiftc -swift-version 6 \
-            Tinycast/Features/Launcher/Model/SearchRelevance.swift \
-            Tools/fuzz-test.swift -o /tmp/fuzz-test && /tmp/fuzz-test
-          swiftc -swift-version 6 \
-            Tinycast/Features/Launcher/Model/SearchRelevance.swift \
-            Tinycast/Features/Launcher/Model/LauncherRankingStore.swift \
-            Tools/ranking-test.swift \
-            -o /tmp/ranking-test && /tmp/ranking-test
-          swiftc Tinycast/Features/Calculator/Model/*.swift \
-            Tools/calc-test.swift -o /tmp/calc-test && /tmp/calc-test
-          swiftc -swift-version 6 \
-            Tinycast/Features/Clipboard/Model/ClipboardStore.swift \
-            Tools/clipboard-test.swift \
-            -o /tmp/clipboard-test && /tmp/clipboard-test
-          swiftc -swift-version 6 \
-            Tinycast/Features/Launcher/Model/SearchScopes.swift \
-            Tools/scopes-test.swift -o /tmp/scopes-test && /tmp/scopes-test
-          swiftc -swift-version 6 \
-            Tinycast/Features/Backup/Model/RaycastFormat.swift \
-            Tinycast/Features/Backup/Model/RaycastV1Decoder.swift \
-            Tinycast/Features/Backup/Service/Gunzip.swift \
-            Tinycast/Features/Clipboard/Model/ClipboardStore.swift \
-            Tools/raycast-test.swift \
-            -o /tmp/raycast-test && /tmp/raycast-test
-          swiftc Tinycast/Features/Emoji/Model/EmojiCatalog.swift \
-            Tinycast/Features/Emoji/Model/EmojiGridGeometry.swift \
-            Tinycast/Features/Emoji/Model/EmojiData.generated.swift \
-            Tools/emoji-test.swift -o /tmp/emoji-test && /tmp/emoji-test
-          swiftc -swift-version 6 \
-            Tinycast/Features/CustomCommands/Model/CustomCommand.swift \
-            Tinycast/Features/CustomCommands/Service/ShellCommandRunner.swift \
-            Tools/custom-command-test.swift \
-            -o /tmp/custom-command-test && /tmp/custom-command-test
-          swiftc -swift-version 6 \
-            Tinycast/Platform/NotificationToken.swift \
-            Tinycast/Platform/HealthTicker.swift \
-            Tinycast/Features/Snippets/Model/*.swift \
-            Tinycast/Features/Snippets/Service/*.swift \
-            Tools/snippets-test.swift \
-            -o /tmp/snippets-test && /tmp/snippets-test
-          swiftc -swift-version 6 \
-            Tinycast/Features/HotKeys/Model/DoubleTapModifier.swift \
-            Tinycast/Features/HotKeys/Model/DoubleTapDetector.swift \
-            Tinycast/Features/HotKeys/Model/HyperKey.swift \
-            Tinycast/Features/HotKeys/Model/KeyShortcut.swift \
-            Tinycast/Features/HotKeys/Model/HotKeyBinding.swift \
-            Tinycast/Features/SystemActions/Model/SystemAction.swift \
-            Tinycast/Features/WindowManagement/Model/WindowCommand.swift \
-            Tools/hotkey-test.swift -o /tmp/hotkey-test && /tmp/hotkey-test
+          swiftc -swift-version 6 Tinycast/Features/Launcher/Model/SearchRelevance.swift Tools/fuzz-test.swift \
+              -o /tmp/fuzz-test && /tmp/fuzz-test                            # launcher matcher + field priority
+          swiftc -swift-version 6 Tinycast/Features/Launcher/Model/SearchRelevance.swift \
+              Tinycast/Features/Launcher/Model/LauncherRankingStore.swift Tools/ranking-test.swift \
+              -o /tmp/ranking-test && /tmp/ranking-test                      # learned launcher ranking
+          swiftc Tinycast/Features/Calculator/Model/*.swift Tools/calc-test.swift \
+              -o /tmp/calc-test && /tmp/calc-test                           # calculator engine
+          swiftc -swift-version 6 Tinycast/Features/Clipboard/Model/ClipboardStore.swift Tools/clipboard-test.swift \
+              -o /tmp/clipboard-test && /tmp/clipboard-test                 # clipboard store
+          swiftc -swift-version 6 Tinycast/Features/Launcher/Model/SearchScopes.swift Tools/scopes-test.swift \
+              -o /tmp/scopes-test && /tmp/scopes-test                       # launcher search scopes
+          swiftc -swift-version 6 Tinycast/Features/Backup/Model/RaycastFormat.swift \
+              Tinycast/Features/Backup/Model/RaycastV1Decoder.swift Tinycast/Features/Backup/Service/Gunzip.swift \
+              Tinycast/Features/Clipboard/Model/ClipboardStore.swift Tools/raycast-test.swift \
+              -o /tmp/raycast-test && /tmp/raycast-test                     # raycast format detect + v1 decode
+          swiftc -swift-version 6 Tinycast/Features/CustomCommands/Model/CustomCommand.swift \
+              Tinycast/Features/CustomCommands/Service/ShellCommandRunner.swift Tools/custom-command-test.swift \
+              -o /tmp/custom-command-test && /tmp/custom-command-test        # custom command store + runner
+          swiftc -swift-version 6 Tinycast/Features/HotKeys/Model/DoubleTapModifier.swift \
+              Tinycast/Features/HotKeys/Model/DoubleTapDetector.swift \
+              Tinycast/Features/HotKeys/Model/HyperKey.swift \
+              Tinycast/Features/HotKeys/Model/KeyShortcut.swift \
+              Tinycast/Features/HotKeys/Model/HotKeyBinding.swift \
+              Tinycast/Features/SystemActions/Model/SystemAction.swift \
+              Tinycast/Features/WindowManagement/Model/WindowCommand.swift Tools/hotkey-test.swift \
+              -o /tmp/hotkey-test && /tmp/hotkey-test                        # hotkey models
           swiftc -swift-version 6 Tinycast/DesignSystem/Theme.swift \
-            Tinycast/Features/HotKeys/UI/CalloutPlacement.swift \
-            Tools/callout-test.swift \
-            -o /tmp/callout-test && /tmp/callout-test
-          swiftc -swift-version 6 \
-            Tinycast/Features/SystemActions/Model/SystemAction.swift \
-            Tools/system-action-test.swift \
-            -o /tmp/system-action-test && /tmp/system-action-test
-          swiftc -swift-version 6 \
-            Tinycast/Features/SystemActions/Model/VolumeLevel.swift \
-            Tools/volume-test.swift -o /tmp/volume-test && /tmp/volume-test
-          swiftc -swift-version 6 \
-            Tinycast/Features/WindowManagement/Model/WindowCommand.swift \
-            Tinycast/Features/WindowManagement/Model/WindowLayout.swift \
-            Tinycast/Features/WindowManagement/Model/WindowActionMemory.swift \
-            Tools/window-command-test.swift \
-            -o /tmp/window-command-test && /tmp/window-command-test
-          swiftc -swift-version 6 \
-            Tinycast/Features/Uninstall/Model/UninstallTarget.swift \
-            Tinycast/Features/Uninstall/Model/UninstallSearchRoot.swift \
-            Tinycast/Features/Uninstall/Model/UninstallRules.swift \
-            Tinycast/Features/Uninstall/Model/UninstallProtection.swift \
-            Tinycast/Features/Uninstall/Model/UninstallPlan.swift \
-            Tools/uninstall-test.swift \
-            -o /tmp/uninstall-test && /tmp/uninstall-test
-          swiftc -swift-version 6 \
-            Tinycast/Features/Quicklinks/Model/Quicklink.swift \
-            Tinycast/Features/Quicklinks/Model/QuicklinkDestination.swift \
-            Tinycast/Features/Quicklinks/Model/QuicklinkStore.swift \
-            Tinycast/Features/Quicklinks/Model/QuicklinkArchive.swift \
-            Tools/quicklink-test.swift \
-            -o /tmp/quicklink-test && /tmp/quicklink-test
+              Tinycast/Features/HotKeys/UI/CalloutPlacement.swift Tools/callout-test.swift \
+              -o /tmp/callout-test && /tmp/callout-test                      # shortcut-recorder callout placement
+          swiftc -swift-version 6 Tinycast/Features/SystemActions/Model/SystemAction.swift Tools/system-action-test.swift \
+              -o /tmp/system-action-test && /tmp/system-action-test        # system action metadata + safety
+          swiftc -swift-version 6 Tinycast/Features/SystemActions/Model/VolumeLevel.swift Tools/volume-test.swift \
+              -o /tmp/volume-test && /tmp/volume-test                        # volume step grid + percentage
+          swiftc -swift-version 6 Tinycast/Features/WindowManagement/Model/WindowCommand.swift \
+              Tinycast/Features/WindowManagement/Model/WindowLayout.swift \
+              Tinycast/Features/WindowManagement/Model/WindowActionMemory.swift Tools/window-command-test.swift \
+              -o /tmp/window-command-test && /tmp/window-command-test        # window geometry + action memory
+          swiftc -swift-version 6 Tinycast/Features/Uninstall/Model/UninstallTarget.swift \
+              Tinycast/Features/Uninstall/Model/UninstallSearchRoot.swift Tinycast/Features/Uninstall/Model/UninstallRules.swift \
+              Tinycast/Features/Uninstall/Model/AdministratorTrashPolicy.swift \
+              Tinycast/Features/Uninstall/Model/UninstallProtection.swift Tinycast/Features/Uninstall/Model/UninstallPlan.swift \
+              Tools/uninstall-test.swift -o /tmp/uninstall-test && /tmp/uninstall-test  # uninstall attribution + locking
           swiftc -swift-version 6 Tinycast/Palette/PaletteRowIndex.swift \
-            Tinycast/Features/Emoji/Model/EmojiGridGeometry.swift \
-            Tools/palette-selection-test.swift \
-            -o /tmp/palette-selection-test && /tmp/palette-selection-test
-          swiftc -swift-version 6 \
-            Tinycast/Features/AI/Model/AICommand.swift \
-            Tools/ai-command-test.swift \
-            -o /tmp/ai-command-test && /tmp/ai-command-test
-          swiftc -swift-version 6 \
-            Tinycast/Features/Settings/SettingsKeys.swift \
-            Tinycast/Features/Backup/Model/SettingsData.swift \
-            Tools/settings-backup-test.swift \
-            -o /tmp/settings-backup-test && /tmp/settings-backup-test
+              Tools/palette-selection-test.swift \
+              -o /tmp/palette-selection-test && /tmp/palette-selection-test  # palette flat-selection row order
+          swiftc -swift-version 6 Tinycast/Features/AI/Model/AICommand.swift Tools/ai-command-test.swift \
+              -o /tmp/ai-command-test && /tmp/ai-command-test               # AI command store + keyword recognizer
+          swiftc -swift-version 6 Tinycast/Features/Settings/SettingsKeys.swift \
+              Tinycast/Features/Backup/Model/SettingsData.swift Tools/settings-backup-test.swift \
+              -o /tmp/settings-backup-test && /tmp/settings-backup-test      # settings backup completeness
+          swiftc -swift-version 6 Tinycast/Features/AI/Model/AIPromptTemplateEngine.swift Tools/ai-prompt-template-test.swift \
+              -o /tmp/ai-prompt-template-test && /tmp/ai-prompt-template-test
+          swiftc -swift-version 6 Tinycast/Features/Settings/LegacyFeatureCleanupRunner.swift \
+              Tinycast/Features/Settings/LegacyFeatureCleanupCoordinator.swift Tools/legacy-feature-cleanup-test.swift \
+              -o /tmp/legacy-feature-cleanup-test && /tmp/legacy-feature-cleanup-test
+          swiftc -O -swift-version 6 Tinycast/Features/Backup/Model/{SettingsBackup,SettingsData,RetiredFeatureCompatibility,RaycastFormat,RaycastV1Decoder,RaycastImport,RaycastImportV1,RaycastImportV2}.swift \
+              Tinycast/Features/Backup/Service/{Gunzip,Scrypt}.swift Tinycast/Features/Settings/SettingsKeys.swift \
+              Tinycast/Features/Clipboard/Model/ClipboardStore.swift Tinycast/Features/CustomCommands/Model/CustomCommand.swift \
+              Tinycast/Features/HotKeys/Model/{KeyShortcut,HotKeyBinding,DoubleTapModifier,HyperKey}.swift \
+              Tinycast/Features/SystemActions/Model/SystemAction.swift Tinycast/Features/WindowManagement/Model/WindowCommand.swift \
+              Tools/backup-compatibility-test.swift -o /tmp/backup-compatibility-test && /tmp/backup-compatibility-test

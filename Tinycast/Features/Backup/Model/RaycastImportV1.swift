@@ -14,9 +14,6 @@ enum RaycastImportV1 {
         return RaycastImport.Result(
             backup: backup,
             clipboard: payload.clipboard,
-            snippets: payload.snippets.map {
-                Snippet(name: $0.name, text: $0.text, keyword: $0.keyword)
-            },
             missingImages: payload.missingImages)
     }
 
@@ -34,10 +31,6 @@ enum RaycastImportV1 {
 
         if let secs = payload.popToRootTimeout, let timeout = PopToRootTimeout(rawValue: secs) {
             data.popToRootSeconds = timeout.rawValue
-            mapped = true
-        }
-        if let tone = skinTone(payload.emojiSkinTone) {
-            data.emojiSkinTone = tone
             mapped = true
         }
         if let hyperKey = payload.hyperKey {
@@ -82,10 +75,6 @@ enum RaycastImportV1 {
             hotkeys.toggleClipboard = binding(clipboard)
             mapped = true
         }
-        if let emoji = payload.toggleEmoji {
-            hotkeys.toggleEmoji = binding(emoji)
-            mapped = true
-        }
         if !payload.appHotkeys.isEmpty {
             hotkeys.apps = payload.appHotkeys.mapValues(binding)
             mapped = true
@@ -100,10 +89,4 @@ enum RaycastImportV1 {
                 carbonKeyCode: hotkey.carbonKeyCode, carbonModifiers: hotkey.carbonModifiers))
     }
 
-    /// Enum raw values line up (`light`…`dark`); Raycast's `default` maps to none.
-    private static func skinTone(_ raw: String?) -> String? {
-        guard let raw else { return nil }
-        if raw == "default" { return EmojiSkinTone.none.rawValue }
-        return EmojiSkinTone(rawValue: raw)?.rawValue
-    }
 }

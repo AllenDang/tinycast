@@ -1,22 +1,5 @@
 import SwiftUI
 
-enum PopToRootTimeout: Int, CaseIterable, Identifiable, Sendable {
-    case immediately = 0
-    case afterFive = 5
-    case afterFifteen = 15
-    case afterThirty = 30
-    case afterSixty = 60
-    case afterNinety = 90
-
-    var id: Int { rawValue }
-
-    var title: String {
-        self == .immediately ? "Immediately" : "After \(rawValue) seconds"
-    }
-
-    var interval: TimeInterval { TimeInterval(rawValue) }
-}
-
 @MainActor
 @Observable
 final class AppSettings {
@@ -57,11 +40,6 @@ final class AppSettings {
         didSet { defaults.set(hyperKeyReplacesGlyph, forKey: AppSettingsKey.hyperKeyReplacesGlyph.rawValue) }
     }
 
-    /// Preferred skin tone applied to modifier-capable emoji at render and copy time.
-    var emojiSkinTone: EmojiSkinTone {
-        didSet { defaults.set(emojiSkinTone.rawValue, forKey: AppSettingsKey.emojiSkinTone.rawValue) }
-    }
-
     /// How long a closed palette keeps its state before popping back to the root launcher.
     var popToRootTimeout: PopToRootTimeout {
         didSet { defaults.set(popToRootTimeout.rawValue, forKey: AppSettingsKey.popToRootTimeout.rawValue) }
@@ -93,14 +71,6 @@ final class AppSettings {
         }
     }
 
-    var snippetsEnabled: Bool {
-        didSet { defaults.set(snippetsEnabled, forKey: AppSettingsKey.snippetsEnabled.rawValue) }
-    }
-
-    var snippetsShowInLauncher: Bool {
-        didSet { defaults.set(snippetsShowInLauncher, forKey: AppSettingsKey.snippetsShowInLauncher.rawValue) }
-    }
-
     /// Off means fully off: no launcher entries, and a still-registered shortcut moves nothing.
     var windowManagementEnabled: Bool {
         didSet { defaults.set(windowManagementEnabled, forKey: AppSettingsKey.windowManagementEnabled.rawValue) }
@@ -119,31 +89,6 @@ final class AppSettings {
     /// Re-triggering a half steps it through ⅓ and ⅔ instead of re-applying the same frame.
     var windowCycleOnRepeat: Bool {
         didSet { defaults.set(windowCycleOnRepeat, forKey: AppSettingsKey.windowCycleOnRepeat.rawValue) }
-    }
-
-    var quicklinksEnabled: Bool {
-        didSet { defaults.set(quicklinksEnabled, forKey: AppSettingsKey.quicklinksEnabled.rawValue) }
-    }
-
-    var quicklinksShowInLauncher: Bool {
-        didSet { defaults.set(quicklinksShowInLauncher, forKey: AppSettingsKey.quicklinksShowInLauncher.rawValue) }
-    }
-
-    var quicklinkOpensNewWindow: Bool {
-        didSet { defaults.set(quicklinkOpensNewWindow, forKey: AppSettingsKey.quicklinkOpensNewWindow.rawValue) }
-    }
-
-    /// What `{selection}` does when there is no readable selection to pass.
-    var quicklinkSelectionFallback: QuicklinkSelectionFallback {
-        didSet {
-            defaults.set(quicklinkSelectionFallback.rawValue, forKey: AppSettingsKey.quicklinkSelectionFallback.rawValue)
-        }
-    }
-
-    var quicklinkConfirmsBeforeDelete: Bool {
-        didSet {
-            defaults.set(quicklinkConfirmsBeforeDelete, forKey: AppSettingsKey.quicklinkConfirmsBeforeDelete.rawValue)
-        }
     }
 
     init() {
@@ -166,8 +111,6 @@ final class AppSettings {
         hyperKeyReplacesGlyph =
             defaults.object(forKey: AppSettingsKey.hyperKeyReplacesGlyph.rawValue) == nil
             || defaults.bool(forKey: AppSettingsKey.hyperKeyReplacesGlyph.rawValue)
-        emojiSkinTone =
-            defaults.string(forKey: AppSettingsKey.emojiSkinTone.rawValue).flatMap(EmojiSkinTone.init) ?? .none
         popToRootTimeout =
             PopToRootTimeout(rawValue: defaults.integer(forKey: AppSettingsKey.popToRootTimeout.rawValue))
             ?? .immediately
@@ -184,10 +127,6 @@ final class AppSettings {
         customCommandsShowInLauncher =
             defaults.object(forKey: AppSettingsKey.customCommandsShowInLauncher.rawValue) == nil
             || defaults.bool(forKey: AppSettingsKey.customCommandsShowInLauncher.rawValue)
-        snippetsEnabled = defaults.bool(forKey: AppSettingsKey.snippetsEnabled.rawValue)
-        snippetsShowInLauncher =
-            defaults.object(forKey: AppSettingsKey.snippetsShowInLauncher.rawValue) == nil
-            || defaults.bool(forKey: AppSettingsKey.snippetsShowInLauncher.rawValue)
         windowManagementEnabled = defaults.bool(forKey: AppSettingsKey.windowManagementEnabled.rawValue)
         windowManagementShowInLauncher =
             defaults.object(forKey: AppSettingsKey.windowManagementShowInLauncher.rawValue) == nil
@@ -195,16 +134,5 @@ final class AppSettings {
         // Unset reads as 0, which is the intended default anyway — no gap.
         windowGap = defaults.integer(forKey: AppSettingsKey.windowGap.rawValue)
         windowCycleOnRepeat = defaults.bool(forKey: AppSettingsKey.windowCycleOnRepeat.rawValue)
-        quicklinksEnabled = defaults.bool(forKey: AppSettingsKey.quicklinksEnabled.rawValue)
-        quicklinksShowInLauncher =
-            defaults.object(forKey: AppSettingsKey.quicklinksShowInLauncher.rawValue) == nil
-            || defaults.bool(forKey: AppSettingsKey.quicklinksShowInLauncher.rawValue)
-        quicklinkOpensNewWindow = defaults.bool(forKey: AppSettingsKey.quicklinkOpensNewWindow.rawValue)
-        quicklinkSelectionFallback =
-            defaults.string(forKey: AppSettingsKey.quicklinkSelectionFallback.rawValue)
-            .flatMap(QuicklinkSelectionFallback.init) ?? .ask
-        quicklinkConfirmsBeforeDelete =
-            defaults.object(forKey: AppSettingsKey.quicklinkConfirmsBeforeDelete.rawValue) == nil
-            || defaults.bool(forKey: AppSettingsKey.quicklinkConfirmsBeforeDelete.rawValue)
     }
 }

@@ -18,12 +18,9 @@ the keycap rendering — only the _engine_ differs.
 
 Bindings persist as JSON strings under stable, app-owned `hotkey.<action>` UserDefaults keys. The set
 of bound bundle IDs lives in `boundAppBundleIDs` and is re-registered on launch. System Settings panes
-use `boundPaneBundleIDs`; custom commands and quicklinks use their stable UUIDs in
-`boundCustomCommandIDs` and `boundQuicklinkIDs`. Those two are the per-item case — unlike a fixed
-catalog, there is no `allCases` to walk — so each needs an index for `start()` to re-register from
-and to prune bindings whose record was deleted while Tinycast wasn't running. That prune is why
-`QuicklinkStore` loads at launch even when the feature is off
-(see [quicklinks.md](quicklinks.md#hotkeys)).
+use `boundPaneBundleIDs`; custom commands use stable UUIDs in `boundCustomCommandIDs`, which lets
+startup re-register and prune per-item shortcuts. Retired Emoji and Quicklinks bindings are ignored;
+only explicit legacy cleanup clears their defaults.
 
 `HotKeyBinding` synthesizes `Codable`: both `.combo(KeyShortcut)` and
 `.doubleTap(DoubleTapModifier)` round-trip through the same current format. The same values are stored

@@ -161,7 +161,7 @@ struct OnboardingView: View {
                 SettingsRow(
                     title: "Accessibility",
                     subtitle:
-                        "Allows pasting clipboard items and expanded snippets into active apps.",
+                        "Allows pasting clipboard items into active apps.",
                     systemImage: "accessibility", tint: .blue
                 ) {
                     statusBadge

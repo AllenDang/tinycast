@@ -45,7 +45,7 @@ click) calls `AICommandCoordinator.begin`, which is the one and only place a req
 ### The keyword-recognized-but-no-argument-yet hint
 
 An AI command is never an `AppEntry` (see Settings below), so typing just its keyword — `"trans"`,
-nothing after it — has no fuzzy-matched row to fall back on the way a custom command or quicklink
+nothing after it — has no fuzzy-matched row to fall back on the way a custom command
 would. Without a second signal, that reads as a dead end: nothing in the list acknowledges the keyword
 exists until the user has already typed a space and an argument, blind.
 
@@ -116,30 +116,25 @@ clearing one channel's key can never touch another's. Provider names, base URLs 
 secrets, so — unlike the key — they live in plain `UserDefaults` on `AIProviderStore` alongside the
 consent flag.
 
-## The prompt template reuses the one template engine
+## Prompt templates
 
-There is no second parser. A command's `promptTemplate` expands through
-[`SnippetTemplateEngine`](snippets.md#template-tokens) — the same engine Snippets and Quicklinks
-expand through — via a new `{input}` token added to `SnippetTemplateEngine.ExpansionContext` rather
-than a second ad hoc string-replace. `{input}` was added, instead of reusing an existing token, because
-neither existing candidate means the same thing: `{selection}` is a captured *app* selection read
-through Accessibility, not text typed into the palette, and `{argument}` always prompts for a missing
-value — which would turn every AI command into a second-step form, defeating the point of recognizing
-`<keyword> <text>` as one gesture. `{input}` defaults to the empty string for every other caller
-(snippets, quicklinks), so it costs nothing outside this feature, and every other token the engine
-understands — `{date}`, `{clipboard}`, `{uuid}` — still works inside a prompt template, since it is the
-same expansion.
+`Features/AI/Model/AIPromptTemplateEngine.swift` is Foundation-only. The AI session captures the clock,
+calendar, locale, time zone and typed input once. `{input}`, date/time/day formatting and offsets,
+`{uuid}`, and explicit modifier pipelines keep their previous outputs. Substituted values are literal,
+never recursively expanded. Modifiers are `uppercase`, `lowercase`, `trim`, `percent-encode`,
+`json-stringify` and `raw`; there is no automatic URL encoding.
 
-`AICommandSession.begin` captures the expansion context once, at the moment the request starts (the
-same rule `QuicklinkArgumentSession` follows for its own captured context), with an empty clipboard
-history and selection — an AI command's whole point is the typed `{input}`, so there is no captured app
-state to read and no Accessibility permission this feature needs to ask for.
+AI captures no clipboard or app selection: `{clipboard}`, `{selection}` and `{selectedText}` expand
+to empty text as before. Argument defaults expand, missing arguments remain literal (no prompt),
+`{cursor}` is removed and retired snippet references remain literal. Unknown or malformed tokens
+remain literal. No snippet library, text injector, Quicklinks template flow or Accessibility read
+is retained. `Tools/ai-prompt-template-test.swift` directly covers these semantics.
 
 ## The screen: loading → answer, never mid-keystroke
 
 Committing the card calls `AICommandCoordinator.begin`, which starts `AICommandSession`'s request and
 flips `PaletteState.mode` to `.aiCommand`. `AICommandScreen` (`Features/AI/UI/AICommandScreen.swift`)
-is a `PaletteScreen` like `UninstallScreen` and `QuicklinkArgumentsScreen` — reached only this way,
+is a `PaletteScreen` like `UninstallScreen` — reached only this way,
 never entered directly, never in the Tab cycle.
 
 The search field itself freezes for the same duration: `AICommandSession.begin` already captured the
@@ -167,15 +162,13 @@ and pops straight back to the launcher root. The request already reaches the net
 the endpoint a call; "cancel" has to mean the request actually stops, not merely that its window is
 hidden while it keeps running in the background and could resurrect itself on the next reopen. Leaving
 the screen any other way — Tab, the back chevron, a fresh summon — cancels it too, via the same
-`vm.mode` change handler `UninstallSession.cancel()` and `AppCore.cancelQuicklinkArguments()` already
-use.
+`vm.mode` change handler that cancels `UninstallSession`.
 
 ## Settings
 
 **Settings → AI Commands** is its own tab (`SettingsTab.aiCommands`) rather than folding into
 Miscellaneous: the provider management (add/edit/delete endpoints, each with name, Base URL, Model,
-API Key) plus the command catalog's own add/edit/delete list is comparable in size to the Quicklinks
-or Snippets panes, which each earned their own tab over sharing Commands'.
+API Key) plus the command catalog's own add/edit/delete list warrants its own pane.
 
 The provider section lists each configured endpoint with a green status dot when ready (all three of
 Base URL, Model and API Key are filled in) and an orange dot when incomplete. Add/Edit opens

@@ -2,9 +2,6 @@ import AppKit
 import Carbon.HIToolbox
 
 enum Paster {
-    /// Stamped on Tinycast's own synthetic keystrokes so the snippet keyword tap can skip them.
-    static let tinycastEventTag: Int64 = 0x54494E59
-
     /// Covers the gap between `activate()` returning and the target app accepting a keystroke.
     private static let activationDelay: TimeInterval = 0.08
 
@@ -34,39 +31,6 @@ enum Paster {
         pb.clearContents()
         pb.declareTypes([.string], owner: nil)
         pb.setString(text, forType: .string)
-    }
-
-    @MainActor
-    static func pasteString(_ text: String, previousApp: NSRunningApplication?) {
-        writeString(text)
-        previousApp?.activate()
-        DispatchQueue.main.asyncAfter(deadline: .now() + activationDelay) {
-            postCommandV()
-        }
-    }
-
-    /// String counterpart of `copy(_:store:)`.
-    @MainActor
-    static func copyString(_ text: String) {
-        writeString(text)
-    }
-
-    @MainActor
-    static func pasteStringInPlace(_ text: String, into app: NSRunningApplication?) {
-        writeString(text)
-        guard let pid = app?.processIdentifier else { return }
-        DispatchQueue.main.asyncAfter(deadline: .now() + directPostDelay) {
-            postCommandV(toPid: pid)
-        }
-    }
-
-    @MainActor
-    private static func writeString(_ text: String) {
-        let pb = NSPasteboard.general
-        pb.clearContents()
-        pb.declareTypes([.string, ClipboardMonitor.internalType], owner: nil)
-        pb.setString(text, forType: .string)
-        pb.setData(Data(), forType: ClipboardMonitor.internalType)
     }
 
     @MainActor @discardableResult
@@ -115,8 +79,6 @@ enum Paster {
 
         down.flags = .maskCommand
         up.flags = .maskCommand
-        down.setIntegerValueField(.eventSourceUserData, value: tinycastEventTag)
-        up.setIntegerValueField(.eventSourceUserData, value: tinycastEventTag)
 
         if let pid {
             down.postToPid(pid)

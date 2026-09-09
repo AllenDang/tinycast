@@ -70,6 +70,9 @@ export function Switch() {
               loading="lazy"
               decoding="async"
             />
+            <figcaption className="p-3 text-small text-ash">
+              Historical screenshot. Emoji import has been retired; current import options are listed alongside.
+            </figcaption>
           </figure>
         </Reveal>
       </div>

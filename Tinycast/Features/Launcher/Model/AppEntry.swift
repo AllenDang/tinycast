@@ -14,10 +14,8 @@ struct AppEntry: Identifiable, Hashable, Sendable {
         case systemSettings
         case command
         case customCommand
-        case snippet
         case systemAction
         case windowCommand
-        case quicklink
 
         var descriptor: KindDescriptor {
             switch self {
@@ -37,10 +35,6 @@ struct AppEntry: Identifiable, Hashable, Sendable {
                 return KindDescriptor(
                     label: "Custom Command", sectionTitle: "Custom Commands",
                     openVerb: "Run Custom Command", canRevealInFinder: false, isSymbolIcon: true)
-            case .snippet:
-                return KindDescriptor(
-                    label: "Snippet", sectionTitle: "Snippets", openVerb: "Paste Snippet",
-                    canRevealInFinder: true, isSymbolIcon: true)
             case .systemAction:
                 return KindDescriptor(
                     label: "System Action", sectionTitle: "System Actions",
@@ -49,10 +43,6 @@ struct AppEntry: Identifiable, Hashable, Sendable {
                 return KindDescriptor(
                     label: "Window Command", sectionTitle: "Window Management",
                     openVerb: "Move Window", canRevealInFinder: false, isSymbolIcon: true)
-            case .quicklink:
-                return KindDescriptor(
-                    label: "Quicklink", sectionTitle: "Quicklinks", openVerb: "Open Quicklink",
-                    canRevealInFinder: false, isSymbolIcon: true)
             }
         }
     }
@@ -62,8 +52,6 @@ struct AppEntry: Identifiable, Hashable, Sendable {
     let url: URL
     let bundleID: String?
     let kind: Kind
-    var matchAliases: [String] = []
-    var symbolName: String?
     /// Spotlight's `kMDItemAlternateNames`, ranked below the display name. Applications only.
     var alternateNames: [String] = []
     /// `CFBundleExecutable`, matched literally as a last resort. Applications only.
@@ -75,7 +63,7 @@ struct AppEntry: Identifiable, Hashable, Sendable {
 
     var searchFields: SearchFields {
         SearchFields(
-            names: [name] + matchAliases, alternateNames: alternateNames,
+            names: [name], alternateNames: alternateNames,
             bundleID: bundleID, executableName: executableName)
     }
 
@@ -93,9 +81,7 @@ struct AppEntry: Identifiable, Hashable, Sendable {
             return SystemActionCatalog.action(forEntryID: id).map { .systemAction(id: $0.id) }
         case .windowCommand:
             return WindowCommandCatalog.command(forEntryID: id).map { .windowCommand(id: $0.id) }
-        case .quicklink:
-            return Quicklink.id(fromEntryID: id).map { .quicklink(id: $0) }
-        case .command, .snippet:
+        case .command:
             return nil
         }
     }
@@ -106,10 +92,7 @@ struct AppEntry: Identifiable, Hashable, Sendable {
     var isSymbolIcon: Bool { kind.descriptor.isSymbolIcon }
 
     var symbolIconName: String {
-        if let symbolName { return symbolName }
         switch kind {
-        case .quicklink: return Quicklink.sfSymbol
-        case .snippet: return "text.quote"
         case .customCommand: return CustomCommand.sfSymbol
         case .command: return CommandCatalog.command(for: self)?.sfSymbol ?? "questionmark"
         case .systemAction: return SystemActionCatalog.action(forEntryID: id)?.sfSymbol ?? "questionmark"

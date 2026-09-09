@@ -62,17 +62,15 @@ enum Theme {
         /// The uninstall list's leading checkbox / lock glyph.
         static let checkbox: CGFloat = 16
         static let clipboardListWidth: CGFloat = 290
-        static let emojiCell: CGFloat = 56
         static let menuWidth: CGFloat = 276
         static let menuIcon: CGFloat = 20
         /// Settings window: sidebar column width and the small icon used in setting rows.
         static let settingsSidebar: CGFloat = 184
         static let settingsRowIcon: CGFloat = 20
         static let statusDot: CGFloat = 6
-        /// Settings editor modals (Custom Commands, Snippets): fixed width, intrinsic height.
+        /// Settings editor modals (Custom Commands): fixed width, intrinsic height.
         static let editorSheetWidth: CGFloat = 480
         static let editorTextHeight: CGFloat = 120
-        static let argumentPromptWidth: CGFloat = 220
         static let hudMaxWidth: CGFloat = 420
         static let hudEdgeOffset: CGFloat = 48
         /// Tinycast's own dialog: fixed width, height measured from the SwiftUI content.

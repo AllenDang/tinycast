@@ -31,6 +31,10 @@ struct ClipboardTests {
         pinsLeadFilteredSearches()
         persistence()
         freshSchema()
+        importEquality()
+        importMixedFieldsAndFailures()
+        importBeyondWindowAndLongText()
+        importHistoryFailure()
 
         print("\(passes)/\(passes + failures) passed")
         if failures > 0 { exit(1) }
@@ -200,6 +204,136 @@ struct ClipboardTests {
         reopened.load()
         expect(reopened.items.first?.sourceBundleID == "com.example.source", "source app persists")
         expect(reopened.items.first?.isPinned == true, "pin stamp persists")
+    }
+
+    static func importEquality() {
+        withStore { store, dir in
+            store.maxAge = .greatestFiniteMagnitude
+            let base = Date(timeIntervalSince1970: 1_700_000_000)
+            store.addText("é", sourceBundleID: nil)
+            expect(store.importEntries([entry("e\u{301}", at: base)]) == 1,
+                   "historical text equality is binary, not Unicode canonical equality")
+            expect(sqlite(dir.appendingPathComponent("clipboard.sqlite3"),
+                          "SELECT hex(text) FROM items") == ["C3A9", "65CC81"],
+                   "composed and decomposed text bytes both persist")
+            store.clearAll()
+            expect(store.importEntries([entry("é", at: base),
+                                        entry("e\u{301}", at: base.addingTimeInterval(1))]) == 1,
+                   "existing canonical within-batch seen-set semantics are preserved")
+            expect(store.importEntries([entry("é", at: base),
+                                        entry("e\u{301}", at: base.addingTimeInterval(1))]) == 1,
+                   "skipped historical duplicate does not enter the within-batch seen set")
+            store.clearAll()
+            store.addText("prefix", sourceBundleID: nil)
+            expect(store.importEntries([entry("prefix\0tail", at: base)]) == 0,
+                   "historical lookup matches the binding's first-NUL truncation")
+            store.clearAll()
+            expect(store.importEntries([entry("prefix\0first", at: base),
+                                        entry("prefix\0second", at: base.addingTimeInterval(1))]) == 1,
+                   "successful insert prevents a later equivalent NUL-truncated value")
+            expect(store.items.first?.text == "prefix", "stored text still truncates at NUL")
+            store.clearAll()
+            let db = dir.appendingPathComponent("clipboard.sqlite3")
+            sqlite(db, "INSERT INTO items(id,kind,text,created_at) VALUES('\(UUID())','text','prefix'||char(0)||'stored',1700000000)")
+            expect(store.importEntries([entry("prefix\0tail", at: base)]) == 1,
+                   "a historical embedded NUL is not truncated during matching")
+            expect(sqlite(db, "SELECT count(*) FROM items") == ["2"],
+                   "historical embedded-NUL and bound-prefix records remain distinct")
+            store.clearAll()
+            let image = ClipboardItem(imagePath: "/fixture/image.png", sourceBundleID: nil)
+            expect(store.importEntries([image, image]) == 1, "within-batch image duplicate skipped")
+            expect(store.importEntries([image]) == 0, "historical image path duplicate skipped")
+            expect(store.importEntries([ClipboardItem(imagePath: "/fixture/Image.png", sourceBundleID: nil)]) == 1,
+                   "image path equality remains case-sensitive")
+            expect(store.importEntries([ClipboardItem(imagePath: "/fixture/image.png\0suffix", sourceBundleID: nil)]) == 0,
+                   "image path binding also truncates at NUL")
+            store.clearAll()
+            let nilText = ClipboardItem(id: UUID(), kind: .text, text: nil, imagePath: nil,
+                                        createdAt: base, sourceBundleID: nil)
+            expect(store.importEntries([nilText]) == 0, "nil primary payload is skipped")
+            expect(store.importEntries([entry("", at: base), entry("\0suffix", at: base.addingTimeInterval(1))]) == 1,
+                   "empty and first-NUL values match SQLite empty text")
+        }
+    }
+
+    static func importMixedFieldsAndFailures() {
+        withStore { store, dir in
+            store.maxAge = .greatestFiniteMagnitude
+            let base = Date(timeIntervalSince1970: 1_700_000_000)
+            func mixed(_ kind: ClipboardItem.Kind, _ text: String, _ path: String, _ offset: Double) -> ClipboardItem {
+                ClipboardItem(id: UUID(), kind: kind, text: text, imagePath: path,
+                              createdAt: base.addingTimeInterval(offset), sourceBundleID: nil)
+            }
+            let both = mixed(.text, "shared text", "/fixture/shared.png", 0)
+            let image = ClipboardItem(imagePath: "/fixture/shared.png", createdAt: base.addingTimeInterval(1), sourceBundleID: nil)
+            expect(store.importEntries([both, image]) == 1,
+                   "text-kind insert also participates in path deduplication")
+            expect(store.importEntries([image]) == 0, "historical path lookup ignores kind")
+            store.clearAll()
+            let bothImage = mixed(.image, "shared text", "/fixture/shared.png", 0)
+            expect(store.importEntries([bothImage, entry("shared text", at: base.addingTimeInterval(1))]) == 1,
+                   "image-kind insert also participates in text deduplication")
+            expect(store.importEntries([entry("shared text", at: base)]) == 0,
+                   "historical text lookup ignores kind")
+            store.clearAll()
+            let occupied = entry("occupied", at: base)
+            expect(store.importEntries([occupied]) == 1, "seed occupied UUID")
+            let failed = ClipboardItem(id: occupied.id, kind: .text, text: "new\0failed", imagePath: nil,
+                                       createdAt: base.addingTimeInterval(1), sourceBundleID: nil)
+            let successful = entry("new\0success", at: base.addingTimeInterval(2))
+            expect(store.importEntries([failed, successful]) == 2,
+                   "pre-existing API counts insert attempts, including UUID constraint failures")
+            expect(sqlite(dir.appendingPathComponent("clipboard.sqlite3"), "SELECT count(*) FROM items") == ["2"],
+                   "failed insert does not falsely add its SQL key to historical matches")
+            expect(store.items.first?.id == successful.id, "later valid NUL-equivalent insert succeeds")
+            let sameFailed = ClipboardItem(id: occupied.id, kind: .text, text: "not stored", imagePath: nil,
+                                           createdAt: base.addingTimeInterval(3), sourceBundleID: nil)
+            expect(store.importEntries([sameFailed, entry("not stored", at: base.addingTimeInterval(4))]) == 1,
+                   "failed insertion still enters the pre-existing within-batch seen set")
+            expect(!store.items.contains { $0.text == "not stored" }, "same-batch failed duplicate is not retried")
+        }
+    }
+
+    static func importBeyondWindowAndLongText() {
+        withStore { store, dir in
+            store.maxAge = .greatestFiniteMagnitude
+            let base = Date(timeIntervalSince1970: 1_700_000_000)
+            let history = (0..<1400).map { entry("history \($0)", at: base.addingTimeInterval(Double($0))) }
+            expect(store.importEntries(history) == 1400, "seed history beyond memory window")
+            expect(store.items.count == 1000, "resident history stays bounded")
+            expect(store.importEntries([history[0], history[100], history[1399]]) == 0,
+                   "deduplication includes nonresident history")
+            let long = String(repeating: "long exact text café ", count: 3200)
+            let oldest = entry(long, at: base.addingTimeInterval(2000))
+            let newest = entry(long + "!", at: base.addingTimeInterval(2001))
+            expect(store.importEntries([newest, oldest, oldest]) == 2, "long text exact dedup and count")
+            expect(Array(store.items.prefix(2).map(\.id)) == [newest.id, oldest.id],
+                   "unsorted incoming records retain oldest-first insertion/newest-first load")
+            expect(store.importEntries([oldest, newest]) == 0, "long historical duplicates skipped")
+            let db = dir.appendingPathComponent("clipboard.sqlite3")
+            expect(sqlite(db, "SELECT name FROM sqlite_master WHERE type='index'")
+                   == ["sqlite_autoindex_items_1", "items_created_at", "items_pinned_at"],
+                   "no persistent large-text or image equality index added")
+        }
+    }
+
+    static func importHistoryFailure() {
+        withStore { store, dir in
+            store.addText("unchanged", sourceBundleID: nil)
+            let before = store.items
+            let db = dir.appendingPathComponent("clipboard.sqlite3")
+            sqlite(db, "ALTER TABLE items RENAME TO held_items")
+            expect(store.importEntries([entry("incoming", at: Date())]) == 0,
+                   "history-statement schema error aborts import before inserting")
+            expect(store.items == before, "history read failure leaves resident state unchanged")
+            expect(sqlite(db, "SELECT text FROM held_items") == ["unchanged"],
+                   "history read failure leaves persisted rows unchanged")
+            sqlite(db, "ALTER TABLE held_items RENAME TO items")
+            expect(store.importEntries([entry("incoming", at: Date())]) == 1,
+                   "failed read resets statement and rolls back its transaction for successful retry")
+            expect(store.importEntries([entry("unchanged", at: Date())]) == 0,
+                   "historical deduplication remains usable after retry")
+        }
     }
 
     // MARK: - Benchmark

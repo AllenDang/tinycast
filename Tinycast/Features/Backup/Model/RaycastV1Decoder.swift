@@ -16,14 +16,7 @@ struct RaycastV1Payload: Sendable, Equatable {
         let includesShift: Bool?
     }
 
-    struct SnippetRecord: Sendable, Equatable {
-        let name: String
-        let text: String
-        let keyword: String?
-    }
-
     var popToRootTimeout: Int?
-    var emojiSkinTone: String?
     var hyperKey: HyperKeyState?
     var useHyperKeyIcon: Bool?
     var windowMode: String?
@@ -31,10 +24,8 @@ struct RaycastV1Payload: Sendable, Equatable {
     var statusBarIsVisible: Bool?
     var clipboardDisabledApps: [String]?
     var toggleClipboard: Hotkey?
-    var toggleEmoji: Hotkey?
     var appHotkeys: [String: Hotkey] = [:]
     var favorites: [String] = []
-    var snippets: [SnippetRecord] = []
     var clipboard: [ClipboardItem] = []
     /// Image clips whose file no longer exists on disk (Raycast's cache is pruned independently).
     var missingImages = 0
@@ -64,7 +55,6 @@ enum RaycastV1Decoder {
         readRootSearch(json, into: &payload)
         readClipboard(json, into: &payload)
         payload.favorites = readFavorites(json)
-        payload.snippets = readSnippets(json)
         return payload
     }
 
@@ -124,7 +114,6 @@ enum RaycastV1Decoder {
         let appearance = preferences?["preferencesAppearance"] as? [String: Any]
 
         payload.popToRootTimeout = advanced?["popToRootTimeout"] as? Int
-        payload.emojiSkinTone = advanced?["emojiSkinTone"] as? String
         payload.useHyperKeyIcon = advanced?["useHyperKeyIcon"] as? Bool
         if let state = advanced?["raycast_hyperKey_state"] as? [String: Any],
             let keyCode = state["keyCode"] as? Int {
@@ -152,8 +141,6 @@ enum RaycastV1Decoder {
             case "command":
                 if key == "builtin_command_clipboardHistory" {
                     payload.toggleClipboard = hotkey
-                } else if key.lowercased().contains("emoji") {
-                    payload.toggleEmoji = hotkey
                 }
             default:
                 break
@@ -202,17 +189,6 @@ enum RaycastV1Decoder {
         }
     }
 
-    private static func readSnippets(_ json: [String: Any]) -> [RaycastV1Payload.SnippetRecord] {
-        let entries =
-            (json["builtin_package_snippets"] as? [String: Any])?["snippets"] as? [[String: Any]] ?? []
-        return entries.compactMap { entry in
-            let name = (entry["name"] as? String)?.trimmed ?? ""
-            guard !name.isEmpty, let text = entry["text"] as? String else { return nil }
-            let keyword = (entry["keyword"] as? String)?.trimmed
-            return .init(name: name, text: text, keyword: keyword?.isEmpty == false ? keyword : nil)
-        }
-    }
-
     // MARK: - Helpers
 
     private static func parseDate(_ string: String?, using parser: ISO8601DateFormatter) -> Date? {
@@ -229,8 +205,4 @@ enum RaycastV1Decoder {
     private static func looksLikeBundleID(_ value: String) -> Bool {
         value.contains(".") && !value.contains("/") && !value.contains(" ")
     }
-}
-
-extension String {
-    fileprivate var trimmed: String { trimmingCharacters(in: .whitespacesAndNewlines) }
 }

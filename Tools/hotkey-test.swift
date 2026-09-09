@@ -84,11 +84,11 @@ struct DoubleTapDetectorTests {
     static func persistenceKeys() {
         let id = UUID(uuidString: "00000000-0000-0000-0000-000000000001")!
         let actions: [HotKeyAction] = [
-            .togglePalette, .toggleClipboard, .toggleEmoji,
+            .togglePalette, .toggleClipboard,
             .app(bundleID: "com.example.app"),
             .settingsPane(bundleID: "com.example.pane"),
             .customCommand(id: id), .systemAction(id: .lockScreen),
-            .windowCommand(id: .leftHalf), .quicklink(id: id),
+            .windowCommand(id: .leftHalf),
         ]
         let keys = actions.map(\.defaultsKey)
         expect(Set(keys).count == actions.count, "every action has a distinct persistence key")

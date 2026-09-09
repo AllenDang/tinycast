@@ -118,8 +118,6 @@ struct LauncherList: View {
         let sectionOrder: [(String, AppEntry.Kind)] = [
             (AppEntry.Kind.application.descriptor.sectionTitle, .application),
             (AppEntry.Kind.systemSettings.descriptor.sectionTitle, .systemSettings),
-            (AppEntry.Kind.quicklink.descriptor.sectionTitle, .quicklink),
-            (AppEntry.Kind.snippet.descriptor.sectionTitle, .snippet),
             (AppEntry.Kind.systemAction.descriptor.sectionTitle, .systemAction),
             (AppEntry.Kind.windowCommand.descriptor.sectionTitle, .windowCommand),
             (AppEntry.Kind.customCommand.descriptor.sectionTitle, .customCommand),

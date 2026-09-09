@@ -6,8 +6,6 @@ struct RootPaletteView: View {
     @Environment(AICommandCoordinator.self) private var aiCoordinator
     @Environment(CalculatorCoordinator.self) private var calculatorCoordinator
     @Environment(ClipboardCoordinator.self) private var clipboardCoordinator
-    @Environment(EmojiCoordinator.self) private var emojiCoordinator
-    @Environment(QuicklinkCoordinator.self) private var quicklinkCoordinator
     @Environment(UninstallCoordinator.self) private var uninstallCoordinator
     @Environment(PaletteState.self) private var vm
     @Environment(AppIndex.self) private var appIndex
@@ -16,11 +14,7 @@ struct RootPaletteView: View {
     @Environment(VisibilityStore.self) private var visibility
     @Environment(CalculatorHistoryStore.self) private var calcHistory
     @Environment(CurrencyRateStore.self) private var currencyRates
-    @Environment(EmojiIndex.self) private var emojiIndex
-    @Environment(FrequentEmojiStore.self) private var frequentEmoji
     @Environment(UninstallSession.self) private var uninstall
-    @Environment(QuicklinkStore.self) private var quicklinks
-    @Environment(QuicklinkArgumentSession.self) private var quicklinkArguments
     @Environment(AICommandStore.self) private var aiCommands
     @Environment(AIProviderStore.self) private var aiProvider
     @Environment(AICommandSession.self) private var aiCommandSession
@@ -51,22 +45,8 @@ struct RootPaletteView: View {
             return UninstallScreen(
                 session: uninstall, coordinator: uninstallCoordinator, vm: vm,
                 openActions: openActions)
-        case .quicklinkArguments:
-            return QuicklinkArgumentsScreen(
-                session: quicklinkArguments, coordinator: quicklinkCoordinator, vm: vm,
-                scrollToTop: { scroll = ScrollIntent(kind: .top) })
-        case .quicklinks:
-            return QuicklinkListScreen(
-                store: quicklinks, coordinator: quicklinkCoordinator,
-                palette: paletteCoordinator, vm: vm, openActions: openActions)
         case .aiCommand:
-            return AICommandScreen(
-                session: aiCommandSession, coordinator: aiCoordinator)
-        case .emoji:
-            return EmojiScreen(
-                index: emojiIndex, frequent: frequentEmoji,
-                coordinator: emojiCoordinator, vm: vm,
-                tone: settings.emojiSkinTone, openActions: openActions)
+            return AICommandScreen(session: aiCommandSession, coordinator: aiCoordinator)
         case .clipboard:
             return ClipboardScreen(
                 store: store, coordinator: clipboardCoordinator, vm: vm,
@@ -116,7 +96,7 @@ struct RootPaletteView: View {
         let count = activeScreen.rows.count
         let selected = PaletteRowIndex(sectionCounts: [count]).clamped(vm.selection)
         let showsPrimaryAction =
-            (count > 0 || vm.mode == .quicklinkArguments)
+            count > 0
             && activeScreen.hasPrimaryAction(at: selected)
         let showsActionsMenu = activeScreen.actions(at: selected) != nil
 
@@ -183,9 +163,6 @@ struct RootPaletteView: View {
             // Every way out of the Uninstall screen: back chevron, bare backspace, a fresh summon.
             if vm.mode != .uninstall { uninstall.cancel() }
             // Same for a half-filled argument form: leaving the screen abandons the pending open.
-            if vm.mode != .quicklinkArguments {
-                quicklinkCoordinator.cancelQuicklinkArguments()
-            }
             if vm.mode != .aiCommand { aiCoordinator.cancel() }
             vm.searchFieldFrozen = searchFieldFrozen
         }
@@ -343,7 +320,7 @@ struct RootPaletteView: View {
     }
 
     private var searchPrompt: String {
-        vm.mode == .quicklinkArguments ? quicklinkArguments.prompt : vm.mode.placeholder
+        vm.mode.placeholder
     }
 
     private var searchField: some View {

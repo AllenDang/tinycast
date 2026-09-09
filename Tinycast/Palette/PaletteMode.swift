@@ -5,10 +5,7 @@ enum PaletteMode: String, CaseIterable, Identifiable {
     case launcher
     case clipboard
     case calculatorHistory
-    case emoji
     case uninstall
-    case quicklinks
-    case quicklinkArguments
     case aiCommand
 
     var id: String { rawValue }
@@ -17,9 +14,7 @@ enum PaletteMode: String, CaseIterable, Identifiable {
         case .launcher: return "magnifyingglass"
         case .clipboard: return "doc.on.doc"
         case .calculatorHistory: return "plus.forwardslash.minus"
-        case .emoji: return "face.smiling"
         case .uninstall: return "trash"
-        case .quicklinks, .quicklinkArguments: return Quicklink.sfSymbol
         case .aiCommand: return AICommand.sfSymbol
         }
     }
@@ -28,11 +23,7 @@ enum PaletteMode: String, CaseIterable, Identifiable {
         case .launcher: return "Search for apps and commands…"
         case .clipboard: return "Type to filter entries…"
         case .calculatorHistory: return "Do math, convert units, or search your past calculations…"
-        case .emoji: return "Search emoji and symbols…"
         case .uninstall: return "Filter files and folders by name…"
-        case .quicklinks: return "Search quicklinks…"
-        // Replaced by the pending argument's name; only reached if the session vanished mid-render.
-        case .quicklinkArguments: return "Enter a value…"
         case .aiCommand: return "Press ↵ to copy the result…"
         }
     }

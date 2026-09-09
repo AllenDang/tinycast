@@ -45,7 +45,6 @@ v1 JSON is a set of `builtin_package_*` / `raycast_*` providers, with `raycast_v
 | v1 path                                                                             | Tinycast                                                              |
 | ----------------------------------------------------------------------------------- | --------------------------------------------------------------------- |
 | `…raycastPreferences.preferencesAdvanced.popToRootTimeout`                          | `popToRootSeconds` (exact `PopToRootTimeout` match only)              |
-| `…preferencesAdvanced.emojiSkinTone`                                                | `emojiSkinTone` (`default` → none)                                    |
 | `…preferencesAdvanced.raycast_hyperKey_state` `{enabled, keyCode, includeShiftKey}` | `hyperKey` (a Carbon code — 57 is caps lock), `hyperKeyIncludesShift` |
 | `…preferencesAdvanced.useHyperKeyIcon`                                              | `hyperKeyReplacesGlyph`                                               |
 | `…preferencesAppearance.raycastPreferredWindowMode`                                 | `compactMode` (`== "compact"`)                                        |
@@ -53,9 +52,8 @@ v1 JSON is a set of `builtin_package_*` / `raycast_*` providers, with `raycast_v
 | `…preferencesAppearance.statusBarIsVisible`                                         | `showInMenuBar`                                                       |
 | `builtin_package_clipboardHistory.clipboardHistoryDisabledApplications`             | `clipboardDisabledApps`                                               |
 | `…clipboardHistoryRecords[]`                                                        | `[ClipboardItem]`                                                     |
-| `builtin_package_rootSearch.rootSearch[]`                                           | app hotkeys, clipboard/emoji command hotkeys                          |
+| `builtin_package_rootSearch.rootSearch[]`                                           | app hotkeys, clipboard command hotkeys                          |
 | `builtin_package_navigation.pinnedMenuItems`                                        | `favoriteApps`                                                        |
-| `builtin_package_snippets.snippets`                                                 | `[Snippet]`                                                           |
 
 Notes that matter:
 
@@ -70,16 +68,23 @@ Notes that matter:
   record can be any document and Tinycast has no kind for that, so its label imports as text.
 - **v1 exports no launch-at-login preference and no global palette hotkey**, so neither is ever
   mapped. That is why `.launchAtLogin` is absent from `RaycastFormat.v1.supportedOptions`.
-- `builtin_package_navigation` and `builtin_package_snippets` are mapped defensively — no export with
-  favorites or snippets configured has been available to verify their exact shape.
+- `builtin_package_navigation` is mapped defensively; its favorites shape has limited fixture evidence.
 
 ## Layout
 
 `RaycastFormat.swift` and `RaycastV1Decoder.swift` stay Foundation + CommonCrypto + Carbon so
 `Tools/raycast-test.swift` compiles them against the real sources. The decoder's job is _shape_ — it
 returns Raycast's own values in a plain `RaycastV1Payload`; turning those into Tinycast's domain types
-(`PopToRootTimeout`, `EmojiSkinTone`, `HyperKeyPhysicalKey`, `KeyShortcut`) is `RaycastImportV1`'s job.
+(`PopToRootTimeout`, `HyperKeyPhysicalKey`, `KeyShortcut`) is `RaycastImportV1`'s job.
 That is the same pure-layer / platform-layer split `Features/WindowManagement/` uses.
 
 `RaycastImport` itself is only the facade: `Result`, `selecting(_:)`, and the `read(file:passphrase:)`
 dispatcher. `BackupActions.importRaycast` runs it off the main actor.
+
+## Retired fields
+
+Emoji preferences/shortcuts, Snippets and Quicklinks are ignored in both formats and native backups.
+Malformed values in these retired fields cannot invalidate surviving settings or hotkeys. New backups
+emit only current fields; retired launcher IDs and kinds are filtered during gather/apply. Surviving
+Raycast option bits retain their original values. `Tools/backup-compatibility-test.swift` exercises
+native decoding plus both encrypted format dispatchers with synthetic fixtures.
